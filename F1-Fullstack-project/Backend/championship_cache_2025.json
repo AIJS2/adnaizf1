@@ -1,0 +1,361 @@
+{
+  "year": 2025,
+  "teams": [
+    {
+      "name": "McLaren",
+      "points": 756,
+      "wins": 14,
+      "podiums": 31,
+      "points_last_race": 0,
+      "position": 1,
+      "id": "mclaren"
+    },
+    {
+      "name": "Mercedes",
+      "points": 431,
+      "wins": 2,
+      "podiums": 12,
+      "points_last_race": 33,
+      "position": 2,
+      "id": "mercedes"
+    },
+    {
+      "name": "Red Bull Racing",
+      "points": 391,
+      "wins": 6,
+      "podiums": 13,
+      "points_last_race": 25,
+      "position": 3,
+      "id": "red_bull_racing"
+    },
+    {
+      "name": "Ferrari",
+      "points": 378,
+      "wins": 0,
+      "podiums": 7,
+      "points_last_race": 16,
+      "position": 4,
+      "id": "ferrari"
+    },
+    {
+      "name": "Williams",
+      "points": 121,
+      "wins": 0,
+      "podiums": 1,
+      "points_last_race": 10,
+      "position": 5,
+      "id": "williams"
+    },
+    {
+      "name": "Racing Bulls",
+      "points": 90,
+      "wins": 0,
+      "podiums": 1,
+      "points_last_race": 8,
+      "position": 6,
+      "id": "racing_bulls"
+    },
+    {
+      "name": "Haas F1 Team",
+      "points": 73,
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 3,
+      "position": 7,
+      "id": "haas_f1_team"
+    },
+    {
+      "name": "Aston Martin",
+      "points": 72,
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 8,
+      "id": "aston_martin"
+    },
+    {
+      "name": "Kick Sauber",
+      "points": 68,
+      "wins": 0,
+      "podiums": 1,
+      "points_last_race": 6,
+      "position": 9,
+      "id": "kick_sauber"
+    },
+    {
+      "name": "Alpine",
+      "points": 22,
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 10,
+      "id": "alpine"
+    }
+  ],
+  "drivers": [
+    {
+      "name": "Lando Norris",
+      "team": "McLaren",
+      "points": 390.0,
+      "driver_number": 4,
+      "abbreviation": "NOR",
+      "wins": 7,
+      "podiums": 17,
+      "points_last_race": 0,
+      "position": 1,
+      "id": "lando_norris"
+    },
+    {
+      "name": "Max Verstappen",
+      "team": "Red Bull Racing",
+      "points": 366.0,
+      "driver_number": 1,
+      "abbreviation": "VER",
+      "wins": 6,
+      "podiums": 13,
+      "points_last_race": 25,
+      "position": 2,
+      "id": "max_verstappen"
+    },
+    {
+      "name": "Oscar Piastri",
+      "team": "McLaren",
+      "points": 366.0,
+      "driver_number": 81,
+      "abbreviation": "PIA",
+      "wins": 7,
+      "podiums": 14,
+      "points_last_race": 0,
+      "position": 3,
+      "id": "oscar_piastri"
+    },
+    {
+      "name": "George Russell",
+      "team": "Mercedes",
+      "points": 294.0,
+      "driver_number": 63,
+      "abbreviation": "RUS",
+      "wins": 2,
+      "podiums": 9,
+      "points_last_race": 18,
+      "position": 4,
+      "id": "george_russell"
+    },
+    {
+      "name": "Charles Leclerc",
+      "team": "Ferrari",
+      "points": 226.0,
+      "driver_number": 16,
+      "abbreviation": "LEC",
+      "wins": 0,
+      "podiums": 7,
+      "points_last_race": 12,
+      "position": 5,
+      "id": "charles_leclerc"
+    },
+    {
+      "name": "Lewis Hamilton",
+      "team": "Ferrari",
+      "points": 152.0,
+      "driver_number": 44,
+      "abbreviation": "HAM",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 4,
+      "position": 6,
+      "id": "lewis_hamilton"
+    },
+    {
+      "name": "Kimi Antonelli",
+      "team": "Mercedes",
+      "points": 123.0,
+      "driver_number": 12,
+      "abbreviation": "ANT",
+      "wins": 0,
+      "podiums": 3,
+      "points_last_race": 15,
+      "position": 7,
+      "id": "kimi_antonelli"
+    },
+    {
+      "name": "Alexander Albon",
+      "team": "Williams",
+      "points": 73.0,
+      "driver_number": 23,
+      "abbreviation": "ALB",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 8,
+      "id": "alexander_albon"
+    },
+    {
+      "name": "Isack Hadjar",
+      "team": "Racing Bulls",
+      "points": 51.0,
+      "driver_number": 6,
+      "abbreviation": "HAD",
+      "wins": 0,
+      "podiums": 1,
+      "points_last_race": 8,
+      "position": 9,
+      "id": "isack_hadjar"
+    },
+    {
+      "name": "Nico Hulkenberg",
+      "team": "Kick Sauber",
+      "points": 49.0,
+      "driver_number": 27,
+      "abbreviation": "HUL",
+      "wins": 0,
+      "podiums": 1,
+      "points_last_race": 6,
+      "position": 10,
+      "id": "nico_hulkenberg"
+    },
+    {
+      "name": "Carlos Sainz",
+      "team": "Williams",
+      "points": 48.0,
+      "driver_number": 55,
+      "abbreviation": "SAI",
+      "wins": 0,
+      "podiums": 1,
+      "points_last_race": 10,
+      "position": 11,
+      "id": "carlos_sainz"
+    },
+    {
+      "name": "Oliver Bearman",
+      "team": "Haas F1 Team",
+      "points": 41.0,
+      "driver_number": 87,
+      "abbreviation": "BEA",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 1,
+      "position": 12,
+      "id": "oliver_bearman"
+    },
+    {
+      "name": "Fernando Alonso",
+      "team": "Aston Martin",
+      "points": 40.0,
+      "driver_number": 14,
+      "abbreviation": "ALO",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 13,
+      "id": "fernando_alonso"
+    },
+    {
+      "name": "Liam Lawson",
+      "team": "Racing Bulls",
+      "points": 36.0,
+      "driver_number": 30,
+      "abbreviation": "LAW",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 14,
+      "id": "liam_lawson"
+    },
+    {
+      "name": "Lance Stroll",
+      "team": "Aston Martin",
+      "points": 32.0,
+      "driver_number": 18,
+      "abbreviation": "STR",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 15,
+      "id": "lance_stroll"
+    },
+    {
+      "name": "Esteban Ocon",
+      "team": "Haas F1 Team",
+      "points": 32.0,
+      "driver_number": 31,
+      "abbreviation": "OCO",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 2,
+      "position": 16,
+      "id": "esteban_ocon"
+    },
+    {
+      "name": "Yuki Tsunoda",
+      "team": "Red Bull Racing",
+      "points": 28.0,
+      "driver_number": 22,
+      "abbreviation": "TSU",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 17,
+      "id": "yuki_tsunoda"
+    },
+    {
+      "name": "Pierre Gasly",
+      "team": "Alpine",
+      "points": 22.0,
+      "driver_number": 10,
+      "abbreviation": "GAS",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 18,
+      "id": "pierre_gasly"
+    },
+    {
+      "name": "Gabriel Bortoleto",
+      "team": "Kick Sauber",
+      "points": 19.0,
+      "driver_number": 5,
+      "abbreviation": "BOR",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 19,
+      "id": "gabriel_bortoleto"
+    },
+    {
+      "name": "Andrea Kimi Antonelli",
+      "team": "Mercedes",
+      "points": 14.0,
+      "driver_number": 12,
+      "abbreviation": "ANT",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 20,
+      "id": "andrea_kimi_antonelli"
+    },
+    {
+      "name": "Jack Doohan",
+      "team": "Alpine",
+      "points": 0.0,
+      "driver_number": 7,
+      "abbreviation": "DOO",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 21,
+      "id": "jack_doohan"
+    },
+    {
+      "name": "Franco Colapinto",
+      "team": "Alpine",
+      "points": 0.0,
+      "driver_number": 43,
+      "abbreviation": "COL",
+      "wins": 0,
+      "podiums": 0,
+      "points_last_race": 0,
+      "position": 22,
+      "id": "franco_colapinto"
+    }
+  ]
+}

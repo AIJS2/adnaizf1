@@ -1,0 +1,198 @@
+{
+  "year": 2025,
+  "last_race_name": "Mexico City Grand Prix",
+  "team_standings": [
+    {
+      "name": "McLaren",
+      "points": 680.0,
+      "points_last_race": 35
+    },
+    {
+      "name": "Ferrari",
+      "points": 338.0,
+      "points_last_race": 22
+    },
+    {
+      "name": "Mercedes",
+      "points": 337.0,
+      "points_last_race": 14
+    },
+    {
+      "name": "Red Bull Racing",
+      "points": 321.0,
+      "points_last_race": 15
+    },
+    {
+      "name": "Williams",
+      "points": 109.0,
+      "points_last_race": 0
+    },
+    {
+      "name": "Aston Martin",
+      "points": 69.0,
+      "points_last_race": 0
+    },
+    {
+      "name": "Racing Bulls",
+      "points": 68.0,
+      "points_last_race": 0
+    },
+    {
+      "name": "Haas F1 Team",
+      "points": 61.0,
+      "points_last_race": 14
+    },
+    {
+      "name": "Kick Sauber",
+      "points": 60.0,
+      "points_last_race": 1
+    },
+    {
+      "name": "Alpine",
+      "points": 20.0,
+      "points_last_race": 0
+    }
+  ],
+  "driver_standings": [
+    {
+      "name": "Oscar Piastri",
+      "points": 341.0,
+      "team": "McLaren"
+    },
+    {
+      "name": "Lando Norris",
+      "points": 339.0,
+      "team": "McLaren"
+    },
+    {
+      "name": "Max Verstappen",
+      "points": 296.0,
+      "team": "Red Bull Racing"
+    },
+    {
+      "name": "George Russell",
+      "points": 248.0,
+      "team": "Mercedes"
+    },
+    {
+      "name": "Charles Leclerc",
+      "points": 198.0,
+      "team": "Ferrari"
+    },
+    {
+      "name": "Lewis Hamilton",
+      "points": 140.0,
+      "team": "Ferrari"
+    },
+    {
+      "name": "Kimi Antonelli",
+      "points": 75.0,
+      "team": "Mercedes"
+    },
+    {
+      "name": "Alexander Albon",
+      "points": 71.0,
+      "team": "Williams"
+    },
+    {
+      "name": "Nico Hulkenberg",
+      "points": 41.0,
+      "team": "Kick Sauber"
+    },
+    {
+      "name": "Carlos Sainz",
+      "points": 38.0,
+      "team": "Williams"
+    },
+    {
+      "name": "Fernando Alonso",
+      "points": 37.0,
+      "team": "Aston Martin"
+    },
+    {
+      "name": "Isack Hadjar",
+      "points": 35.0,
+      "team": "Racing Bulls"
+    },
+    {
+      "name": "Lance Stroll",
+      "points": 32.0,
+      "team": "Aston Martin"
+    },
+    {
+      "name": "Oliver Bearman",
+      "points": 31.0,
+      "team": "Haas F1 Team"
+    },
+    {
+      "name": "Liam Lawson",
+      "points": 30.0,
+      "team": "Racing Bulls"
+    },
+    {
+      "name": "Esteban Ocon",
+      "points": 30.0,
+      "team": "Haas F1 Team"
+    },
+    {
+      "name": "Yuki Tsunoda",
+      "points": 28.0,
+      "team": "Red Bull Racing"
+    },
+    {
+      "name": "Pierre Gasly",
+      "points": 20.0,
+      "team": "Alpine"
+    },
+    {
+      "name": "Gabriel Bortoleto",
+      "points": 19.0,
+      "team": "Kick Sauber"
+    },
+    {
+      "name": "Andrea Kimi Antonelli",
+      "points": 14.0,
+      "team": "Mercedes"
+    },
+    {
+      "name": "Jack Doohan",
+      "points": 0.0,
+      "team": "Alpine"
+    },
+    {
+      "name": "Franco Colapinto",
+      "points": 0.0,
+      "team": "Alpine"
+    }
+  ],
+  "race_analytics": [
+    {
+      "round": 19,
+      "name": "United States Grand Prix",
+      "date": "2025-10-19",
+      "location": "Austin",
+      "status": "Finished",
+      "winner": "Max Verstappen"
+    },
+    {
+      "round": 20,
+      "name": "Mexico City Grand Prix",
+      "date": "2025-10-26",
+      "location": "Mexico City",
+      "status": "Finished",
+      "winner": "Lando Norris"
+    },
+    {
+      "round": 21,
+      "name": "S\u00e3o Paulo Grand Prix",
+      "date": "2025-11-09",
+      "location": "S\u00e3o Paulo",
+      "status": "Upcoming",
+      "winner": null
+    }
+  ],
+  "next_race_event": {
+    "name": "S\u00e3o Paulo Grand Prix - Practice 1",
+    "date": "2025-11-07T14:30:00+00:00"
+  }
+}

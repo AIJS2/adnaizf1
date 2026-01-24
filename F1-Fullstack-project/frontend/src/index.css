@@ -1,0 +1,54 @@
+/* src/index.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* Warna background utama aplikasimu */
+  background-color: #0a0a0a; 
+}
+
+/* ... (kode animasimu tidak berubah) ... */
+@keyframes gradient-slow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-slow {
+  background-size: 400% 400%;
+  animation: gradient-slow 20s ease infinite;
+}
+
+
+/* ===== STYLE SCROLLBAR SEPERTI GOOGLE AI STUDIO ===== */
+
+/* Untuk browser berbasis Webkit (Chrome, Brave, Edge) */
+::-webkit-scrollbar {
+  width: 6px; /* Dibuat sangat tipis */
+}
+
+/* Bagian Track (Rel scrollbar) dibuat transparan */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Bagian Thumb (Yang digeser) */
+::-webkit-scrollbar-thumb {
+  /* Warna abu-abu terang seperti di gambar */
+  background-color: #9ca3af; 
+  /* Trik untuk membuat ujungnya selalu membulat sempurna (bentuk pil) */
+  border-radius: 9999px;
+}
+
+/* Saat Thumb di-hover oleh mouse, dibuat lebih terang */
+::-webkit-scrollbar-thumb:hover {
+  background-color: #d1d5db; /* Warna abu-abu yang lebih terang lagi */
+}
+
+/* Untuk Firefox */
+html {
+  scrollbar-width: thin;
+  /* Format: [warna thumb] [warna track] */
+  scrollbar-color: #9ca3af transparent; 
+}

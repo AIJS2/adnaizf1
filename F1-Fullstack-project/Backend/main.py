@@ -37,6 +37,45 @@ app.add_middleware(
 fastf1.Cache.enable_cache("cache")
 CACHE_DURATION_HOURS = 6
 
+# Redis Advanced Caching Setup
+import redis
+REDIS_URL = os.environ.get("REDIS_URL")
+redis_client = None
+if REDIS_URL:
+    try:
+        redis_client = redis.from_url(REDIS_URL)
+        redis_client.ping()
+        print("'? Connected to Redis for Advanced Caching!")
+    except Exception as e:
+        print(f"?O Failed to connect to Redis: {e}")
+        redis_client = None
+
+def get_advanced_cache(key, hours=CACHE_DURATION_HOURS):
+    if redis_client:
+        try:
+            cached = redis_client.get(key)
+            if cached:
+                return json.loads(cached)
+        except: pass
+    if os.path.exists(key):
+        file_mod_time = datetime.fromtimestamp(os.path.getmtime(key))
+        if datetime.now() - file_mod_time < timedelta(hours=hours):
+            with open(key, "r", encoding="utf-8") as f:
+                return json.load(f)
+    return None
+
+def set_advanced_cache(key, data, hours=CACHE_DURATION_HOURS):
+    if redis_client:
+        try:
+            redis_client.setex(key, int(hours * 3600), json.dumps(data))
+        except: pass
+    dirname = os.path.dirname(key)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
+    with open(key, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
 def apply_f1_official_standings(data):
     import json
     import os
@@ -157,12 +196,10 @@ def get_dashboard_cache_filename(year: int):
 @app.get("/api/dashboard/{year}")
 def get_dashboard_data(year: int):
     CACHE_FILE = get_dashboard_cache_filename(year)
-    if os.path.exists(CACHE_FILE):
-        file_mod_time = datetime.fromtimestamp(os.path.getmtime(CACHE_FILE))
-        if datetime.now() - file_mod_time < timedelta(hours=CACHE_DURATION_HOURS):
-            print("✅ Menyajikan data dari CACHE (Dashboard)...")
-            with open(CACHE_FILE, "r") as f:
-                return json.load(f)
+    cached_data = get_advanced_cache(CACHE_FILE)
+    if cached_data:
+        print("o. Menyajikan data dari REDIS/CACHE (Dashboard)...")
+        return cached_data
     try:
         print("⚙️ Menghitung data Dashboard...")
         today = pd.to_datetime("today").normalize()
@@ -201,8 +238,7 @@ def get_dashboard_data(year: int):
                 if event_found:
                     break
             pre_season_data["next_race_event"] = next_event_for_preseason
-            with open(CACHE_FILE, "w") as f:
-                json.dump(pre_season_data, f, indent=2)
+            set_advanced_cache(CACHE_FILE, pre_season_data)
             return pre_season_data
 
         last_race = completed_races.iloc[-1] if not completed_races.empty else None
@@ -313,8 +349,7 @@ def get_dashboard_data(year: int):
                  race_analytics.append(race_info)
         final_data["race_analytics"] = race_analytics
         final_data = apply_f1_official_standings(final_data)
-        with open(CACHE_FILE, "w") as f:
-            json.dump(final_data, f, indent=2)
+        set_advanced_cache(CACHE_FILE, final_data)
         print("✅ Perhitungan Dashboard selesai. Data disimpan ke cache.")
         return final_data
     except Exception as e:
@@ -364,8 +399,7 @@ async def get_all_races_for_year(year: int):
                     print(f"  -> Gagal mengambil data pemenang untuk {race['EventName']}: {e}")
                     race_info["winner"] = "Data not available"
             all_races_data.append(race_info)
-        with open(CACHE_FILE, "w") as f:
-            json.dump(all_races_data, f, indent=2)
+        set_advanced_cache(CACHE_FILE, all_races_data)
         print(f"✅ Perhitungan SEMUA BALAPAN untuk {year} selesai.")
         return all_races_data
     except Exception as e:
@@ -476,8 +510,7 @@ async def get_race_details(year: int, round_number: int):
                 "practice1_results": None, "practice2_results": None, "practice3_results": None,
                 "tyre_strategy": None, "weather_info": None
             }
-            with open(CACHE_FILE, "w") as f:
-                json.dump(final_data, f, indent=2)
+            set_advanced_cache(CACHE_FILE, final_data)
             return final_data
 
         SESSION_MAP = {
@@ -912,8 +945,7 @@ async def get_race_details(year: int, round_number: int):
         }
 
 
-        with open(CACHE_FILE, "w") as f:
-            json.dump(final_data, f, indent=2)
+        set_advanced_cache(CACHE_FILE, final_data)
         print(f"✅ Perhitungan DETAIL SUPER LENGKAP (dgn tab dinamis) selesai.")
         return final_data
     except Exception as e:
@@ -953,12 +985,10 @@ def get_telemetry_compare(year: int, round_number: int, drivers: str = "VER,NOR"
         return {"error": "Pilih minimal 1 pembalap."}
 
     CACHE_FILE = os.path.join("cache", f"telemetry_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json")
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
+    cached_data = get_advanced_cache(CACHE_FILE, hours=24) # Telemetry cached longer
+    if cached_data:
+        print(f"o. Menyajikan data dari REDIS/CACHE (Telemetry).")
+        return cached_data
 
     try:
         session = fastf1.get_session(year, round_number, 'R')
@@ -1083,9 +1113,7 @@ def get_telemetry_compare(year: int, round_number: int, drivers: str = "VER,NOR"
             "telemetry": data_points
         }
         
-        os.makedirs("cache", exist_ok=True)
-        with open(CACHE_FILE, "w") as f:
-            json.dump(result, f, indent=2)
+        set_advanced_cache(CACHE_FILE, result)
             
         return result
     except Exception as e:
@@ -1142,8 +1170,7 @@ def get_championship_standings(year: int):
                 "teams": [],
                 "drivers": []
             }
-            with open(CACHE_FILE, "w") as f:
-                json.dump(pre_season_data, f, indent=2)
+            set_advanced_cache(CACHE_FILE, pre_season_data)
             return pre_season_data
         # --- AKHIR PERUBAHAN ---
 
@@ -1233,8 +1260,7 @@ def get_championship_standings(year: int):
             "session_results": df_full[['RoundNumber', 'FullName', 'TeamName', 'Position', 'Points', 'SessionType', 'Abbreviation', 'EventName', 'Location']].to_dict(orient="records")
         }
         final_data = apply_f1_official_standings(final_data)
-        with open(CACHE_FILE, "w") as f:
-            json.dump(final_data, f, indent=2)
+        set_advanced_cache(CACHE_FILE, final_data)
         print("✅ Perhitungan Championship (Teams & Drivers) lengkap selesai. Data disimpan ke cache.")
         return final_data
     except Exception as e:

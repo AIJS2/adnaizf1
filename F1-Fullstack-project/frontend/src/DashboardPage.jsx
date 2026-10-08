@@ -366,7 +366,7 @@ function DashboardPage() {
             <div className="min-w-0 relative z-10">
               <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-red-400 transition-colors">Season Calendar</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
-                {lastRace ? `Round ${lastRace.round} of ${dashboardData?.total_races || 24}` : `${dashboardData?.year} FIA F1 Season`}
+                {lastRace ? <>{lastRace.round} <span className="text-neutral-500 font-medium">/ {dashboardData?.total_races || 24}</span> Races</> : `${dashboardData?.year} FIA F1 Season`}
               </p>
               {lastRace && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-red-300/80 transition-colors">Next: {upcomingRace?.name || 'End of Season'}</p>}
             </div>

@@ -233,7 +233,7 @@ def get_dashboard_data(year: int):
                     continue
         
         # Inisialisasi final_data di awal, tambahkan kunci 'next_race_event'
-        final_data = { "year": year, "last_race_name": last_race_name, "team_standings": [], "driver_standings": [], "race_analytics": [], "next_race_event": None }
+        final_data = { "year": year, "last_race_name": last_race_name, "team_standings": [], "driver_standings": [], "race_analytics": [], "next_race_event": None, "total_races": len(official_races) }
 
         if all_driver_results:
             df_all_drivers = pd.concat(all_driver_results, ignore_index=True)

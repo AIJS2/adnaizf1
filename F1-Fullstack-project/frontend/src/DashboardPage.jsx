@@ -366,8 +366,9 @@ function DashboardPage() {
             <div className="min-w-0 relative z-10">
               <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-red-400 transition-colors">Season Calendar</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
-                {lastRace ? `Round ${lastRace.round} Completed` : `${dashboardData?.year} FIA F1 Season`}
+                {lastRace ? `Round ${lastRace.round} of ${dashboardData?.race_analytics?.length || 24}` : `${dashboardData?.year} FIA F1 Season`}
               </p>
+              {lastRace && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-red-300/80 transition-colors">Next: {upcomingRace?.name || 'End of Season'}</p>}
             </div>
           </div>
 
@@ -381,6 +382,7 @@ function DashboardPage() {
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Driver ? `${p1Driver.name} (${parseInt(p1Driver.points)} PTS)` : '-'}
               </p>
+              {p2Driver && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-yellow-400/80 transition-colors">+{parseInt(p1Driver.points - p2Driver.points)} PTS ahead of {p2Driver.name.split(' ').pop()}</p>}
             </div>
           </div>
 
@@ -394,6 +396,7 @@ function DashboardPage() {
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Team ? `${p1Team.name} (${parseInt(p1Team.points)} PTS)` : '-'}
               </p>
+              {dashboardData?.team_standings?.[1] && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-cyan-300/80 transition-colors">+{parseInt(p1Team.points - dashboardData.team_standings[1].points)} PTS ahead of {dashboardData.team_standings[1].name}</p>}
             </div>
           </div>
 
@@ -407,6 +410,7 @@ function DashboardPage() {
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {lastRace?.winner ? `${lastRace.winner}` : (dashboardData?.last_race_name || '-')}
               </p>
+              {lastRace && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-orange-400/80 transition-colors">{lastRace.name}</p>}
             </div>
           </div>
         </section>

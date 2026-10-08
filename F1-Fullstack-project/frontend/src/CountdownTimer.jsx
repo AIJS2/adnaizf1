@@ -1,47 +1,44 @@
-// src/CountdownTimer.jsx - VERSI FINAL (TANPA LABEL)
+// src/CountdownTimer.jsx - FIXED: useEffect dengan interval yang benar
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const CountdownTimer = ({ targetDate }) => {
-  const calculateTimeLeft = () => {
-    const difference = +new Date(targetDate) - +new Date();
-    let timeLeft = {};
+  const calculateTimeLeft = useCallback(() => {
+    const target = new Date(targetDate).getTime();
+    const now = new Date().getTime();
+    const difference = target - now;
 
-    if (difference > 0) {
-      // Kita tetap gunakan key ini untuk logika, tapi tidak akan menampilkannya
-      timeLeft = {
-        HARI: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        JAM: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        MENIT: Math.floor((difference / 1000 / 60) % 60),
-        DETIK: Math.floor((difference / 1000) % 60),
-      };
-    }
-    return timeLeft;
-  };
+    if (difference <= 0) return {};
+
+    return {
+      HARI:  Math.floor(difference / (1000 * 60 * 60 * 24)),
+      JAM:   Math.floor((difference / (1000 * 60 * 60)) % 24),
+      MENIT: Math.floor((difference / 1000 / 60) % 60),
+      DETIK: Math.floor((difference / 1000) % 60),
+    };
+  }, [targetDate]);
 
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Gunakan setInterval agar update tiap detik tanpa re-render chain
+    const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
-    return () => clearTimeout(timer);
-  });
 
-  // Jika waktu habis, tampilkan pesan live
+    // Cleanup interval saat komponen di-unmount
+    return () => clearInterval(timer);
+  }, [calculateTimeLeft]); // dependency array yang benar
+
   if (!Object.keys(timeLeft).length) {
     return <span className="text-xl font-bold text-green-400 animate-pulse">RACE IS LIVE!</span>;
   }
 
-  // Gabungkan semua komponen jadi satu, HANYA ANGKA DAN PEMISAH
   const countdownComponents = Object.keys(timeLeft).map((interval, index) => (
     <React.Fragment key={interval}>
-      {/* Angka Countdown */}
       <span className="text-2xl font-bold text-white tracking-wider font-mono">
         {String(timeLeft[interval]).padStart(2, '0')}
       </span>
-      
-      {/* Tampilkan pemisah ':' kecuali untuk elemen terakhir */}
       {index < Object.keys(timeLeft).length - 1 && (
         <span className="text-xl font-bold text-neutral-600 mx-4">:</span>
       )}

@@ -40,3 +40,4 @@ url-normalize==2.2.1
 urllib3==2.5.0
 uvicorn==0.37.0
 websockets==13.1
+beautifulsoup4==4.12.3

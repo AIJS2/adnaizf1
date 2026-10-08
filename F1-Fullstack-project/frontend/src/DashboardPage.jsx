@@ -358,49 +358,53 @@ function DashboardPage() {
 
         {/* 1. SEASON PULSE BAR */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <div className="bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800/80 hover:border-neutral-700 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-md shadow-lg transition-colors group cursor-default">
-            <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 flex-shrink-0 group-hover:scale-110 transition-transform">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-red-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(239,68,68,0.15)] transition-all duration-300 group cursor-default">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors pointer-events-none" />
+            <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all">
               <Calendar size={18} />
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500 block group-hover:text-red-400/70 transition-colors">Season Calendar</span>
-              <p className="text-sm font-extrabold text-white truncate">
+            <div className="min-w-0 relative z-10">
+              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-red-400 transition-colors">Season Calendar</span>
+              <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {lastRace ? `Round ${lastRace.round} Completed` : `${dashboardData?.year} FIA F1 Season`}
               </p>
             </div>
           </div>
 
-          <div className="bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800/80 hover:border-neutral-700 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-md shadow-lg transition-colors group cursor-default">
-            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 flex-shrink-0 group-hover:scale-110 transition-transform">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-yellow-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(234,179,8,0.15)] transition-all duration-300 group cursor-default">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-colors pointer-events-none" />
+            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 flex-shrink-0 group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all">
               <Crown size={18} />
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500 block group-hover:text-yellow-500/70 transition-colors">Drivers Leader</span>
-              <p className="text-sm font-extrabold text-white truncate">
+            <div className="min-w-0 relative z-10">
+              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-yellow-500 transition-colors">Drivers Leader</span>
+              <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Driver ? `${p1Driver.name} (${parseInt(p1Driver.points)} PTS)` : '-'}
               </p>
             </div>
           </div>
 
-          <div className="bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800/80 hover:border-neutral-700 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-md shadow-lg transition-colors group cursor-default">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0 group-hover:scale-110 transition-transform">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-cyan-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(6,182,212,0.15)] transition-all duration-300 group cursor-default">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-colors pointer-events-none" />
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all">
               <Shield size={18} />
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500 block group-hover:text-cyan-400/70 transition-colors">Constructors Leader</span>
-              <p className="text-sm font-extrabold text-white truncate">
+            <div className="min-w-0 relative z-10">
+              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-cyan-400 transition-colors">Constructors Leader</span>
+              <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Team ? `${p1Team.name} (${parseInt(p1Team.points)} PTS)` : '-'}
               </p>
             </div>
           </div>
 
-          <div className="bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800/80 hover:border-neutral-700 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-md shadow-lg transition-colors group cursor-default">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 flex-shrink-0 group-hover:scale-110 transition-transform">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-orange-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(249,115,22,0.15)] transition-all duration-300 group cursor-default">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors pointer-events-none" />
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 flex-shrink-0 group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all">
               <Flame size={18} />
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500 block group-hover:text-orange-500/70 transition-colors">Last GP Winner</span>
-              <p className="text-sm font-extrabold text-white truncate">
+            <div className="min-w-0 relative z-10">
+              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-orange-500 transition-colors">Last GP Winner</span>
+              <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {lastRace?.winner ? `${lastRace.winner}` : (dashboardData?.last_race_name || '-')}
               </p>
             </div>

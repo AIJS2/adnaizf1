@@ -462,7 +462,7 @@ function DashboardPage() {
                   <Flag size={16} /> View Race Details
                 </Link>
                 <Link 
-                  to={upcomingRace ? `/race/${dashboardData?.year}/${upcomingRace.round}` : '/races'}
+                  to="/races"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-800/80 hover:bg-neutral-800 text-white border border-neutral-700 hover:border-neutral-600 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5"
                 >
                   <Gauge size={16} /> Open Telemetry
@@ -767,3 +767,4 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
+

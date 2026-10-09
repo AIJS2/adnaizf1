@@ -4,8 +4,8 @@ import {
   Search, X, User, Users, Flag, Trophy, Activity, 
   LayoutDashboard, MapPin, ArrowRight, CornerDownLeft, Sparkles 
 } from 'lucide-react';
-import { teamColors, teamLogos } from './data/teamData';
-import { API_URL } from './config';
+import { teamColors, teamLogos } from '../../data/teamData';
+import { API_URL } from '../../config';
 
 const year = new Date().getFullYear();
 
@@ -613,16 +613,21 @@ export default function CommandPalette({ isOpen, setIsOpen }) {
         if (!res.ok) return;
         const racesData = await res.json();
         if (Array.isArray(racesData) && racesData.length > 0) {
-          const dynamicRaces = racesData.map(r => ({
-            id: `race-${r.round_number}`,
+          const dynamicRaces = racesData.map(r => {
+            const round = r.round ?? r.round_number;
+            const name = r.name ?? r.event_name;
+
+            return {
+            id: `race-${round}`,
             type: 'Circuits',
-            title: r.event_name || `Round ${r.round_number}`,
-            subtitle: `${r.location || 'F1 Circuit'} · Round ${r.round_number}`,
-            round: r.round_number,
-            link: `/race/${year}/${r.round_number}`,
+            title: name || `Round ${round}`,
+            subtitle: `${r.location || 'F1 Circuit'} · Round ${round}`,
+            round,
+            link: `/race/${year}/${round}`,
             icon: MapPin,
-            keywords: [r.event_name, r.location, `round ${r.round_number}`].filter(Boolean)
-          }));
+            keywords: [name, r.location, `round ${round}`].filter(Boolean)
+            };
+          });
           
           setItems(prev => {
             const staticNonRaces = prev.filter(i => i.type !== 'Circuits');

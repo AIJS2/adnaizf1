@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import Navbar from './Navbar';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import ErrorState from '../components/layout/ErrorState';
 import { Calendar, Trophy, Clock, Info, AlertTriangle, RefreshCw, MapPin, ChevronDown, Filter, Zap, ArrowDown, CheckCircle2, Timer, Flag as FlagIcon } from 'lucide-react';
-import Flag from 'react-world-flags';
 import { Link } from 'react-router-dom';
-import { API_URL } from './config';
-import { getTrackMap } from './data/trackData';
-import { teamColors } from './data/teamData';
+import { API_URL } from '../config';
+import { getTrackMap } from '../data/trackData';
+import { teamColors } from '../data/teamData';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -181,7 +181,16 @@ const RaceCard = ({ race, isNextRace, index }) => {
               <div className="max-w-[70%]">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
                   <div className="shadow-[0_0_10px_rgba(255,255,255,0.1)] rounded-sm overflow-hidden">
-                    <Flag code={flagCode} className="w-8 h-auto" fallback={<div className="w-8 h-5 bg-neutral-800" />} />
+                    {flagCode ? (
+                      <img
+                        src={`https://flagcdn.com/w40/${flagCode.toLowerCase()}.png`}
+                        alt={`${race.country} flag`}
+                        className="w-8 h-auto"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-8 h-5 bg-neutral-800" />
+                    )}
                   </div>
                   <h3 className="font-black text-white text-lg md:text-xl leading-tight uppercase italic tracking-tight group-hover:text-red-400 transition-colors">
                     {race.name}
@@ -257,27 +266,12 @@ const RaceCard = ({ race, isNextRace, index }) => {
 };
 
 // --- ERROR STATE ---
-const ErrorState = ({ onRetry }) => (
-  <div className="bg-neutral-950 min-h-screen text-white flex items-center justify-center text-center px-4 relative">
-    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
-    <div className="max-w-md relative z-10 bg-red-950/40 backdrop-blur-xl border border-red-500/30 p-8 rounded-3xl shadow-[0_0_40px_rgba(220,38,38,0.15)]">
-      <AlertTriangle size={56} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse" />
-      <h2 className="text-3xl font-black text-red-500 mb-3 uppercase italic tracking-tight">Koneksi Bermasalah</h2>
-      <p className="text-neutral-300 mb-8 font-medium">
-        Tidak bisa terhubung ke server. Pastikan backend Python sudah berjalan lalu coba lagi.
-      </p>
-      <button onClick={onRetry}
-        className="flex items-center gap-2 mx-auto px-8 py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] uppercase tracking-wider">
-        <RefreshCw size={18} /> Coba Lagi
-      </button>
-    </div>
-  </div>
-);
+
 
 // --- LOADING SKELETON ---
 const LoadingSkeleton = () => (
   <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
-    <Navbar />
+    
     <main className="container mx-auto px-6 pt-28 pb-12 relative z-10">
       <div className="animate-pulse space-y-8">
         <div className="flex flex-col gap-4">
@@ -302,32 +296,19 @@ const LoadingSkeleton = () => (
 // --- KOMPONEN UTAMA RacesPage ---
 // =======================================================================
 const RacesPage = () => {
-  const [races, setRaces] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const nextRaceRef = useRef(null);
 
-  const fetchAllRaces = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const { data: races = [], isLoading: loading, error, refetch: fetchAllRaces } = useQuery({
+    queryKey: ['races', CURRENT_YEAR],
+    queryFn: async () => {
       const response = await fetch(`${API_URL}/api/races/${CURRENT_YEAR}`);
       if (!response.ok) throw new Error(`Failed to fetch. Status: ${response.status}`);
       const data = await response.json();
       if (data.error) throw new Error(data.error);
-      setRaces(data);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      return data;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchAllRaces();
-  }, [fetchAllRaces]);
+  });
 
   // Find next upcoming race
   const nextRace = useMemo(() => {
@@ -398,7 +379,7 @@ const RacesPage = () => {
       <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
       <div className="fixed inset-0 bg-gradient-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none" />
 
-      <Navbar />
+      
       <main className="container mx-auto px-4 md:px-6 pt-28 pb-16 relative z-10">
         
         {/* Header Section */}

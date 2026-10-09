@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import Navbar from './Navbar';
 import {
   Search, Trophy, Crown, Users, User, AlertTriangle, Loader2,
   Medal, Flame, ChevronRight, GitCompareArrows, Star, Hash,
   Factory, Shield, TrendingUp, TrendingDown, Minus, CircleDot, Sparkles
 } from 'lucide-react';
-import { API_URL } from './config';
-import { teamLogos, teamColors } from './data/teamData';
+import { API_URL } from '../config';
+import { teamLogos, teamColors } from '../data/teamData';
+import ChampionshipWorm from '../components/ChampionshipWorm';
 
 // =======================================================================
 // --- PODIUM CARD (Top 3 special treatment) ---
@@ -127,7 +127,6 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }) => {
 const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }) => {
   const teamColor = type === 'driver' ? (teamColors[entry.team] || '#EF4444') : (teamColors[entry.name] || '#EF4444');
   const darkLogos = ['Audi', 'Mercedes', 'Haas'];
-  const teamName = type === 'driver' ? entry.team : entry.name;
   const pct = maxPoints > 0 ? Math.max(5, (entry.points / maxPoints) * 100) : 5;
   const gap = leaderPoints - entry.points;
 
@@ -227,7 +226,7 @@ const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }
 const StatsPage = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'drivers');
-  const [data, setData] = useState({ drivers: [], teams: [] });
+  const [data, setData] = useState({ drivers: [], teams: [], session_results: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -244,7 +243,8 @@ const StatsPage = () => {
       if (result.error) throw new Error(result.error);
       setData({
         drivers: result.drivers || [],
-        teams: result.teams || []
+        teams: result.teams || [],
+        session_results: result.session_results || []
       });
     } catch (err) {
       setError(err.message);
@@ -289,7 +289,7 @@ const StatsPage = () => {
       <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
       <div className="fixed inset-0 bg-gradient-to-b from-red-900/15 via-neutral-950/85 to-neutral-950 pointer-events-none" />
 
-      <Navbar />
+      
       <main className="container mx-auto px-4 md:px-6 pt-28 pb-16 relative z-10">
         
         {/* Header */}
@@ -315,7 +315,7 @@ const StatsPage = () => {
 
               <div className="flex bg-neutral-900/80 backdrop-blur border border-neutral-700/50 p-1.5 rounded-xl shadow-lg">
                 <button onClick={() => { setActiveTab('drivers'); setSearchTerm(''); }}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-black transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-black transition-all ${
                     activeTab === 'drivers'
                       ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/40'
                       : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
@@ -323,12 +323,20 @@ const StatsPage = () => {
                   <User size={16} /> Drivers
                 </button>
                 <button onClick={() => { setActiveTab('constructors'); setSearchTerm(''); }}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-black transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-black transition-all ${
                     activeTab === 'constructors'
                       ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/40'
                       : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
                   }`}>
                   <Factory size={16} /> Constructors
+                </button>
+                <button onClick={() => { setActiveTab('progression'); setSearchTerm(''); }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-black transition-all ${
+                    activeTab === 'progression'
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/40'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                  }`}>
+                  <TrendingUp size={16} /> Worm
                 </button>
               </div>
             </div>
@@ -486,6 +494,13 @@ const StatsPage = () => {
                     </div>
                   </section>
                 )}
+              </div>
+            )}
+
+            {/* ==================== PROGRESSION WORM ==================== */}
+            {activeTab === 'progression' && (
+              <div className="space-y-4">
+                <ChampionshipWorm sessionResults={data.session_results} drivers={data.drivers} teams={data.teams} />
               </div>
             )}
           </div>

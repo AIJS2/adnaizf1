@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Flag, Activity, Trophy, Menu, X, Users, Search, Calculator } from 'lucide-react';
-import CommandPalette from './CommandPalette';
+import CommandPalette from '../ui/CommandPalette';
 
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -9,6 +9,7 @@ const navLinks = [
   { to: '/stats',     label: 'Stats',     icon: Trophy },
   { to: '/compare',   label: 'Compare',   icon: Users },
   { to: '/simulator', label: 'Simulator', icon: Calculator },
+  { to: '/live',      label: 'Live Timing', icon: Activity },
 ];
 
 function Navbar() {

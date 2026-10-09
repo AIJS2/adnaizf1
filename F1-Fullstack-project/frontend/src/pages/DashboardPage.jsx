@@ -1,321 +1,55 @@
 // src/DashboardPage.jsx - Next-Gen F1 Telemetry & Championship Dashboard
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchDashboardData } from '../services/api';
+
+import ErrorState from '../components/layout/ErrorState';
 import { Link } from 'react-router-dom';
 import { 
   Trophy, Calendar, Clock, ChevronRight, AlertTriangle, RefreshCw, 
   ArrowUp, Flag, Gauge, Zap, TrendingUp, Users, Activity, Award, MapPin, Calculator, Swords, Crown, Target, Shield, Flame,
   FlaskConical, FlagTriangleRight
 } from 'lucide-react';
-import Navbar from './Navbar';
-import { API_URL } from './config';
-import { teamLogos, teamColors } from './data/teamData';
-import { getTrackMap } from './data/trackData';
+import { API_URL } from '../config';
+import { teamLogos, teamColors } from '../data/teamData';
+import { getTrackMap } from '../data/trackData';
+import HeroCountdown from '../components/ui/HeroCountdown';
+import TeamCard from '../components/dashboard/TeamCard';
+import DriverStandingsList from '../components/dashboard/DriverStandingsList';
+import RaceAnalyticsCard from '../components/dashboard/RaceAnalyticsCard';
 
-// --- DIGITAL HERO COUNTDOWN COMPONENT ---
-const HeroCountdown = ({ targetDate }) => {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: false });
 
-  useEffect(() => {
-    const calc = () => {
-      const diff = new Date(targetDate).getTime() - new Date().getTime();
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: true });
-        return;
-      }
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((diff / 1000 / 60) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
-        isLive: false,
-      });
-    };
-    calc();
-    const interval = setInterval(calc, 1000);
-    return () => clearInterval(interval);
-  }, [targetDate]);
 
-  if (timeLeft.isLive) {
-    return (
-      <div className="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/40 text-green-400 font-black px-4 py-2 rounded-xl text-sm animate-pulse font-mono uppercase tracking-wider">
-        <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
-        SESSION IS LIVE ON TRACK
-      </div>
-    );
-  }
 
-  return (
-    <div className="flex items-center gap-2 sm:gap-3">
-      {[
-        { val: timeLeft.days, label: 'DAYS' },
-        { val: timeLeft.hours, label: 'HRS' },
-        { val: timeLeft.minutes, label: 'MIN' },
-        { val: timeLeft.seconds, label: 'SEC' },
-      ].map((item, idx) => (
-        <div key={idx} className="bg-neutral-900/90 border border-neutral-800 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-center min-w-[56px] sm:min-w-[64px] shadow-lg">
-          <div className="font-mono font-black text-2xl sm:text-3xl text-white tracking-tight">
-            {String(item.val).padStart(2, '0')}
-          </div>
-          <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-extrabold mt-0.5">
-            {item.label}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// --- TEAM CARD (TOP CONSTRUCTORS) ---
-const TeamCard = ({ team, index, maxPoints }) => {
-  const logo = teamLogos[team.name];
-  const color = teamColors[team.name] || '#EF4444';
-  const teamId = team.id || team.name.toLowerCase().replace(/\s+/g, '_');
-  const pct = maxPoints > 0 ? Math.max(8, (team.points / maxPoints) * 100) : 50;
-
-  return (
-    <Link
-      to={`/team/${teamId}`}
-      className="block group bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 shadow-lg relative overflow-hidden cursor-pointer"
-    >
-      {/* Accent left color border */}
-      <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: color }} />
-
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2.5">
-          <span className="font-mono text-xs font-black text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
-            P{index + 1}
-          </span>
-          <span className="font-extrabold text-neutral-300 group-hover:text-red-400 transition-colors uppercase tracking-wider text-sm truncate max-w-[130px]">
-            {team.name}
-          </span>
-        </div>
-        {logo && <img src={logo} alt={team.name} className="h-5 w-auto object-contain opacity-90" />}
-      </div>
-
-      <div className="flex items-baseline justify-between mt-2">
-        <p className="text-3xl sm:text-4xl font-black italic text-white tracking-tight font-mono">
-          {parseInt(team.points, 10)} <span className="text-xs font-bold text-neutral-500 not-italic">PTS</span>
-        </p>
-
-        {team.points_last_race > 0 && (
-          <div className="flex items-center gap-1 text-green-400 font-bold text-xs bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 font-mono">
-            <ArrowUp size={12} strokeWidth={3} />
-            <span>+{parseInt(team.points_last_race, 10)}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Mini Progress Bar */}
-      <div className="mt-3 w-full bg-neutral-950 rounded-full h-1 overflow-hidden">
-        <div 
-          className="h-full rounded-full transition-all duration-500" 
-          style={{ width: `${pct}%`, backgroundColor: color }} 
-        />
-      </div>
-    </Link>
-  );
-};
-
-// --- DRIVER LIST COMPONENT ---
-const DriverStandingsList = ({ drivers }) => (
-  <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 h-full shadow-2xl flex flex-col relative overflow-hidden">
-    <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4" />
-    <div className="flex justify-between items-center mb-5 border-b border-neutral-800/80 pb-4 relative z-10">
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500">
-          <Trophy size={16} />
-        </div>
-        <h3 className="text-xl font-black uppercase tracking-tight text-white">Driver Standings</h3>
-      </div>
-      <Link to="/stats" className="text-xs font-bold uppercase tracking-wider text-red-500 hover:text-red-400 transition-colors flex items-center group">
-        View All <ChevronRight size={14} className="ml-0.5 group-hover:translate-x-1 transition-transform" />
-      </Link>
-    </div>
-
-    <div className="space-y-1.5 flex-grow relative z-10">
-      {drivers.map((driver, index) => {
-        const logo = teamLogos[driver.team];
-        const teamColor = teamColors[driver.team] || '#EF4444';
-        const driverId = driver.id || driver.name.toLowerCase().replace(/\s+/g, '_');
-        const isLeader = index === 0;
-
-        // Custom background for top 3
-        const bgClass = index === 0 
-          ? 'bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10 hover:border-yellow-500/40' 
-          : index === 1 
-          ? 'bg-slate-400/5 border-slate-400/20 hover:bg-slate-400/10 hover:border-slate-400/40'
-          : index === 2
-          ? 'bg-amber-600/5 border-amber-600/20 hover:bg-amber-600/10 hover:border-amber-600/40'
-          : 'border-transparent hover:border-neutral-700 hover:bg-neutral-800/60';
-
-        return (
-          <Link 
-            key={driver.name} 
-            to={`/driver/${driverId}`}
-            className={`flex items-center justify-between text-sm py-2.5 px-3 rounded-xl border transition-all group cursor-pointer ${bgClass}`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className={`font-mono font-black text-xs w-5 text-center ${
-                index === 0 ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-neutral-500'
-              }`}>
-                {index + 1}
-              </span>
-              <span className="w-1.5 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: teamColor, boxShadow: `0 0 8px ${teamColor}80` }} />
-              {logo ? <img src={logo} alt={driver.team} className="h-3.5 w-auto object-contain flex-shrink-0 opacity-90 group-hover:opacity-100" /> : <div className="w-3.5" />}
-              <span className="font-bold text-white group-hover:text-red-400 uppercase tracking-tight transition-colors truncate">
-                {driver.name}
-              </span>
-              {isLeader && (
-                <span className="hidden sm:inline-block bg-yellow-500/20 text-yellow-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40 uppercase shadow-[0_0_10px_rgba(250,204,21,0.2)]">
-                  <Crown size={10} className="inline-block mr-1 -mt-0.5" />P1
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0 font-mono">
-              <span className="font-extrabold text-white text-base">{parseInt(driver.points, 10)}</span>
-              <span className="text-[10px] text-neutral-500 uppercase font-sans font-bold">PTS</span>
-              <ChevronRight size={14} className="text-neutral-600 group-hover:text-white transition-colors ml-1" />
-            </div>
-          </Link>
-        );
-      })}
-    </div>
-  </div>
-);
-
-// --- RACE ANALYTICS COMPONENT ---
-const RaceAnalyticsCard = ({ races, year }) => (
-  <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 h-full shadow-2xl flex flex-col">
-    <div className="flex justify-between items-center mb-5 border-b border-neutral-800/80 pb-4">
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500">
-          <Calendar size={16} />
-        </div>
-        <h3 className="text-xl font-black uppercase tracking-tight text-white">Race Calendar & Results</h3>
-      </div>
-      <Link to="/races" className="text-xs font-bold uppercase tracking-wider text-red-500 hover:text-red-400 transition-colors flex items-center group">
-        Full Season <ChevronRight size={14} className="ml-0.5 group-hover:translate-x-1 transition-transform" />
-      </Link>
-    </div>
-
-    <div className="space-y-3 flex-grow">
-      {races.map((race, index) => {
-        const isFinished = race.status === 'Finished';
-        const isUpcoming = race.status === 'Upcoming';
-        const isOngoing = race.status === 'Ongoing';
-
-        return (
-          <Link
-            key={race.name + index}
-            to={`/race/${year}/${race.round}`}
-            className="group block bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-800/80 hover:border-neutral-700 rounded-2xl p-4 transition-all duration-200"
-          >
-            <div className="flex justify-between items-start mb-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold bg-neutral-900 text-neutral-400 border border-neutral-800 px-2 py-0.5 rounded uppercase">
-                  Rnd {race.round}
-                </span>
-                <p className="font-extrabold text-white text-sm uppercase tracking-tight group-hover:text-red-400 transition-colors truncate">
-                  {race.name}
-                </p>
-              </div>
-
-              {isFinished && (
-                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
-                  FINISHED
-                </span>
-              )}
-              {isOngoing && (
-                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 animate-pulse flex items-center gap-1">
-                  <Clock size={10} /> ONGOING
-                </span>
-              )}
-              {isUpcoming && (
-                <span className="text-[10px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/30">
-                  UPCOMING
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-neutral-400 mt-2">
-              <span className="flex items-center gap-1">
-                <MapPin size={12} className="text-neutral-500" /> {race.location} &bull; {new Date(`${race.date}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
-
-              {isFinished && race.winner && (
-                <div className="flex items-center gap-1.5 text-xs font-bold text-yellow-400">
-                  <Trophy size={13} className="text-yellow-500" />
-                  <span>{race.winner}</span>
-                </div>
-              )}
-            </div>
-          </Link>
-        );
-      })}
-    </div>
-  </div>
-);
-
-// --- ERROR STATE COMPONENT ---
-const ErrorState = ({ message, onRetry }) => (
-  <div className="bg-neutral-950 min-h-screen text-white flex items-center justify-center text-center px-4 font-sans">
-    <div className="max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl">
-      <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
-      <h2 className="text-2xl font-black uppercase text-red-500 mb-2">Gagal Memuat Data</h2>
-      <p className="text-neutral-400 text-sm mb-6">Backend offline atau koneksi FastF1 sedang memproses. Coba refresh kembali.</p>
-      <p className="text-neutral-500 text-xs font-mono mb-6 bg-neutral-950 p-3 rounded-xl border border-neutral-800 overflow-x-auto">{message}</p>
-      <button
-        onClick={onRetry}
-        className="flex items-center gap-2 mx-auto px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors text-sm"
-      >
-        <RefreshCw size={16} /> Coba Lagi
-      </button>
-    </div>
-  </div>
-);
 
 // =======================================================================
 // --- MAIN DASHBOARD PAGE ---
 // =======================================================================
 function DashboardPage() {
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  
+  const currentYear = new Date().getFullYear();
+  const prevYear = currentYear - 1;
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const currentYear = new Date().getFullYear();
-      const prevYear = currentYear - 1;
-
-      const responseCurrent = await fetch(`${API_URL}/api/dashboard/${currentYear}?t=${new Date().getTime()}`);
-      const dataCurrent = await responseCurrent.json();
-
+  const { data, error, isLoading: loading, refetch } = useQuery({
+    queryKey: ['dashboard', currentYear],
+    queryFn: async () => {
+      let dataCurrent = await fetchDashboardData(currentYear);
       if (dataCurrent.status === "pre_season" || (dataCurrent.driver_standings && dataCurrent.driver_standings.length === 0)) {
-        const responsePrev = await fetch(`${API_URL}/api/dashboard/${prevYear}?t=${new Date().getTime()}`);
-        const dataPrev = await responsePrev.json();
-        setDashboardData({ ...dataPrev, year: prevYear, next_race_event: dataCurrent.next_race_event });
-      } else {
-        setDashboardData(dataCurrent);
+        let dataPrev = await fetchDashboardData(prevYear);
+        return { ...dataPrev, year: prevYear, next_race_event: dataCurrent.next_race_event };
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      return dataCurrent;
     }
-  };
+  });
+  
+  const dashboardData = data;
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
   if (loading) {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
-        <Navbar />
+        
         <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
           <div className="animate-pulse space-y-6">
             <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
@@ -329,7 +63,7 @@ function DashboardPage() {
     );
   }
 
-  if (error) return <ErrorState message={error} onRetry={fetchDashboardData} />;
+  if (error) return <ErrorState message={error} onRetry={refetch} />;
 
   // Derived Values
   const upcomingRace = dashboardData?.race_analytics?.find(r => r.status === 'Upcoming') || dashboardData?.race_analytics?.[dashboardData.race_analytics.length - 1];
@@ -344,7 +78,7 @@ function DashboardPage() {
   const trackMapImg = getTrackMap(upcomingRace || { name: dashboardData?.next_race_event?.name });
 
   const maxTeamPoints = dashboardData?.team_standings?.length > 0 ? Math.max(...dashboardData.team_standings.map(t => t.points)) : 1;
-  const maxDriverPoints = dashboardData?.driver_standings?.length > 0 ? Math.max(...dashboardData.driver_standings.map(d => d.points)) : 1;
+  
 
   // Title Fight gap calculation
   const titleGap = (p1Driver && p2Driver) ? Math.round(p1Driver.points - p2Driver.points) : 0;
@@ -353,7 +87,7 @@ function DashboardPage() {
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans selection:bg-red-600">
-      <Navbar />
+      
       <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
 
         {/* 1. SEASON PULSE BAR */}

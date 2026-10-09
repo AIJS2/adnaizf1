@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import CountdownTimer from './CountdownTimer';
-import { API_URL } from './config';
+import CountdownTimer from '../components/ui/CountdownTimer';
+import { API_URL } from '../config';
 import { 
   ArrowRight, Activity, Users, Calculator, Layers, 
   ChevronRight, Gauge, Trophy, Flag, Share2, Sparkles, BookOpen 

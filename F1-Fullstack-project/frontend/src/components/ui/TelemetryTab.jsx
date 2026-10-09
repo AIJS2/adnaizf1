@@ -1,6 +1,6 @@
 // src/TelemetryTab.jsx
 import React, { useState, useEffect } from 'react';
-import { API_URL } from './config';
+import { API_URL } from '../../config';
 import { 
   Activity, RefreshCw, AlertTriangle, Zap, GitCommitVertical, 
   Gauge, TrendingUp, Radio, Compass, Flag, Award, ChevronLeft, ChevronRight, Crosshair
@@ -10,7 +10,21 @@ import {
   Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
 } from 'recharts';
 import html2canvas from 'html2canvas';
-import { teamColors, teamLogos } from './data/teamData';
+import { teamColors, teamLogos } from '../../data/teamData';
+
+const adjustColor = (col, amt) => {
+  if (!col) return '#ffffff';
+  let color = col.replace(/^#/, '');
+  if (color.length === 3) color = color[0]+color[0]+color[1]+color[1]+color[2]+color[2];
+  let num = parseInt(color, 16);
+  let r = (num >> 16) + amt;
+  let b = ((num >> 8) & 0x00FF) + amt;
+  let g = (num & 0x0000FF) + amt;
+  r = Math.max(Math.min(255, r), 0);
+  b = Math.max(Math.min(255, b), 0);
+  g = Math.max(Math.min(255, g), 0);
+  return '#' + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
+};
 
 const TrackDominationMap = ({ telemetry, drivers, driver_info, activeDistance }) => {
   if (!telemetry || !telemetry[0] || telemetry[0].x === undefined) return null;
@@ -33,6 +47,55 @@ const TrackDominationMap = ({ telemetry, drivers, driver_info, activeDistance })
     activePoint = telemetry.find(d => d.distance === activeDistance) || telemetry.find(d => d.distance >= activeDistance);
   }
 
+  // Pre-calculate driver styles (for teammates)
+  const driverStyles = {};
+  const teamCounts = {};
+  drivers.forEach(drv => {
+    const team = driver_info[drv]?.team;
+    if (!teamCounts[team]) teamCounts[team] = 0;
+    
+    const index = teamCounts[team];
+    teamCounts[team]++;
+    
+    let color = teamColors[team] || '#ffffff';
+    if (index === 1) color = adjustColor(color, -60);
+    else if (index === 2) color = adjustColor(color, 60);
+    
+    driverStyles[drv] = {
+      color,
+      strokeDasharray: undefined // No dashes on track map
+    };
+  });
+
+  // Group points into continuous polylines based on dominant driver
+  const polylines = [];
+  let currentLine = null;
+  
+  telemetry.forEach((d) => {
+    if (d.x === undefined || d.y === undefined || isNaN(d.x) || isNaN(d.y)) return;
+    const dominant = d.dominant_driver;
+    
+    if (!currentLine || currentLine.driver !== dominant) {
+      if (currentLine) {
+        // To prevent gaps between segments, add this point to the previous line as well
+        currentLine.points.push(`${d.x},${d.y}`);
+        polylines.push(currentLine);
+      }
+      currentLine = {
+        driver: dominant,
+        points: [`${d.x},${d.y}`]
+      };
+    } else {
+      currentLine.points.push(`${d.x},${d.y}`);
+    }
+  });
+  if (currentLine) polylines.push(currentLine);
+
+  const allPoints = telemetry
+    .filter(d => d.x !== undefined && d.y !== undefined && !isNaN(d.x) && !isNaN(d.y))
+    .map(d => `${d.x},${d.y}`)
+    .join(' ');
+
   return (
     <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl mb-8">
       <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
@@ -40,20 +103,27 @@ const TrackDominationMap = ({ telemetry, drivers, driver_info, activeDistance })
       </h3>
       <div className="w-full h-[400px] bg-neutral-950 rounded-2xl p-4 flex items-center justify-center overflow-hidden">
         <svg viewBox={viewBox} className="w-full h-full" style={{ transform: 'scale(1, -1)' }}>
-          {telemetry.map((d, i) => {
-            if (i === 0) return null;
-            const prev = telemetry[i - 1];
-            const dominant = d.dominant_driver;
-            const team = dominant ? driver_info[dominant]?.team : '';
-            const color = teamColors[team] || '#ffffff';
+          {/* Background Track Line */}
+          <polyline 
+            points={allPoints}
+            stroke="#2a2a2a"
+            strokeWidth={500}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+          {polylines.map((line, i) => {
+            const style = driverStyles[line.driver] || { color: '#ffffff' };
             return (
-              <line 
+              <polyline 
                 key={i}
-                x1={prev.x} y1={prev.y}
-                x2={d.x} y2={d.y}
-                stroke={color}
+                points={line.points.join(' ')}
+                stroke={style.color}
                 strokeWidth={500}
+                strokeDasharray={style.strokeDasharray}
                 strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
               />
             );
           })}
@@ -71,11 +141,13 @@ const TrackDominationMap = ({ telemetry, drivers, driver_info, activeDistance })
       </div>
       <div className="flex flex-wrap justify-center gap-4 mt-4 text-sm font-bold">
         {drivers.map(drv => {
-          const team = driver_info[drv]?.team;
-          const color = teamColors[team] || '#ffffff';
+          const style = driverStyles[drv] || { color: '#ffffff' };
           return (
             <div key={drv} className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full" style={{backgroundColor: color}}></span> {drv}
+              <svg width="24" height="12" viewBox="0 0 24 12">
+                <line x1="0" y1="6" x2="24" y2="6" stroke={style.color} strokeWidth="4" />
+              </svg>
+              {drv}
             </div>
           );
         })}
@@ -174,13 +246,14 @@ const LapRuler = ({ lap, setLap }) => {
 
 
 const TelemetryTab = ({ year, round }) => {
-  const [selectedDrivers, setSelectedDrivers] = useState(['VER', 'NOR']);
+  const [selectedDrivers, setSelectedDrivers] = useState([]);
   const [availableDrivers, setAvailableDrivers] = useState([]);
   const [lap, setLap] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [telemetryData, setTelemetryData] = useState(null);
   const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
 
   const defaultDrivers = [
     'VER', 'NOR', 'LEC', 'HAM', 'RUS', 'PIA', 'SAI', 'PER', 'ALO', 'STR',
@@ -194,14 +267,7 @@ const TelemetryTab = ({ year, round }) => {
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setAvailableDrivers(data);
-          const abbrs = data.map(d => d.abbreviation);
-          
-          let init = [];
-          if (abbrs.includes('VER')) init.push('VER');
-          if (abbrs.includes('NOR')) init.push('NOR');
-          if (init.length === 0) init = abbrs.slice(0, 2);
-          
-          setSelectedDrivers(init);
+          setSelectedDrivers([]); // No drivers selected initially
         } else {
           setAvailableDrivers(defaultDrivers.map(d => ({ abbreviation: d, full_name: d, team_name: '' })));
         }
@@ -213,9 +279,7 @@ const TelemetryTab = ({ year, round }) => {
 
   const toggleDriver = (drv) => {
     if (selectedDrivers.includes(drv)) {
-      if (selectedDrivers.length > 1) {
-        setSelectedDrivers(selectedDrivers.filter(d => d !== drv));
-      }
+      setSelectedDrivers(selectedDrivers.filter(d => d !== drv));
     } else {
       if (selectedDrivers.length >= 10) {
         alert("Maximum 10 drivers can be compared at once.");
@@ -225,33 +289,59 @@ const TelemetryTab = ({ year, round }) => {
     }
   };
 
+  const fetchIdRef = React.useRef(0);
+
   const fetchTelemetry = async () => {
     if (!round || !year || selectedDrivers.length === 0) return;
+    const fetchId = ++fetchIdRef.current;
+    
     setLoading(true);
     setError(null);
+    setWarning(null);
     try {
       const lapQuery = lap ? `&lap=${lap}` : '';
-      const res = await fetch(`${API_URL}/api/telemetry/${year}/${round}?drivers=${selectedDrivers.join(',')}${lapQuery}`);
-      if (!res.ok) throw new Error("Failed to fetch telemetry data.");
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const url = `${API_URL}/api/telemetry/${year}/${round}?drivers=${selectedDrivers.join(',')}${lapQuery}`;
+      const res = await fetch(url);
+      
+      let data;
+      let rawText = '';
+      try {
+        rawText = await res.text();
+        data = JSON.parse(rawText);
+      } catch {
+        // Fallback handled below
+      }
+
+      if (fetchId !== fetchIdRef.current) return;
+
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.error || rawText || "Failed to fetch telemetry data.");
+      }
+      if (data?.error) throw new Error(data.error);
       
       setTelemetryData(data);
+      if (data.unavailable_drivers?.length) {
+        const warningParts = data.unavailable_drivers.map((drv) => {
+          const reason = data.unavailable_reasons?.[drv] || 'No data available';
+          return `${drv}: ${reason}`;
+        });
+        setWarning(warningParts.join(' | '));
+      }
     } catch (err) {
-      setError(err.message);
+      if (fetchId !== fetchIdRef.current) return;
+      console.error("API Error:", err);
+      setTelemetryData(null);
+      setError(err.message === "Failed to fetch" ? "Network Error: Failed to connect to backend (check CORS or if backend is running)." : err.message);
     } finally {
-      setLoading(false);
+      if (fetchId === fetchIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   const [activeDistance, setActiveDistance] = useState(null);
 
-  useEffect(() => {
-    if (round && year && selectedDrivers.length > 0) {
-      fetchTelemetry();
-    }
-    // eslint-disable-next-line
-  }, [year, round]);
+  // Removed auto-fetch useEffect to prevent heavy requests on every click
 
   const handleExportPNG = async () => {
     const el = document.getElementById('telemetry-card');
@@ -343,7 +433,14 @@ const TelemetryTab = ({ year, round }) => {
         </div>
       )}
 
-      {loading && (
+      {warning && !error && (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-2xl p-4 mb-6 flex items-center gap-3">
+          <AlertTriangle size={20} className="flex-shrink-0" />
+          <span className="font-semibold text-sm">{warning}</span>
+        </div>
+      )}
+
+      {loading && !telemetryData && (
         <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-16 flex flex-col items-center justify-center min-h-[40vh] mb-8">
           <RefreshCw className="animate-spin text-red-500 mb-4" size={44} />
           <h3 className="text-xl font-bold animate-pulse text-white">Extracting Multi-Driver Telemetry...</h3>
@@ -351,15 +448,22 @@ const TelemetryTab = ({ year, round }) => {
         </div>
       )}
 
-      {telemetryData && !loading && (
-        <div className="space-y-8">
-          <div className="flex justify-end">
-            <button 
-              onClick={handleExportPNG}
-              className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold py-2 px-4 rounded-xl transition-all shadow-md hover:shadow-lg border border-neutral-700 flex items-center gap-2"
-            >
-              Export Social Card (PNG)
-            </button>
+      {telemetryData && (
+        <div className={`space-y-8 transition-opacity duration-300 ${loading ? 'opacity-40 pointer-events-none blur-[2px]' : 'opacity-100'}`}>
+          <div className="flex justify-between items-center">
+            {loading && (
+              <div className="flex items-center gap-2 text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-full animate-pulse">
+                <RefreshCw className="animate-spin" size={16} /> Fetching {selectedDrivers.length} Drivers Telemetry...
+              </div>
+            )}
+            <div className="flex-1 flex justify-end">
+              <button 
+                onClick={handleExportPNG}
+                className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold py-2 px-4 rounded-xl transition-all shadow-md hover:shadow-lg border border-neutral-700 flex items-center gap-2"
+              >
+                Export Social Card (PNG)
+              </button>
+            </div>
           </div>
 
           <div id="telemetry-card" className="space-y-8 p-6 bg-neutral-950/90 rounded-3xl">
@@ -419,19 +523,43 @@ const TelemetryTab = ({ year, round }) => {
 
             {/* Custom Tooltip */}
             {(() => {
+              const driverStyles = {};
+              const teamCounts = {};
+              telemetryData.drivers.forEach(drv => {
+                const team = telemetryData.driver_info[drv]?.team;
+                if (!teamCounts[team]) teamCounts[team] = 0;
+                
+                const index = teamCounts[team];
+                teamCounts[team]++;
+                
+                let strokeDasharray = undefined;
+                if (index === 1) strokeDasharray = "5 5";
+                else if (index === 2) strokeDasharray = "3 3";
+                
+                let color = teamColors[team] || '#fff';
+                if (index === 1) color = adjustColor(color, -60);
+                else if (index === 2) color = adjustColor(color, 60);
+                
+                driverStyles[drv] = {
+                  color,
+                  strokeDasharray
+                };
+              });
+
               const CustomTooltip = ({ active, payload, label }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-neutral-950/95 backdrop-blur-md border border-neutral-700 p-4 rounded-xl shadow-2xl min-w-[200px]">
+                    <div className="bg-neutral-955/95 backdrop-blur-md border border-neutral-700 p-4 rounded-xl shadow-2xl min-w-[200px]">
                       <p className="text-neutral-400 text-xs font-bold mb-3 border-b border-neutral-800 pb-2">Distance: {label}m</p>
                       {payload.map((entry, index) => {
                         const drv = entry.name;
-                        const info = telemetryData.driver_info[drv];
-                        const color = teamColors[info?.team] || '#fff';
+                        const style = driverStyles[drv] || { color: '#fff' };
                         return (
                           <div key={index} className="flex justify-between items-center mb-1 text-sm font-mono">
                             <span className="font-bold flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></span>
+                              <svg width="16" height="8" viewBox="0 0 16 8">
+                                <line x1="0" y1="4" x2="16" y2="4" stroke={style.color} strokeWidth="3" strokeDasharray={style.strokeDasharray} />
+                              </svg>
                               <span className="text-white">{drv}</span>
                             </span>
                             <span className="text-neutral-300 font-bold ml-4">
@@ -467,23 +595,22 @@ const TelemetryTab = ({ year, round }) => {
                         <XAxis dataKey="distance" stroke="#666" tick={{fill: '#888', fontSize: 11}} tickLine={false} axisLine={false} minTickGap={50} />
                         <YAxis domain={domain} stroke="#666" tick={{fill: '#888', fontSize: 11}} tickLine={false} axisLine={false} width={40} />
                         <RechartsTooltip content={<CustomTooltip />} />
-                        <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                        <Legend verticalAlign="top" height={36} iconType="plainline" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
                         
                         {telemetryData.drivers.map(drv => {
                           const dataKey = dataKeys.replace('{drv}', drv);
-                          // Don't render delta line for the reference driver if it's delta chart (it's always 0 anyway, but we don't return it)
                           if (dataKeys.startsWith('delta') && drv === telemetryData.drivers[0]) return null;
                           
-                          const info = telemetryData.driver_info[drv];
-                          const color = teamColors[info?.team] || '#fff';
+                          const style = driverStyles[drv] || { color: '#fff' };
                           return (
                             <Line 
                               key={drv}
                               type="monotone" 
                               dataKey={dataKey} 
                               name={drv}
-                              stroke={color} 
-                              strokeWidth={2} 
+                              stroke={style.color}
+                              strokeWidth={2}
+                              strokeDasharray={style.strokeDasharray}
                               dot={false}
                               activeDot={{ r: 4, strokeWidth: 0 }}
                               isAnimationActive={false}

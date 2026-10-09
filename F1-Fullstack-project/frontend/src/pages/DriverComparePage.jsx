@@ -2,10 +2,11 @@
 // Major UI/UX overhaul with contextual icons & polished design
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchDriverProfile } from '../services/api';
 import { Link, useSearchParams } from 'react-router-dom';
-import Navbar from './Navbar';
-import { API_URL } from './config';
-import { teamColors, teamLogos } from './data/teamData';
+import { API_URL } from '../config';
+import { teamColors, teamLogos } from '../data/teamData';
 import {
   Swords, Trophy, Medal, Target, ArrowLeftRight, TrendingUp,
   Flag, AlertTriangle, Loader2, ChevronRight, CheckCircle2,
@@ -18,69 +19,52 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
 import html2canvas from 'html2canvas';
+import DriverRadarChart from '../components/DriverRadarChart';
 
 const DriverComparePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
 
-  const [driversList, setDriversList] = useState([]);
-  const [driver1Id, setDriver1Id] = useState(searchParams.get('d1') || 'charles_leclerc');
+    const [driver1Id, setDriver1Id] = useState(searchParams.get('d1') || 'charles_leclerc');
   const [driver2Id, setDriver2Id] = useState(searchParams.get('d2') || 'max_verstappen');
 
-  const [profile1, setProfile1] = useState(null);
-  const [profile2, setProfile2] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+    
+      const [activeTab, setActiveTab] = useState('overview');
 
+  
   // 1. Fetch available drivers list
+  const { data: championshipData } = useQuery({
+    queryKey: ['championship', currentYear],
+    queryFn: () => fetch(`${API_URL}/api/championship/${currentYear}`).then(r => r.json()),
+  });
+
+  const driversList = championshipData?.drivers || [];
+
   useEffect(() => {
-    fetch(`${API_URL}/api/championship/${currentYear}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.drivers && Array.isArray(data.drivers)) {
-          setDriversList(data.drivers);
-          if (!searchParams.get('d1') && data.drivers[0]) {
-            setDriver1Id(data.drivers[0].id);
-          }
-          if (!searchParams.get('d2') && data.drivers[1]) {
-            setDriver2Id(data.drivers[1].id);
-          }
-        }
-      })
-      .catch(err => console.error(err));
-  }, [currentYear]);
-
-  // 2. Fetch both driver profiles
-  const fetchBothProfiles = async (d1, d2) => {
-    if (!d1 || !d2) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [res1, res2] = await Promise.all([
-        fetch(`${API_URL}/api/driver/${currentYear}/${d1}`),
-        fetch(`${API_URL}/api/driver/${currentYear}/${d2}`)
-      ]);
-
-      if (!res1.ok || !res2.ok) throw new Error("Gagal mengambil data profil pembalap.");
-      const data1 = await res1.json();
-      const data2 = await res2.json();
-
-      if (data1.error) throw new Error(data1.error);
-      if (data2.error) throw new Error(data2.error);
-
-      setProfile1(data1);
-      setProfile2(data2);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (driversList.length > 0) {
+      if (!searchParams.get('d1') && driversList[0]) setDriver1Id(driversList[0].id);
+      if (!searchParams.get('d2') && driversList[1]) setDriver2Id(driversList[1].id);
     }
-  };
+  }, [driversList, searchParams]);
+
+  // 2. Fetch both driver profiles using useQuery
+  const { data: profile1, isLoading: loading1, error: error1 } = useQuery({
+    queryKey: ['driverProfile', currentYear, driver1Id],
+    queryFn: () => fetchDriverProfile(currentYear, driver1Id),
+    enabled: !!driver1Id,
+  });
+
+  const { data: profile2, isLoading: loading2, error: error2 } = useQuery({
+    queryKey: ['driverProfile', currentYear, driver2Id],
+    queryFn: () => fetchDriverProfile(currentYear, driver2Id),
+    enabled: !!driver2Id,
+  });
+
+  const loading = loading1 || loading2;
+  const error = error1 ? error1.message : error2 ? error2.message : null;
 
   useEffect(() => {
     if (driver1Id && driver2Id) {
-      fetchBothProfiles(driver1Id, driver2Id);
       setSearchParams({ d1: driver1Id, d2: driver2Id });
     }
   }, [driver1Id, driver2Id]);
@@ -209,7 +193,7 @@ const DriverComparePage = () => {
       <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
       <div className="fixed inset-0 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-950 pointer-events-none" />
 
-      <Navbar />
+      
       <main className="container mx-auto px-4 md:px-6 pt-28 pb-16 relative z-10">
 
         {/* Page Header */}
@@ -441,10 +425,18 @@ const DriverComparePage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {metricConfigs.map(m => (
-                      <div key={m.key}>{renderComparisonBar(m)}</div>
-                    ))}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    {/* Radar Chart */}
+                    <div className="w-full">
+                      <DriverRadarChart profile1={profile1} profile2={profile2} />
+                    </div>
+
+                    {/* Comparison Bars */}
+                    <div className="space-y-4">
+                      {metricConfigs.map(m => (
+                        <div key={m.key}>{renderComparisonBar(m)}</div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* H2H Summary Scoreboard */}

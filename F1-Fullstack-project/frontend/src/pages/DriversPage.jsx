@@ -1,28 +1,14 @@
+// Note: This is dead code, not routed. StatsPage is used instead.
 // src/DriversPage.jsx - FIXED: shared teamData, config, dynamic year, improved error
 
 import React, { useState, useEffect } from 'react';
-import Navbar from './Navbar';
+import ErrorState from '../components/layout/ErrorState';
 import { Search, ArrowUp, Trophy, AlertTriangle, RefreshCw } from 'lucide-react';
-import { API_URL } from './config';
-import { teamLogos, teamColors } from './data/teamData';
+import { API_URL } from '../config';
+import { teamLogos, teamColors } from '../data/teamData';
 
 // --- ERROR STATE ---
-const ErrorState = ({ message, onRetry }) => (
-  <div className="bg-neutral-950 min-h-screen text-white flex items-center justify-center text-center px-4">
-    <div className="max-w-md">
-      <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
-      <h2 className="text-3xl font-black italic text-red-500 uppercase mb-2">Data Unavailable</h2>
-      <p className="text-neutral-400 mb-6">Backend mungkin sedang offline. Pastikan server Python sudah berjalan.</p>
-      <p className="text-neutral-600 text-xs font-mono mb-6 bg-neutral-900 px-3 py-2 rounded">{message}</p>
-      <button
-        onClick={onRetry}
-        className="flex items-center gap-2 mx-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors"
-      >
-        <RefreshCw size={16} /> Coba Lagi
-      </button>
-    </div>
-  </div>
-);
+
 
 function DriversPage() {
   const [drivers, setDrivers] = useState([]);
@@ -65,7 +51,7 @@ function DriversPage() {
   if (loading) {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
-        <Navbar />
+        
         <main className="container mx-auto px-4 md:px-6 pt-28 pb-12">
           <div className="animate-pulse space-y-8 w-full">
             <div className="h-16 w-64 bg-neutral-900/60 border border-neutral-800 rounded-xl"></div>
@@ -84,7 +70,7 @@ function DriversPage() {
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
-      <Navbar />
+      
       <main className="container mx-auto px-4 md:px-6 pt-28 pb-12">
         <header className="mb-10">
           <h1 className="text-5xl md:text-6xl font-black tracking-tighter italic uppercase">

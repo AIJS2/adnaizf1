@@ -14,6 +14,20 @@ import ThrottleChart from '../dashboard/ThrottleChart';
 import TimeDeltaChart from '../dashboard/TimeDeltaChart';
 import { TelemetryResponse } from '../../types/f1';
 
+const adjustColor = (col: string, amt: number): string => {
+  if (!col) return '#ffffff';
+  let color = col.replace(/^#/, '');
+  if (color.length === 3) color = color[0]+color[0]+color[1]+color[1]+color[2]+color[2];
+  const num = parseInt(color, 16);
+  let r = (num >> 16) + amt;
+  let b = ((num >> 8) & 0x00FF) + amt;
+  let g = (num & 0x0000FF) + amt;
+  r = Math.max(Math.min(255, r), 0);
+  b = Math.max(Math.min(255, b), 0);
+  g = Math.max(Math.min(255, g), 0);
+  return '#' + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
+};
+
 const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void }) => {
   const currentLap = lap ? parseInt(lap, 10) : null;
 

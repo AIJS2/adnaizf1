@@ -14,7 +14,7 @@ def get_dashboard_cache_filename(year: int):
 # --- ENDPOINT DETAIL BALAPAN (DENGAN PERBAIKAN LOGO) ---
 # =======================================================================
 @router.get("/api/race/{year}/{round_number}")
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def get_race_details(request: Request, year: int, round_number: int):
     CACHE_FILE = f"race_detail_cache_{year}_{round_number}.json"
     

@@ -16,7 +16,7 @@ def get_dashboard_cache_filename(year: int):
 # --- Endpoint /api/telemetry/{year}/{round_number} (Head-to-Head) ---
 # =======================================================================
 @router.get("/api/telemetry/{year}/{round_number}")
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def get_telemetry_compare(request: Request, year: int, round_number: int, drivers: str = "VER,NOR", lap: int = None):
     driver_list = [d.strip().upper() for d in drivers.split(',')]
     driver_list = driver_list[:10] # Max 10 drivers
@@ -47,7 +47,7 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
         return {"error": "Terjadi kesalahan internal saat memproses data."}
 
 @router.get("/api/telemetry-drivers/{year}/{round_number}")
-@limiter.limit("20/minute")
+@limiter.limit("200/minute")
 async def get_telemetry_drivers(request: Request, year: int, round_number: int):
     try:
         return await asyncio.to_thread(

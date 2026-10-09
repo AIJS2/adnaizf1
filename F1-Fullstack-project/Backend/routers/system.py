@@ -21,7 +21,7 @@ def get_championship_cache_filename(year: int):
     return f"championship_cache_{year}.json"
 
 @router.get("/api/clear_cache/{year}")
-@limiter.limit("5/minute")
+@limiter.limit("50/minute")
 async def clear_cache(request: Request, year: int):
     championship_cache = get_championship_cache_filename(year)
     dashboard_cache = get_dashboard_cache_filename(year)

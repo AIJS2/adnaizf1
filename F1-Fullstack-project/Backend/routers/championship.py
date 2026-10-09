@@ -23,7 +23,7 @@ def get_championship_cache_filename(year: int):
 # --- Endpoint /api/championship/{year} (DENGAN PERBAIKAN PRA-MUSIM) ---
 # =======================================================================
 @router.get("/api/championship/{year}")
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def get_championship_standings(request: Request, year: int):
     CACHE_FILE = get_championship_cache_filename(year)
     import asyncio

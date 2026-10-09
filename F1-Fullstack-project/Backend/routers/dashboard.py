@@ -16,7 +16,7 @@ def get_dashboard_cache_filename(year: int):
 # --- Endpoint Dashboard (DENGAN PENAMBAHAN LOGIKA COUNTDOWN) ---
 # =======================================================================
 @router.get("/api/dashboard/{year}")
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def get_dashboard_data(request: Request, year: int):
     CACHE_FILE = get_dashboard_cache_filename(year)
     cached_data = get_advanced_cache(CACHE_FILE)

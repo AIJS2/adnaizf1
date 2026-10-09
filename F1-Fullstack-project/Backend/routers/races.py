@@ -14,7 +14,7 @@ def get_dashboard_cache_filename(year: int):
 # --- Endpoint All Races (DENGAN PERBAIKAN JADWAL KOSONG) ---
 # =======================================================================
 @router.get("/api/races/{year}")
-@limiter.limit("20/minute")
+@limiter.limit("200/minute")
 async def get_all_races_for_year(request: Request, year: int):
     CACHE_FILE = f"all_races_cache_{year}.json"
     cached_data = await asyncio.to_thread(get_advanced_cache, CACHE_FILE)

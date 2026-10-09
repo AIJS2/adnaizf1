@@ -14,6 +14,93 @@ import ThrottleChart from '../dashboard/ThrottleChart';
 import TimeDeltaChart from '../dashboard/TimeDeltaChart';
 import { TelemetryResponse } from '../../types/f1';
 
+const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void }) => {
+  const currentLap = lap ? parseInt(lap, 10) : null;
+
+  const handleLapClick = (l: number) => setLap(l.toString());
+  const setFastest = () => setLap('');
+
+  const getVisibleLaps = () => {
+    if (!currentLap) return [1, 2, 3, 4, 5];
+    let start = Math.max(1, currentLap - 2);
+    return Array.from({ length: 5 }, (_, i) => start + i);
+  };
+
+  const visibleLaps = getVisibleLaps();
+
+  return (
+    <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72">
+      <div className="absolute top-0 w-3/4 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent"></div>
+      
+      <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+        <Crosshair size={12} className="text-red-500" /> Lap Selector
+      </div>
+      
+      <div className="flex items-center justify-between w-full mb-5 px-2 h-16">
+        <button 
+          onClick={() => { if(currentLap && currentLap > 1) setLap((currentLap - 1).toString()) }}
+          className="text-neutral-600 hover:text-white transition-colors p-1"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        
+        <div className="flex-1 flex justify-center items-center gap-3">
+          {!currentLap ? (
+            <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 tracking-widest animate-pulse">
+              FASTEST
+            </div>
+          ) : (
+            <div className="flex items-end gap-3">
+              {visibleLaps.map(l => {
+                const isActive = l === currentLap;
+                return (
+                  <div 
+                    key={l}
+                    onClick={() => handleLapClick(l)}
+                    className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+                      isActive ? 'scale-125 mx-2' : 'opacity-40 hover:opacity-100 hover:scale-110'
+                    }`}
+                  >
+                    <div className={`text-[10px] mb-1.5 font-mono ${isActive ? 'text-red-400 font-black' : 'text-neutral-400 font-bold'}`}>
+                      {l}
+                    </div>
+                    <div className={`w-1 rounded-full transition-all ${isActive ? 'h-8 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'h-3 bg-neutral-600'}`}></div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <button 
+          onClick={() => {
+             const next = currentLap ? currentLap + 1 : 1;
+             setLap(next.toString());
+          }}
+          className="text-neutral-600 hover:text-white transition-colors p-1"
+        >
+          <ChevronRight size={24} />
+        </button>
+      </div>
+
+      <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg overflow-hidden p-1 w-full max-w-[200px]">
+        <button 
+          onClick={setFastest}
+          className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${!currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
+        >
+          FASTEST
+        </button>
+        <button 
+          onClick={() => { if(!currentLap) setLap('1') }}
+          className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
+        >
+          MANUAL
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const TelemetryTab = ({ year, round }: { year: string | number; round: string | number }) => {
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
   const [availableDrivers, setAvailableDrivers] = useState<Record<string, unknown>[]>([]);
@@ -179,16 +266,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-1.5"><Flag size={12}/> Lap Number</label>
-          <input
-            type="number"
-            value={lap}
-            onChange={(e) => setLap(e.target.value)}
-            placeholder="e.g. 15"
-            className="bg-neutral-900 border border-neutral-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500 font-mono text-lg transition-colors w-full h-[48px]"
-          />
-        </div>
+        <LapRuler lap={lap} setLap={setLap} />
 
         <div className="flex flex-col justify-end">
           <button 

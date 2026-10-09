@@ -1,5 +1,0 @@
-test: add vitest suites for timer and track maps
-
-- Fix `NaN` render bug in `CountdownTimer` when given an invalid date.
-- Use factory patterns (`getMockRaceInfo`) to generate test payloads.
-- Cover boundary logic for fuzzy matching and empty data in `getTrackMap`.

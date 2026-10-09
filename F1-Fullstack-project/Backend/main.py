@@ -62,8 +62,3 @@ app.include_router(championship_router)
 app.include_router(profiles_router)
 app.include_router(system_router)
 app.include_router(livetiming_router)
-
-@app.get("/api/sentry-debug")
-async def trigger_error():
-    division_by_zero = 1 / 0
-    return {"message": "You shouldn't see this"}

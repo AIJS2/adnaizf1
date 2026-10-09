@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 
+interface HeroCountdownProps {
+  targetDate: string | Date;
+}
+
+interface TimeLeft {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  isLive: boolean;
+}
+
 // --- DIGITAL HERO COUNTDOWN COMPONENT ---
-const HeroCountdown = ({ targetDate }) => {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: false });
+const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate }) => {
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: false });
 
   useEffect(() => {
     const calc = () => {

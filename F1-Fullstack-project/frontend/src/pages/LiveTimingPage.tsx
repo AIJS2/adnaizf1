@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, CloudRain, Wind, Thermometer, Radio, AlertTriangle, Flag, Circle, Zap } from 'lucide-react';
+import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Zap } from 'lucide-react';
 import { API_URL } from '../config';
 import TyreStrategy from '../components/ui/TyreStrategy';
+import { LiveTimingData } from '../types/f1';
 
-const teamColors = {
+const teamColors: Record<string, string> = {
   "Red Bull Racing": "#3671C6",
   "McLaren": "#FF8000",
   "Ferrari": "#E8002D",
@@ -17,7 +18,12 @@ const teamColors = {
   "Cadillac": "#D4AF37"
 };
 
-const TyreIcon = ({ compound, age }) => {
+interface TyreIconProps {
+  compound: 'S' | 'M' | 'H' | 'I' | 'W' | '' | string;
+  age: number | string;
+}
+
+const TyreIcon: React.FC<TyreIconProps> = ({ compound, age }) => {
   let bg = 'bg-gray-500';
   let text = 'text-white';
   if (compound === 'S') { bg = 'bg-red-500'; }
@@ -36,7 +42,7 @@ const TyreIcon = ({ compound, age }) => {
   );
 };
 
-const SectorTime = ({ time, color }) => {
+const SectorTime: React.FC<{ time: string, color: string }> = ({ time, color }) => {
   let colorClass = 'text-neutral-500'; // default yellow-ish text for no improvement in some screens, but standard is neutral
   let glowClass = '';
   
@@ -53,14 +59,15 @@ const SectorTime = ({ time, color }) => {
   return <span className={`font-mono font-bold ${colorClass} ${glowClass}`}>{time}</span>;
 };
 
-const LiveTimingPage = () => {
-  const [data, setData] = useState({
+const LiveTimingPage: React.FC = () => {
+  const [data, setData] = useState<LiveTimingData>({
     lines: [],
     trackStatus: 'GREEN',
     weather: { air: '--', track: '--', humidity: '--', rain: '--' },
-    messages: []
+    messages: [],
+    isLiveSession: false
   });
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
 
   useEffect(() => {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -70,7 +77,7 @@ const LiveTimingPage = () => {
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => setIsConnected(true);
-    socket.onmessage = (event) => {
+    socket.onmessage = (event: MessageEvent) => {
       const msg = JSON.parse(event.data);
       if (msg.type === 'TimingData') {
         setData(prev => ({
@@ -87,14 +94,14 @@ const LiveTimingPage = () => {
     return () => socket.close();
   }, []);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     if (status.includes('YELLOW')) return 'bg-yellow-500 text-black';
     if (status.includes('RED')) return 'bg-red-600 text-white animate-pulse';
     if (status.includes('SC') || status.includes('VSC')) return 'bg-orange-500 text-white';
     return 'bg-green-500 text-black';
   };
 
-  const sortedLines = [...data.lines].sort((a, b) => parseInt(a.position) - parseInt(b.position));
+  const sortedLines = [...data.lines].sort((a, b) => parseInt(String(a.position)) - parseInt(String(b.position)));
 
   return (
     <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600" style={{ overflowAnchor: 'none' }}>

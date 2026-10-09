@@ -2,7 +2,21 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ChevronRight, Clock, MapPin, Trophy } from 'lucide-react';
 
-const RaceAnalyticsCard = ({ races, year }) => (
+export interface RaceSummary {
+  round: number | string;
+  name: string;
+  status: string;
+  location: string;
+  date: string;
+  winner?: string;
+}
+
+interface RaceAnalyticsCardProps {
+  races: RaceSummary[];
+  year: number | string;
+}
+
+const RaceAnalyticsCard: React.FC<RaceAnalyticsCardProps> = ({ races, year }) => (
   <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 h-full shadow-2xl flex flex-col">
     <div className="flex justify-between items-center mb-5 border-b border-neutral-800/80 pb-4">
       <div className="flex items-center gap-2.5">

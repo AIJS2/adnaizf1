@@ -3,11 +3,25 @@ import { Link } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import { teamLogos, teamColors } from '../../data/teamData';
 
-const TeamCard = ({ team, index, maxPoints }) => {
+export interface TeamStanding {
+  id?: string;
+  name: string;
+  points: number | string;
+  points_last_race?: number | string;
+}
+
+interface TeamCardProps {
+  team: TeamStanding;
+  index: number;
+  maxPoints: number;
+}
+
+const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
   const logo = teamLogos[team.name];
   const color = teamColors[team.name] || '#EF4444';
   const teamId = team.id || team.name.toLowerCase().replace(/\s+/g, '_');
-  const pct = maxPoints > 0 ? Math.max(8, (team.points / maxPoints) * 100) : 50;
+  const pointsNum = typeof team.points === 'string' ? parseFloat(team.points) : team.points;
+  const pct = maxPoints > 0 ? Math.max(8, (pointsNum / maxPoints) * 100) : 50;
 
   return (
     <Link
@@ -31,13 +45,13 @@ const TeamCard = ({ team, index, maxPoints }) => {
 
       <div className="flex items-baseline justify-between mt-2">
         <p className="text-3xl sm:text-4xl font-black italic text-white tracking-tight font-mono">
-          {parseInt(team.points, 10)} <span className="text-xs font-bold text-neutral-500 not-italic">PTS</span>
+          {parseInt(String(team.points), 10)} <span className="text-xs font-bold text-neutral-500 not-italic">PTS</span>
         </p>
 
-        {team.points_last_race > 0 && (
+        {team.points_last_race && parseInt(String(team.points_last_race), 10) > 0 && (
           <div className="flex items-center gap-1 text-green-400 font-bold text-xs bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 font-mono">
             <ArrowUp size={12} strokeWidth={3} />
-            <span>+{parseInt(team.points_last_race, 10)}</span>
+            <span>+{parseInt(String(team.points_last_race), 10)}</span>
           </div>
         )}
       </div>

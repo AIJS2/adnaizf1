@@ -17,7 +17,7 @@ import redBullLogo     from '../assets/logos/red-bull-racing.svg';
 import sauberLogo      from '../assets/logos/sauber.svg';
 import williamsLogo    from '../assets/logos/williams.svg';
 
-export const teamLogos = {
+export const teamLogos: Record<string, string> = {
   "Alpine":             alpineLogo,
   "Aston Martin":       astonMartinLogo,
   "Audi":               audiLogo,
@@ -36,7 +36,7 @@ export const teamLogos = {
   "Williams":           williamsLogo,
 };
 
-export const teamColors = {
+export const teamColors: Record<string, string> = {
   "Red Bull Racing":  "#3671C6",
   "Mercedes":         "#27F4D2",
   "Ferrari":          "#E8002D",

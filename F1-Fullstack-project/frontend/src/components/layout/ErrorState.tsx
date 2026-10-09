@@ -1,4 +1,11 @@
-export default function ErrorState({ message, onRetry }) {
+import React from 'react';
+
+interface ErrorStateProps {
+  message?: string;
+  onRetry?: () => void;
+}
+
+const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => {
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
       <div className="text-center">
@@ -14,4 +21,6 @@ export default function ErrorState({ message, onRetry }) {
       </div>
     </div>
   );
-}
+};
+
+export default ErrorState;

@@ -3,7 +3,18 @@ import { Link } from 'react-router-dom';
 import { Trophy, ChevronRight, Crown } from 'lucide-react';
 import { teamLogos, teamColors } from '../../data/teamData';
 
-const DriverStandingsList = ({ drivers }) => (
+export interface DriverStanding {
+  id?: string;
+  name: string;
+  team: string;
+  points: string | number;
+}
+
+interface DriverStandingsListProps {
+  drivers: DriverStanding[];
+}
+
+const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) => (
   <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 h-full shadow-2xl flex flex-col relative overflow-hidden">
     <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4" />
     <div className="flex justify-between items-center mb-5 border-b border-neutral-800/80 pb-4 relative z-10">
@@ -59,7 +70,7 @@ const DriverStandingsList = ({ drivers }) => (
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0 font-mono">
-              <span className="font-extrabold text-white text-base">{parseInt(driver.points, 10)}</span>
+              <span className="font-extrabold text-white text-base">{parseInt(String(driver.points), 10)}</span>
               <span className="text-[10px] text-neutral-500 uppercase font-sans font-bold">PTS</span>
               <ChevronRight size={14} className="text-neutral-600 group-hover:text-white transition-colors ml-1" />
             </div>

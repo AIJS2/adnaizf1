@@ -1,9 +1,15 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Flag, Activity, Trophy, Menu, X, Users, Search, Calculator } from 'lucide-react';
 import CommandPalette from '../ui/CommandPalette';
 
-const navLinks = [
+interface NavLinkItem {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+const navLinks: NavLinkItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/races',     label: 'Races',     icon: Flag },
   { to: '/stats',     label: 'Stats',     icon: Trophy },
@@ -12,16 +18,16 @@ const navLinks = [
   { to: '/live',      label: 'Live Timing', icon: Activity },
 ];
 
-function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isMac, setIsMac] = useState(false);
-  const activeLinkStyle = { color: '#EF4444' };
+const Navbar: React.FC = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [isMac, setIsMac] = useState<boolean>(false);
+  const activeLinkStyle: React.CSSProperties = { color: '#EF4444' };
 
   useEffect(() => {
     setIsMac(typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform));
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchOpen(prev => !prev);
@@ -30,6 +36,7 @@ function Navbar() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
 
   const toggleMenu = () => setIsMenuOpen(prev => !prev);
   const closeMenu  = () => setIsMenuOpen(false);

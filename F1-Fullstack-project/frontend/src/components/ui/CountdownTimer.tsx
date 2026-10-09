@@ -1,14 +1,25 @@
-// src/CountdownTimer.jsx - FIXED: useEffect dengan interval yang benar
+// src/components/ui/CountdownTimer.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-const CountdownTimer = ({ targetDate }) => {
-  const calculateTimeLeft = useCallback(() => {
+interface CountdownTimerProps {
+  targetDate: string | Date;
+}
+
+interface TimeLeft {
+  HARI?: number;
+  JAM?: number;
+  MENIT?: number;
+  DETIK?: number;
+}
+
+const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
+  const calculateTimeLeft = useCallback((): TimeLeft => {
     const target = new Date(targetDate).getTime();
     const now = new Date().getTime();
     const difference = target - now;
 
-    if (difference <= 0) return {};
+    if (isNaN(difference) || difference <= 0) return {};
 
     return {
       HARI:  Math.floor(difference / (1000 * 60 * 60 * 24)),
@@ -18,28 +29,28 @@ const CountdownTimer = ({ targetDate }) => {
     };
   }, [targetDate]);
 
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
 
   useEffect(() => {
-    // Gunakan setInterval agar update tiap detik tanpa re-render chain
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
 
-    // Cleanup interval saat komponen di-unmount
     return () => clearInterval(timer);
-  }, [calculateTimeLeft]); // dependency array yang benar
+  }, [calculateTimeLeft]);
 
   if (!Object.keys(timeLeft).length) {
     return <span className="text-xl font-bold text-green-400 animate-pulse">RACE IS LIVE!</span>;
   }
 
-  const countdownComponents = Object.keys(timeLeft).map((interval, index) => (
+  const timeKeys = Object.keys(timeLeft) as Array<keyof TimeLeft>;
+
+  const countdownComponents = timeKeys.map((interval, index) => (
     <React.Fragment key={interval}>
       <span className="text-2xl font-bold text-white tracking-wider font-mono">
-        {String(timeLeft[interval]).padStart(2, '0')}
+        {String(timeLeft[interval] ?? 0).padStart(2, '0')}
       </span>
-      {index < Object.keys(timeLeft).length - 1 && (
+      {index < timeKeys.length - 1 && (
         <span className="text-xl font-bold text-neutral-600 mx-4">:</span>
       )}
     </React.Fragment>

@@ -1,8 +1,13 @@
 import React from 'react';
 import { Disc } from 'lucide-react';
+import { LiveTimingLine } from '../../types/f1';
 
-export default function TyreStrategy({ timingData }) {
-  const getTyreColor = (compound) => {
+interface TyreStrategyProps {
+  timingData: LiveTimingLine[];
+}
+
+export default function TyreStrategy({ timingData }: TyreStrategyProps) {
+  const getTyreColor = (compound: string) => {
     if (compound === 'S') return 'bg-red-500';
     if (compound === 'M') return 'bg-yellow-400';
     if (compound === 'H') return 'bg-white';
@@ -11,7 +16,7 @@ export default function TyreStrategy({ timingData }) {
     return 'bg-gray-500';
   };
 
-  const getTyreLife = (compound, age) => {
+  const getTyreLife = (compound: string, age: number) => {
     let maxLife = 30;
     if (compound === 'S') maxLife = 25;
     if (compound === 'M') maxLife = 40;

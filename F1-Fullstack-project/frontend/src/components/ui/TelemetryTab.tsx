@@ -5,255 +5,21 @@ import {
   Activity, RefreshCw, AlertTriangle, Zap, GitCommitVertical, 
   Gauge, TrendingUp, Radio, Compass, Flag, Award, ChevronLeft, ChevronRight, Crosshair
 } from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
-} from 'recharts';
 import html2canvas from 'html2canvas';
 import { teamColors, teamLogos } from '../../data/teamData';
 
-const adjustColor = (col, amt) => {
-  if (!col) return '#ffffff';
-  let color = col.replace(/^#/, '');
-  if (color.length === 3) color = color[0]+color[0]+color[1]+color[1]+color[2]+color[2];
-  let num = parseInt(color, 16);
-  let r = (num >> 16) + amt;
-  let b = ((num >> 8) & 0x00FF) + amt;
-  let g = (num & 0x0000FF) + amt;
-  r = Math.max(Math.min(255, r), 0);
-  b = Math.max(Math.min(255, b), 0);
-  g = Math.max(Math.min(255, g), 0);
-  return '#' + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
-};
+import TrackDominationMap from './TrackDominationMap';
+import TelemetryChart from '../dashboard/TelemetryChart';
 
-const TrackDominationMap = ({ telemetry, drivers, driver_info, activeDistance }) => {
-  if (!telemetry || !telemetry[0] || telemetry[0].x === undefined) return null;
-
-  const xs = telemetry.map(d => d.x).filter(x => x !== undefined && !isNaN(x));
-  const ys = telemetry.map(d => d.y).filter(y => y !== undefined && !isNaN(y));
-  if (xs.length === 0) return null;
-
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
+const TelemetryTab = ({ year, round }: { year: string | number; round: string | number }) => {
+  const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<Record<string, unknown>[]>([]);
+  const [lap, setLap] = useState<string>('');
   
-  const padding = 1000;
-  const viewBox = `${minX - padding} ${minY - padding} ${maxX - minX + padding*2} ${maxY - minY + padding*2}`;
-
-  let activePoint = null;
-  if (activeDistance !== null) {
-    // find nearest distance
-    activePoint = telemetry.find(d => d.distance === activeDistance) || telemetry.find(d => d.distance >= activeDistance);
-  }
-
-  // Pre-calculate driver styles (for teammates)
-  const driverStyles = {};
-  const teamCounts = {};
-  drivers.forEach(drv => {
-    const team = driver_info[drv]?.team;
-    if (!teamCounts[team]) teamCounts[team] = 0;
-    
-    const index = teamCounts[team];
-    teamCounts[team]++;
-    
-    let color = teamColors[team] || '#ffffff';
-    if (index === 1) color = adjustColor(color, -60);
-    else if (index === 2) color = adjustColor(color, 60);
-    
-    driverStyles[drv] = {
-      color,
-      strokeDasharray: undefined // No dashes on track map
-    };
-  });
-
-  // Group points into continuous polylines based on dominant driver
-  const polylines = [];
-  let currentLine = null;
-  
-  telemetry.forEach((d) => {
-    if (d.x === undefined || d.y === undefined || isNaN(d.x) || isNaN(d.y)) return;
-    const dominant = d.dominant_driver;
-    
-    if (!currentLine || currentLine.driver !== dominant) {
-      if (currentLine) {
-        // To prevent gaps between segments, add this point to the previous line as well
-        currentLine.points.push(`${d.x},${d.y}`);
-        polylines.push(currentLine);
-      }
-      currentLine = {
-        driver: dominant,
-        points: [`${d.x},${d.y}`]
-      };
-    } else {
-      currentLine.points.push(`${d.x},${d.y}`);
-    }
-  });
-  if (currentLine) polylines.push(currentLine);
-
-  const allPoints = telemetry
-    .filter(d => d.x !== undefined && d.y !== undefined && !isNaN(d.x) && !isNaN(d.y))
-    .map(d => `${d.x},${d.y}`)
-    .join(' ');
-
-  return (
-    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl mb-8">
-      <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-        <Compass size={20} className="text-red-500" /> Track Domination Map
-      </h3>
-      <div className="w-full h-[400px] bg-neutral-950 rounded-2xl p-4 flex items-center justify-center overflow-hidden">
-        <svg viewBox={viewBox} className="w-full h-full" style={{ transform: 'scale(1, -1)' }}>
-          {/* Background Track Line */}
-          <polyline 
-            points={allPoints}
-            stroke="#2a2a2a"
-            strokeWidth={500}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-          {polylines.map((line, i) => {
-            const style = driverStyles[line.driver] || { color: '#ffffff' };
-            return (
-              <polyline 
-                key={i}
-                points={line.points.join(' ')}
-                stroke={style.color}
-                strokeWidth={500}
-                strokeDasharray={style.strokeDasharray}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            );
-          })}
-          {activePoint && (
-            <circle 
-              cx={activePoint.x} 
-              cy={activePoint.y} 
-              r={300} 
-              fill="#ffffff" 
-              stroke="#000000"
-              strokeWidth={100}
-            />
-          )}
-        </svg>
-      </div>
-      <div className="flex flex-wrap justify-center gap-4 mt-4 text-sm font-bold">
-        {drivers.map(drv => {
-          const style = driverStyles[drv] || { color: '#ffffff' };
-          return (
-            <div key={drv} className="flex items-center gap-2">
-              <svg width="24" height="12" viewBox="0 0 24 12">
-                <line x1="0" y1="6" x2="24" y2="6" stroke={style.color} strokeWidth="4" />
-              </svg>
-              {drv}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-const LapRuler = ({ lap, setLap }) => {
-  const currentLap = lap ? parseInt(lap, 10) : null;
-
-  const handleLapClick = (l) => setLap(l.toString());
-  const setFastest = () => setLap('');
-
-  const getVisibleLaps = () => {
-    if (!currentLap) return [1, 2, 3, 4, 5];
-    let start = Math.max(1, currentLap - 2);
-    return Array.from({ length: 5 }, (_, i) => start + i);
-  };
-
-  const visibleLaps = getVisibleLaps();
-
-  return (
-    <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72">
-      <div className="absolute top-0 w-3/4 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent"></div>
-      
-      <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-        <Crosshair size={12} className="text-red-500" /> Lap Selector
-      </div>
-      
-      <div className="flex items-center justify-between w-full mb-5 px-2 h-16">
-        <button 
-          onClick={() => { if(currentLap > 1) setLap((currentLap - 1).toString()) }}
-          className="text-neutral-600 hover:text-white transition-colors p-1"
-        >
-          <ChevronLeft size={24} />
-        </button>
-        
-        <div className="flex-1 flex justify-center items-center gap-3">
-          {!currentLap ? (
-            <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 tracking-widest animate-pulse">
-              FASTEST
-            </div>
-          ) : (
-            <div className="flex items-end gap-3">
-              {visibleLaps.map(l => {
-                const isActive = l === currentLap;
-                return (
-                  <div 
-                    key={l}
-                    onClick={() => handleLapClick(l)}
-                    className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-                      isActive ? 'scale-125 mx-2' : 'opacity-40 hover:opacity-100 hover:scale-110'
-                    }`}
-                  >
-                    <div className={`text-[10px] mb-1.5 font-mono ${isActive ? 'text-red-400 font-black' : 'text-neutral-400 font-bold'}`}>
-                      {l}
-                    </div>
-                    <div className={`w-1 rounded-full transition-all ${isActive ? 'h-8 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'h-3 bg-neutral-600'}`}></div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <button 
-          onClick={() => {
-             const next = currentLap ? currentLap + 1 : 1;
-             setLap(next.toString());
-          }}
-          className="text-neutral-600 hover:text-white transition-colors p-1"
-        >
-          <ChevronRight size={24} />
-        </button>
-      </div>
-
-      <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg overflow-hidden p-1 w-full max-w-[200px]">
-        <button 
-          onClick={setFastest}
-          className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${!currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
-        >
-          FASTEST
-        </button>
-        <button 
-          onClick={() => { if(!currentLap) setLap('1') }}
-          className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
-        >
-          MANUAL
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
-
-const TelemetryTab = ({ year, round }) => {
-  const [selectedDrivers, setSelectedDrivers] = useState([]);
-  const [availableDrivers, setAvailableDrivers] = useState([]);
-  const [lap, setLap] = useState('');
-  
-  const [loading, setLoading] = useState(false);
-  const [telemetryData, setTelemetryData] = useState(null);
-  const [error, setError] = useState(null);
-  const [warning, setWarning] = useState(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [telemetryData, setTelemetryData] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   const defaultDrivers = [
     'VER', 'NOR', 'LEC', 'HAM', 'RUS', 'PIA', 'SAI', 'PER', 'ALO', 'STR',
@@ -410,7 +176,16 @@ const TelemetryTab = ({ year, round }) => {
           </div>
         </div>
 
-        <LapRuler lap={lap} setLap={setLap} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-1.5"><Flag size={12}/> Lap Number</label>
+          <input
+            type="number"
+            value={lap}
+            onChange={(e) => setLap(e.target.value)}
+            placeholder="e.g. 15"
+            className="bg-neutral-900 border border-neutral-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500 font-mono text-lg transition-colors w-full h-[48px]"
+          />
+        </div>
 
         <div className="flex flex-col justify-end">
           <button 
@@ -546,89 +321,40 @@ const TelemetryTab = ({ year, round }) => {
                 };
               });
 
-              const CustomTooltip = ({ active, payload, label }) => {
-                if (active && payload && payload.length) {
-                  return (
-                    <div className="bg-neutral-955/95 backdrop-blur-md border border-neutral-700 p-4 rounded-xl shadow-2xl min-w-[200px]">
-                      <p className="text-neutral-400 text-xs font-bold mb-3 border-b border-neutral-800 pb-2">Distance: {label}m</p>
-                      {payload.map((entry, index) => {
-                        const drv = entry.name;
-                        const style = driverStyles[drv] || { color: '#fff' };
-                        return (
-                          <div key={index} className="flex justify-between items-center mb-1 text-sm font-mono">
-                            <span className="font-bold flex items-center gap-2">
-                              <svg width="16" height="8" viewBox="0 0 16 8">
-                                <line x1="0" y1="4" x2="16" y2="4" stroke={style.color} strokeWidth="3" strokeDasharray={style.strokeDasharray} />
-                              </svg>
-                              <span className="text-white">{drv}</span>
-                            </span>
-                            <span className="text-neutral-300 font-bold ml-4">
-                              {Number(entry.value).toFixed(1)} {entry.dataKey.startsWith('speed') ? 'km/h' : entry.dataKey.startsWith('delta') ? 's' : '%'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                }
-                return null;
-              };
-
-              const renderLineChart = (title, icon, dataKeys, domain) => (
-                <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl">
-                  <h3 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
-                    {icon} {title}
-                  </h3>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart 
-                        data={telemetryData.telemetry} 
-                        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                        onMouseMove={(chartState) => {
-                          if (chartState && chartState.activeLabel !== undefined) {
-                            setActiveDistance(chartState.activeLabel);
-                          }
-                        }}
-                        onMouseLeave={() => setActiveDistance(null)}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                        <XAxis dataKey="distance" stroke="#666" tick={{fill: '#888', fontSize: 11}} tickLine={false} axisLine={false} minTickGap={50} />
-                        <YAxis domain={domain} stroke="#666" tick={{fill: '#888', fontSize: 11}} tickLine={false} axisLine={false} width={40} />
-                        <RechartsTooltip content={<CustomTooltip />} />
-                        <Legend verticalAlign="top" height={36} iconType="plainline" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
-                        
-                        {telemetryData.drivers.map(drv => {
-                          const dataKey = dataKeys.replace('{drv}', drv);
-                          if (dataKeys.startsWith('delta') && drv === telemetryData.drivers[0]) return null;
-                          
-                          const style = driverStyles[drv] || { color: '#fff' };
-                          return (
-                            <Line 
-                              key={drv}
-                              type="monotone" 
-                              dataKey={dataKey} 
-                              name={drv}
-                              stroke={style.color}
-                              strokeWidth={2}
-                              strokeDasharray={style.strokeDasharray}
-                              dot={false}
-                              activeDot={{ r: 4, strokeWidth: 0 }}
-                              isAnimationActive={false}
-                            />
-                          );
-                        })}
-                        {dataKeys.startsWith('delta') && <ReferenceLine y={0} stroke="#444" strokeDasharray="3 3" />}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              );
-
               return (
                 <div className="space-y-6">
-                  {renderLineChart("Speed Profile", <Gauge className="text-blue-500"/>, "speed_{drv}", ['auto', 'auto'])}
-                  {renderLineChart("Throttle Application", <Zap className="text-orange-500"/>, "throttle_{drv}", [0, 105])}
-                  {telemetryData.drivers.length > 1 && renderLineChart(`Time Delta (to ${telemetryData.drivers[0]})`, <TrendingUp className="text-green-500"/>, "delta_{drv}", ['auto', 'auto'])}
+                  <TelemetryChart 
+                    title="Speed Profile"
+                    icon={<Gauge className="text-blue-500"/>}
+                    data={telemetryData.telemetry}
+                    dataKeys="speed_{drv}"
+                    domain={['auto', 'auto']}
+                    drivers={telemetryData.drivers}
+                    driverStyles={driverStyles}
+                    setActiveDistance={setActiveDistance}
+                  />
+                  <TelemetryChart 
+                    title="Throttle Application"
+                    icon={<Zap className="text-orange-500"/>}
+                    data={telemetryData.telemetry}
+                    dataKeys="throttle_{drv}"
+                    domain={[0, 105]}
+                    drivers={telemetryData.drivers}
+                    driverStyles={driverStyles}
+                    setActiveDistance={setActiveDistance}
+                  />
+                  {telemetryData.drivers.length > 1 && (
+                    <TelemetryChart 
+                      title={`Time Delta (to ${telemetryData.drivers[0]})`}
+                      icon={<TrendingUp className="text-green-500"/>}
+                      data={telemetryData.telemetry}
+                      dataKeys="delta_{drv}"
+                      domain={['auto', 'auto']}
+                      drivers={telemetryData.drivers}
+                      driverStyles={driverStyles}
+                      setActiveDistance={setActiveDistance}
+                    />
+                  )}
                 </div>
               );
             })()}

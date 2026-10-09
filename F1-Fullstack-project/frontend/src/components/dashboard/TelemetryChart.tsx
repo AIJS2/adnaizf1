@@ -10,22 +10,24 @@ import {
   ResponsiveContainer,
   ReferenceLine
 } from 'recharts';
+import { TelemetryFlatPoint } from '../../types/f1';
 
 interface TelemetryChartProps {
   title: string;
   icon: React.ReactNode;
-  data: Record<string, unknown>[];
+  data: TelemetryFlatPoint[];
   dataKeys: string;
-  domain: [number | string, number | string];
+  domain: [number | string | 'auto', number | string | 'auto'];
   drivers: string[];
   driverStyles: Record<string, { color: string; strokeDasharray?: string }>;
   setActiveDistance: (distance: number | null) => void;
+  unit?: string;
 }
 
 interface CustomTooltipProps {
   active?: boolean;
   payload?: { name: string; value: number | string; dataKey: string }[];
-  label?: string;
+  label?: string | number;
   driverStyles: Record<string, { color: string; strokeDasharray?: string }>;
 }
 
@@ -77,9 +79,9 @@ const TelemetryChart: React.FC<TelemetryChartProps> = ({
           <LineChart 
             data={data} 
             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-            onMouseMove={(chartState: { activeLabel?: number } | null | undefined) => {
+            onMouseMove={(chartState: { activeLabel?: number | string } | null) => {
               if (chartState && chartState.activeLabel !== undefined) {
-                setActiveDistance(chartState.activeLabel);
+                setActiveDistance(Number(chartState.activeLabel));
               }
             }}
             onMouseLeave={() => setActiveDistance(null)}

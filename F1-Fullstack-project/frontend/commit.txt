@@ -1,0 +1,7 @@
+refactor(telemetry): extract charts and enforce strict types
+
+- Break down monolithic TelemetryTab into SpeedChart, ThrottleChart,
+  and TimeDeltaChart.
+- Define TelemetryResponse and flat data interfaces in f1.ts to replace
+  weak any/Record types.
+- Fix UTF-16 LE encoding corruption in f1.ts.

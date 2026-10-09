@@ -9,7 +9,10 @@ import html2canvas from 'html2canvas';
 import { teamColors, teamLogos } from '../../data/teamData';
 
 import TrackDominationMap from './TrackDominationMap';
-import TelemetryChart from '../dashboard/TelemetryChart';
+import SpeedChart from '../dashboard/SpeedChart';
+import ThrottleChart from '../dashboard/ThrottleChart';
+import TimeDeltaChart from '../dashboard/TimeDeltaChart';
+import { TelemetryResponse } from '../../types/f1';
 
 const TelemetryTab = ({ year, round }: { year: string | number; round: string | number }) => {
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
@@ -17,7 +20,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
   const [lap, setLap] = useState<string>('');
   
   const [loading, setLoading] = useState<boolean>(false);
-  const [telemetryData, setTelemetryData] = useState<Record<string, unknown> | null>(null);
+  const [telemetryData, setTelemetryData] = useState<TelemetryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
 
@@ -298,8 +301,8 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
             {/* Custom Tooltip */}
             {(() => {
-              const driverStyles = {};
-              const teamCounts = {};
+              const driverStyles: Record<string, { color: string; strokeDasharray?: string }> = {};
+              const teamCounts: Record<string, number> = {};
               telemetryData.drivers.forEach(drv => {
                 const team = telemetryData.driver_info[drv]?.team;
                 if (!teamCounts[team]) teamCounts[team] = 0;
@@ -323,38 +326,24 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
               return (
                 <div className="space-y-6">
-                  <TelemetryChart 
-                    title="Speed Profile"
-                    icon={<Gauge className="text-blue-500"/>}
+                  <SpeedChart 
                     data={telemetryData.telemetry}
-                    dataKeys="speed_{drv}"
-                    domain={['auto', 'auto']}
                     drivers={telemetryData.drivers}
                     driverStyles={driverStyles}
                     setActiveDistance={setActiveDistance}
                   />
-                  <TelemetryChart 
-                    title="Throttle Application"
-                    icon={<Zap className="text-orange-500"/>}
+                  <ThrottleChart 
                     data={telemetryData.telemetry}
-                    dataKeys="throttle_{drv}"
-                    domain={[0, 105]}
                     drivers={telemetryData.drivers}
                     driverStyles={driverStyles}
                     setActiveDistance={setActiveDistance}
                   />
-                  {telemetryData.drivers.length > 1 && (
-                    <TelemetryChart 
-                      title={`Time Delta (to ${telemetryData.drivers[0]})`}
-                      icon={<TrendingUp className="text-green-500"/>}
-                      data={telemetryData.telemetry}
-                      dataKeys="delta_{drv}"
-                      domain={['auto', 'auto']}
-                      drivers={telemetryData.drivers}
-                      driverStyles={driverStyles}
-                      setActiveDistance={setActiveDistance}
-                    />
-                  )}
+                  <TimeDeltaChart 
+                    data={telemetryData.telemetry}
+                    drivers={telemetryData.drivers}
+                    driverStyles={driverStyles}
+                    setActiveDistance={setActiveDistance}
+                  />
                 </div>
               );
             })()}

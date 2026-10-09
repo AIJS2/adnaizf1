@@ -88,3 +88,24 @@ export interface TeamDriverInfo {
   name?: string;
 }
 
+export interface TelemetryFlatPoint {
+  distance: number;
+  [key: string]: string | number | undefined;
+}
+
+export interface DriverStatsInfo {
+  team: string;
+  name?: string;
+  lap_time?: string;
+  compound?: string;
+  max_speed?: number;
+  avg_speed?: number;
+}
+
+export interface TelemetryResponse {
+  telemetry: TelemetryFlatPoint[];
+  drivers: string[];
+  driver_info: Record<string, DriverStatsInfo>;
+  unavailable_drivers?: string[];
+  unavailable_reasons?: Record<string, string>;
+}

@@ -3,7 +3,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import CountdownTimer from '../CountdownTimer';
 import React from 'react';
 
-const getMockCountdownTimerProps = (overrides?: any) => ({
+const getMockCountdownTimerProps = (overrides?: Record<string, unknown>) => ({
   targetDate: new Date('2030-01-01T12:00:00Z').toISOString(),
   ...overrides,
 });

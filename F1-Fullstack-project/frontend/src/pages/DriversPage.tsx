@@ -1,9 +1,10 @@
 // Note: This is dead code, not routed. StatsPage is used instead.
 // src/DriversPage.jsx - FIXED: shared teamData, config, dynamic year, improved error
 
-import React, { useState, useEffect } from 'react';
+import { DriverProfile } from '../types/f1';
+import { useState, useEffect } from 'react';
 import ErrorState from '../components/layout/ErrorState';
-import { Search, ArrowUp, Trophy, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Search, ArrowUp, Trophy } from 'lucide-react';
 import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
 
@@ -11,7 +12,7 @@ import { teamLogos, teamColors } from '../data/teamData';
 
 
 function DriversPage() {
-  const [drivers, setDrivers] = useState([]);
+  const [drivers, setDrivers] = useState<DriverProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,8 +31,8 @@ function DriversPage() {
       if (data.error) setError(data.error);
       else if (data && data.drivers) setDrivers(data.drivers);
       else throw new Error("Invalid data structure from API.");
-    } catch (err) {
-      setError(`Failed to fetch data: ${err.message}`);
+    } catch (err: unknown) {
+      setError(`Failed to fetch data: ${(err instanceof Error ? err.message : String(err))}`);
     } finally {
       setLoading(false);
     }

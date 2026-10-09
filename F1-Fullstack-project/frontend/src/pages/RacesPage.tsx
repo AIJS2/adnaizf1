@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Race } from '../types/f1';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
-import { Calendar, Trophy, Clock, Info, AlertTriangle, RefreshCw, MapPin, ChevronDown, Filter, Zap, ArrowDown, CheckCircle2, Timer, Flag as FlagIcon } from 'lucide-react';
+import { Calendar, Trophy, Clock, Info, MapPin, ChevronDown, Zap, ArrowDown, CheckCircle2, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { getTrackMap } from '../data/trackData';
@@ -9,7 +10,7 @@ import { teamColors } from '../data/teamData';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-const countryCodeMapping = {
+const countryCodeMapping: Record<string, string> = {
   'Australia': 'AU', 'Bahrain': 'BH', 'China': 'CN', 'Saudi Arabia': 'SA',
   'USA': 'US', 'United States': 'US', 'Japan': 'JP', 'Italy': 'IT',
   'Monaco': 'MC', 'Spain': 'ES', 'Canada': 'CA', 'Austria': 'AT',
@@ -22,13 +23,13 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 
 // --- MINI COUNTDOWN ---
-const MiniCountdown = ({ targetDate }) => {
+const MiniCountdown = ({ targetDate }: { targetDate: Date }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0 });
 
   useEffect(() => {
     const calcTime = () => {
       const now = new Date();
-      const diff = targetDate - now;
+      const diff = targetDate.getTime() - now.getTime();
       if (diff <= 0) return { days: 0, hours: 0, mins: 0 };
       return {
         days: Math.floor(diff / (1000 * 60 * 60 * 24)),
@@ -56,7 +57,7 @@ const MiniCountdown = ({ targetDate }) => {
 };
 
 // --- SEASON PROGRESS BAR ---
-const SeasonProgress = ({ completed, total }) => {
+const SeasonProgress = ({ completed, total }: { completed: number; total: number }) => {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   return (
     <div className="flex items-center gap-4 w-full max-w-md">
@@ -76,7 +77,7 @@ const SeasonProgress = ({ completed, total }) => {
 };
 
 // --- FILTER TABS ---
-const FilterTabs = ({ active, onChange, counts }) => {
+const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (key: string) => void; counts: any }) => {
   const tabs = [
     { key: 'all', label: 'All Races', icon: Calendar, count: counts.all },
     { key: 'completed', label: 'Completed', icon: CheckCircle2, count: counts.completed },
@@ -103,7 +104,7 @@ const FilterTabs = ({ active, onChange, counts }) => {
 };
 
 // --- MONTH DIVIDER ---
-const MonthDivider = ({ month, year, raceCount }) => (
+const MonthDivider = ({ month, year, raceCount }: { month: string; year: number; raceCount: number }) => (
   <div className="col-span-full flex items-center gap-4 py-4">
     <div className="flex items-center gap-3">
       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/20 border border-red-500/20 flex items-center justify-center">
@@ -119,14 +120,14 @@ const MonthDivider = ({ month, year, raceCount }) => (
 );
 
 // --- RACE CARD ---
-const RaceCard = ({ race, isNextRace, index }) => {
+const RaceCard = ({ race, isNextRace, index }: { race: Race | any; isNextRace: boolean; index: number }) => {
   const raceDate = new Date(race.date + 'T00:00:00');
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
-  const flagCode = countryCodeMapping[race.country?.trim()];
+  const flagCode = race.country ? countryCodeMapping[race.country.trim()] : undefined;
   const winnerTeamColor = race.winner_team ? (teamColors[race.winner_team] || '#666') : '#333';
 
-  const getStatusConfig = (status) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Finished': return { classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', label: 'COMPLETED', dot: 'bg-emerald-400' };
       case 'Ongoing':  return { classes: 'bg-red-500/20 text-red-400 border-red-500/50', label: 'LIVE', dot: 'bg-red-500 animate-pulse' };
@@ -313,26 +314,26 @@ const RacesPage = () => {
   // Find next upcoming race
   const nextRace = useMemo(() => {
     const now = new Date();
-    return races.find(r => {
+    return races.find((r: Race) => {
       const d = new Date(r.date + 'T00:00:00');
       return d >= now && r.status !== 'Finished';
-    }) || races.find(r => r.status === 'Upcoming') || null;
+    }) || races.find((r: Race) => r.status === 'Upcoming') || null;
   }, [races]);
 
   // Filter races
   const filteredRaces = useMemo(() => {
     switch (filter) {
-      case 'completed': return races.filter(r => r.status === 'Finished');
-      case 'upcoming': return races.filter(r => r.status === 'Upcoming' || r.status === 'Ongoing');
+      case 'completed': return races.filter((r: Race) => r.status === 'Finished');
+      case 'upcoming': return races.filter((r: Race) => r.status === 'Upcoming' || r.status === 'Ongoing');
       default: return races;
     }
   }, [races, filter]);
 
   // Group by month
   const groupedRaces = useMemo(() => {
-    const groups = [];
-    let currentMonth = null;
-    filteredRaces.forEach(race => {
+    const groups: { key: string; month: string; year: number; races: Race[] }[] = [];
+    let currentMonth: string | null = null;
+    filteredRaces.forEach((race: Race) => {
       const d = new Date(race.date + 'T00:00:00');
       const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
       if (monthKey !== currentMonth) {
@@ -353,8 +354,8 @@ const RacesPage = () => {
   // Counts
   const counts = useMemo(() => ({
     all: races.length,
-    completed: races.filter(r => r.status === 'Finished').length,
-    upcoming: races.filter(r => r.status === 'Upcoming' || r.status === 'Ongoing').length,
+    completed: races.filter((r: Race) => r.status === 'Finished').length,
+    upcoming: races.filter((r: Race) => r.status === 'Upcoming' || r.status === 'Ongoing').length,
   }), [races]);
 
   const scrollToNextRace = () => {
@@ -363,8 +364,8 @@ const RacesPage = () => {
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Flash animation
-        el.firstChild?.classList.add('ring-2', 'ring-red-500');
-        setTimeout(() => el.firstChild?.classList.remove('ring-2', 'ring-red-500'), 2000);
+        (el.firstChild as HTMLElement)?.classList.add('ring-2', 'ring-red-500');
+        setTimeout(() => (el.firstChild as HTMLElement)?.classList.remove('ring-2', 'ring-red-500'), 2000);
       }
     }
   };
@@ -466,7 +467,7 @@ const RacesPage = () => {
               <div key={group.key}>
                 <MonthDivider month={group.month} year={group.year} raceCount={group.races.length} />
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                  {group.races.map((race, idx) => (
+                  {group.races.map((race: Race, idx: number) => (
                     <RaceCard
                       key={race.round}
                       race={race}

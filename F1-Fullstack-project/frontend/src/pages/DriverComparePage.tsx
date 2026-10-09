@@ -1,6 +1,7 @@
 // src/DriverComparePage.jsx - Ultimate Driver vs Driver H2H Comparator
 // Major UI/UX overhaul with contextual icons & polished design
 
+import { Race, DriverProfile, TeamProfile } from '../types/f1';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDriverProfile } from '../services/api';
@@ -91,7 +92,7 @@ const DriverComparePage = () => {
       link.href = image;
       link.download = `H2H_${profile1.name}_vs_${profile2.name}.png`;
       link.click();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Export failed', err);
     }
   };

@@ -5,7 +5,7 @@ export interface Race {
   date: string;
   round: number;
   season: number;
-  status: 'upcoming' | 'ongoing' | 'completed';
+  status: 'upcoming' | 'ongoing' | 'completed' | 'Upcoming' | 'Ongoing' | 'Finished' | string;
 }
 
 export interface DriverProfile {
@@ -14,11 +14,18 @@ export interface DriverProfile {
   code: string;
   firstName: string;
   lastName: string;
+  name?: string;
   team: string;
   teamColor: string;
   countryCode?: string;
   points?: number;
   position?: number;
+  wins?: number;
+  podiums?: number;
+  points_share?: number;
+  id?: string;
+  abbreviation?: string;
+  driver_number?: number;
 }
 
 export interface SectorTimeData {
@@ -108,4 +115,16 @@ export interface TelemetryResponse {
   driver_info: Record<string, DriverStatsInfo>;
   unavailable_drivers?: string[];
   unavailable_reasons?: Record<string, string>;
+}
+
+export interface TeamProfile { 
+  id: string; 
+  name: string; 
+  position?: number; 
+  points?: number; 
+  wins?: number; 
+  podiums?: number; 
+  points_last_race?: number; 
+  drivers?: DriverProfile[]; 
+  progression?: Record<string, number>[]; 
 }

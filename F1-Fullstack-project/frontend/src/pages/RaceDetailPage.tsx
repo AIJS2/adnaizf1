@@ -1,13 +1,12 @@
 // src/RaceDetailPage.jsx - FIXED: shared teamData & config, improved error state
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Trophy, GitCommitVertical, Clock, Calendar, AlertTriangle, RefreshCw, Activity, TrendingUp, Wrench, Disc, Route, Gauge, Sun, List, LayoutGrid, Timer, Flag } from 'lucide-react';
+import { Trophy, Calendar, Activity, TrendingUp, Wrench, Route, Gauge, Sun, List, LayoutGrid, Timer, Flag } from 'lucide-react';
 import { API_URL } from '../config';
 import { getTrackMap } from '../data/trackData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import TelemetryTab from '../components/ui/TelemetryTab';
 
 // =======================================================================
@@ -23,7 +22,7 @@ import { SummaryCard } from '../components/race/RaceMiniComponents';
 // --- KOMPONEN UTAMA HALAMAN DETAIL BALAPAN ---
 // =======================================================================
 
-const getTabIcon = (tab, isActive) => {
+const getTabIcon = (tab: string, isActive: boolean) => {
   const props = { size: 16, className: isActive ? 'text-white' : 'text-neutral-300 group-hover:text-white transition-colors' };
   switch (tab) {
     case 'Race': return <Trophy {...props} />;
@@ -94,7 +93,7 @@ function RaceDetailPage() {
     }
   }, [raceData]);
 
-  const handleRaceChange = (event) => {
+  const handleRaceChange = (event: any) => {
     navigate(`/race/${year}/${event.target.value}`);
   };
 
@@ -138,7 +137,7 @@ function RaceDetailPage() {
     ? { ...raceData.race_winner, team_name: raceData.results?.[0]?.team_name }
     : null;
   const poleSitterData = raceData?.pole_position
-    ? { ...raceData.pole_position, team_name: raceData.qualifying_results?.find(d => d.full_name === raceData.pole_position.full_name)?.team_name }
+    ? { ...raceData.pole_position, team_name: raceData.qualifying_results?.find((d: any) => d.full_name === raceData.pole_position.full_name)?.team_name }
     : null;
   const fastestLapData = raceData?.fastest_lap;
 
@@ -165,7 +164,7 @@ function RaceDetailPage() {
         </div>
       );
     }
-    const noData = (session) => (
+    const noData = (session: string) => (
       <div className="p-8 text-center text-neutral-500">Data for {session} is not yet available.</div>
     );
     switch (activeTab) {
@@ -185,7 +184,7 @@ function RaceDetailPage() {
       case 'Speed & Sectors':   return (raceData?.speed_traps || raceData?.sector_matrix) ? <SpeedSectorsTable speedTraps={raceData?.speed_traps} sectorMatrix={raceData?.sector_matrix} /> : noData('Speed & Sectors');
       case 'Weather Data':      return raceData?.weather_info             ? <WeatherChart weatherData={raceData.weather_info} />                    : noData('Weather Data');
       case 'Live Feed':         return raceData?.race_control_messages    ? <RaceControlMessages messages={raceData.race_control_messages} status={raceData.status} /> : noData('Live Feed');
-      case 'Lap Telemetry':     return <TelemetryTab year={year} round={round} />;
+      case 'Lap Telemetry':     return <TelemetryTab year={year || ''} round={round || ''} />;
       default:                  return <div className="p-8 text-center text-neutral-500">Please select a session.</div>;
     }
   };
@@ -230,7 +229,7 @@ function RaceDetailPage() {
               value={round}
               className="bg-neutral-900/80 backdrop-blur border border-neutral-700/50 py-2.5 px-4 rounded-xl font-bold appearance-none cursor-pointer shadow-lg focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
             >
-              {schedule.map(race => (
+              {schedule.map((race: any) => (
                 <option key={race.round} value={race.round}>{race.location}</option>
               ))}
             </select>

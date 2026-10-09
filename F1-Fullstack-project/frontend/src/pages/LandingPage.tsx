@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { Race, DriverProfile, TeamProfile } from '../types/f1';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CountdownTimer from '../components/ui/CountdownTimer';
 import { API_URL } from '../config';
 import { 
   ArrowRight, Activity, Users, Calculator, Layers, 
-  ChevronRight, Gauge, Trophy, Flag, Share2, Sparkles, BookOpen 
+  ChevronRight, Gauge, Trophy, Flag, Share2, BookOpen 
 } from 'lucide-react';
 
 function LandingPage() {
   const [isMounted, setIsMounted] = useState(false);
-  const [nextRace, setNextRace] = useState(null);
+  const [nextRace, setNextRace] = useState<Race | any>(null);
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
@@ -17,7 +18,7 @@ function LandingPage() {
     fetch(`${API_URL}/api/dashboard/${currentYear}?t=${new Date().getTime()}`)
       .then(res => res.json())
       .then(data => {
-        const upcoming = data?.race_analytics?.find(r => r.status === 'Upcoming') || data?.next_race_event;
+        const upcoming = data?.race_analytics?.find((r: Race) => r.status === 'Upcoming' || r.status === 'upcoming') || data?.next_race_event;
         if (upcoming) {
           setNextRace(upcoming);
         }

@@ -1,26 +1,55 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { DriverProfile, TeamProfile } from '../types/f1';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  Search, Trophy, Crown, Users, User, AlertTriangle, Loader2,
-  Medal, Flame, ChevronRight, GitCompareArrows, Star, Hash,
-  Factory, Shield, TrendingUp, TrendingDown, Minus, CircleDot, Sparkles
+  Search, Trophy, Crown, User, AlertTriangle, Loader2,
+  Medal, ChevronRight, GitCompareArrows, Star,
+  Factory, Shield, TrendingUp, TrendingDown, Sparkles
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
 import ChampionshipWorm from '../components/ChampionshipWorm';
 
+interface EntryProps {
+  id?: string;
+  driverId?: string;
+  name?: string;
+  team?: string;
+  points?: number;
+  wins?: number;
+  podiums?: number;
+  abbreviation?: string;
+}
+
+interface PodiumCardProps {
+  entry: EntryProps;
+  rank: number;
+  type: 'driver' | 'constructor';
+  maxPoints: number;
+  leaderPoints: number;
+}
+
+interface StandingRowProps {
+  entry: EntryProps;
+  index: number;
+  type: 'driver' | 'constructor';
+  maxPoints: number;
+  leaderPoints: number;
+  searchTerm?: string;
+}
+
 // =======================================================================
 // --- PODIUM CARD (Top 3 special treatment) ---
 // =======================================================================
-const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }) => {
-  const teamColor = type === 'driver'
+const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardProps) => {
+  const teamColor = type === 'driver' && entry.team
     ? (teamColors[entry.team] || '#EF4444')
     : (teamColors[entry.name] || '#EF4444');
   const darkLogos = ['Audi', 'Mercedes', 'Haas'];
-  const teamName = type === 'driver' ? entry.team : entry.name;
+  const teamName = type === 'driver' && entry.team ? entry.team : entry.name;
   const logoNeedsBrightening = darkLogos.includes(teamName);
 
-  const rankConfig = {
+  const rankConfig: Record<number, { border: string; bg: string; shadow: string; icon: any; iconColor: string; label: string; labelBg: string }> = {
     0: { border: 'border-yellow-500/60', bg: 'from-yellow-500/10 via-yellow-900/5', shadow: 'shadow-yellow-500/20', icon: Crown, iconColor: 'text-yellow-400', label: '1ST', labelBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
     1: { border: 'border-slate-400/40', bg: 'from-slate-400/10 via-slate-800/5', shadow: 'shadow-slate-400/15', icon: Medal, iconColor: 'text-slate-300', label: '2ND', labelBg: 'bg-slate-400/20 text-slate-300 border-slate-400/40' },
     2: { border: 'border-amber-600/40', bg: 'from-amber-600/10 via-amber-900/5', shadow: 'shadow-amber-600/15', icon: Medal, iconColor: 'text-amber-500', label: '3RD', labelBg: 'bg-amber-600/20 text-amber-500 border-amber-600/40' },
@@ -64,7 +93,7 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }) => {
                 {entry.name}
               </h3>
               <div className="flex items-center gap-2.5 mt-2">
-                {teamLogos[entry.team] && (
+                {entry.team && teamLogos[entry.team] && (
                   <img src={teamLogos[entry.team]} alt={entry.team} className="h-5 w-auto object-contain" style={logoNeedsBrightening ? { filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.8))' } : { filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
                 )}
                 <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">{entry.team}</span>
@@ -124,8 +153,8 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }) => {
 // =======================================================================
 // --- STANDING ROW (P4 and below) ---
 // =======================================================================
-const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }) => {
-  const teamColor = type === 'driver' ? (teamColors[entry.team] || '#EF4444') : (teamColors[entry.name] || '#EF4444');
+const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }: StandingRowProps) => {
+  const teamColor = type === 'driver' && entry.team ? (teamColors[entry.team] || '#EF4444') : (teamColors[entry.name] || '#EF4444');
   const darkLogos = ['Audi', 'Mercedes', 'Haas'];
   const pct = maxPoints > 0 ? Math.max(5, (entry.points / maxPoints) * 100) : 5;
   const gap = leaderPoints - entry.points;
@@ -168,8 +197,8 @@ const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }
             </div>
             {type === 'driver' && (
               <div className="flex items-center gap-2.5 mt-1">
-                {teamLogos[entry.team] && (
-                  <img src={teamLogos[entry.team]} alt={entry.team} className="h-4 md:h-5 w-auto object-contain" style={darkLogos.includes(entry.team) ? { filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.7))' } : { filter: 'drop-shadow(0px 1px 3px rgba(0,0,0,0.5))' }} />
+                {entry.team && teamLogos[entry.team] && (
+                  <img src={teamLogos[entry.team]} alt={entry.team} className="h-4 md:h-5 w-auto object-contain" style={darkLogos.includes(entry.team || '') ? { filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.7))' } : { filter: 'drop-shadow(0px 1px 3px rgba(0,0,0,0.5))' }} />
                 )}
                 <span className="text-neutral-400 text-xs font-bold uppercase tracking-wider truncate">{entry.team}</span>
               </div>
@@ -226,9 +255,9 @@ const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }
 const StatsPage = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'drivers');
-  const [data, setData] = useState({ drivers: [], teams: [], session_results: [] });
+  const [data, setData] = useState<{ drivers: DriverProfile[]; teams: TeamProfile[]; session_results: any[] }>({ drivers: [], teams: [], session_results: [] });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const currentYear = new Date().getFullYear();
@@ -246,8 +275,8 @@ const StatsPage = () => {
         teams: result.teams || [],
         session_results: result.session_results || []
       });
-    } catch (err) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
     }

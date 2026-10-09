@@ -1,12 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { 
-  BookOpen, Trophy, Flag, Activity, Users, Calculator, 
+  BookOpen, Flag, Activity, Calculator, 
   BarChart2, Zap, GitCommitVertical, AlertCircle, ChevronRight
 } from 'lucide-react';
 
-const GuideSection = ({ id, title, icon, colorClass, setActiveSection, children }) => {
+interface GuideSectionProps {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  colorClass: 'orange' | 'blue' | 'purple' | 'zinc' | 'emerald';
+  setActiveSection: (id: string) => void;
+  children: React.ReactNode;
+}
+
+const GuideSection: React.FC<GuideSectionProps> = ({ id, title, icon, colorClass, setActiveSection, children }) => {
   const { ref, inView } = useInView({
     threshold: 0.4,
     rootMargin: "-20% 0px -40% 0px"

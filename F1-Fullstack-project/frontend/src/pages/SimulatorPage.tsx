@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { DriverProfile, TeamProfile } from '../types/f1';
+import { useState, useEffect, useMemo } from 'react';
 import { API_URL } from '../config';
 import { teamColors, teamLogos } from '../data/teamData';
 import { Calculator, Trophy, ArrowUp, ArrowDown, Minus, RefreshCw, Zap, Flag, FlaskConical, Activity, Crosshair, Users, Timer } from 'lucide-react';
 
 const SimulatorPage = () => {
-  const [originalDrivers, setOriginalDrivers] = useState([]);
-  const [drivers, setDrivers] = useState([]);
+  const [originalDrivers, setOriginalDrivers] = useState<DriverProfile[]>([]);
+  const [drivers, setDrivers] = useState<DriverProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Simulation inputs
@@ -26,12 +27,12 @@ const SimulatorPage = () => {
         const response = await fetch(`${API_URL}/api/championship/${currentYear}`);
         const data = await response.json();
         if (data.drivers) {
-          const sorted = data.drivers.sort((a, b) => b.points - a.points);
-          sorted.forEach((d, i) => d.position = i + 1);
+          const sorted = data.drivers.sort((a: DriverProfile, b: DriverProfile) => (b.points || 0) - (a.points || 0));
+          sorted.forEach((d: DriverProfile, i: number) => d.position = i + 1);
           setOriginalDrivers(sorted);
           setDrivers(JSON.parse(JSON.stringify(sorted)));
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(err);
       } finally {
         setLoading(false);
@@ -41,34 +42,34 @@ const SimulatorPage = () => {
   }, [currentYear]);
 
   const simulate = () => {
-    let simulated = JSON.parse(JSON.stringify(originalDrivers));
+    const simulated: DriverProfile[] = JSON.parse(JSON.stringify(originalDrivers));
 
     // Apply predictions
     if (p1) {
-      let d = simulated.find(x => x.id === p1);
-      if (d) { d.points += 25; d.wins += 1; d.podiums += 1; }
+      const d = simulated.find((x: DriverProfile) => x.driverId === p1);
+      if (d) { d.points = (d.points || 0) + 25; d.wins = (d.wins || 0) + 1; d.podiums = (d.podiums || 0) + 1; }
     }
     if (p2) {
-      let d = simulated.find(x => x.id === p2);
-      if (d) { d.points += 18; d.podiums += 1; }
+      const d = simulated.find((x: DriverProfile) => x.driverId === p2);
+      if (d) { d.points = (d.points || 0) + 18; d.podiums = (d.podiums || 0) + 1; }
     }
     if (p3) {
-      let d = simulated.find(x => x.id === p3);
-      if (d) { d.points += 15; d.podiums += 1; }
+      const d = simulated.find((x: DriverProfile) => x.driverId === p3);
+      if (d) { d.points = (d.points || 0) + 15; d.podiums = (d.podiums || 0) + 1; }
     }
     if (fastestLap) {
-      let d = simulated.find(x => x.id === fastestLap);
-      if (d) { d.points += 1; }
+      const d = simulated.find((x: DriverProfile) => x.driverId === fastestLap);
+      if (d) { d.points = (d.points || 0) + 1; }
     }
     if (sprintWinner) {
-      let d = simulated.find(x => x.id === sprintWinner);
-      if (d) { d.points += 8; }
+      const d = simulated.find((x: DriverProfile) => x.driverId === sprintWinner);
+      if (d) { d.points = (d.points || 0) + 8; }
     }
 
     // Re-sort
-    simulated.sort((a, b) => b.points - a.points);
+    simulated.sort((a: DriverProfile, b: DriverProfile) => (b.points || 0) - (a.points || 0));
     // Re-assign position
-    simulated.forEach((d, i) => d.position = i + 1);
+    simulated.forEach((d: DriverProfile, i: number) => d.position = i + 1);
 
     setDrivers(simulated);
   };
@@ -80,26 +81,26 @@ const SimulatorPage = () => {
 
   // Calculate Constructors Standings dynamically
   const originalConstructors = useMemo(() => {
-    const teams = {};
-    originalDrivers.forEach(d => {
-      if (!teams[d.team]) teams[d.team] = { id: d.team, team: d.team, points: 0, drivers: [] };
-      teams[d.team].points += d.points;
-      teams[d.team].drivers.push(d.name.split(' ').pop());
+    const teams: Record<string, TeamProfile> = {};
+    originalDrivers.forEach((d: DriverProfile) => {
+      if (!teams[d.team]) teams[d.team] = { id: d.team, name: d.team, points: 0, drivers: [] };
+      teams[d.team].points = (teams[d.team].points || 0) + (d.points || 0);
+      teams[d.team].drivers?.push(d.name?.split(' ').pop() as unknown as DriverProfile);
     });
-    const sorted = Object.values(teams).sort((a, b) => b.points - a.points);
-    sorted.forEach((t, i) => t.position = i + 1);
+    const sorted = Object.values(teams).sort((a: TeamProfile, b: TeamProfile) => (b.points || 0) - (a.points || 0));
+    sorted.forEach((t: TeamProfile, i: number) => t.position = i + 1);
     return sorted;
   }, [originalDrivers]);
 
   const simulatedConstructors = useMemo(() => {
-    const teams = {};
-    drivers.forEach(d => {
-      if (!teams[d.team]) teams[d.team] = { id: d.team, team: d.team, points: 0, drivers: [] };
-      teams[d.team].points += d.points;
-      teams[d.team].drivers.push(d.name.split(' ').pop());
+    const teams: Record<string, TeamProfile> = {};
+    drivers.forEach((d: DriverProfile) => {
+      if (!teams[d.team]) teams[d.team] = { id: d.team, name: d.team, points: 0, drivers: [] };
+      teams[d.team].points = (teams[d.team].points || 0) + (d.points || 0);
+      teams[d.team].drivers?.push(d.name?.split(' ').pop() as unknown as DriverProfile);
     });
-    const sorted = Object.values(teams).sort((a, b) => b.points - a.points);
-    sorted.forEach((t, i) => t.position = i + 1);
+    const sorted = Object.values(teams).sort((a: TeamProfile, b: TeamProfile) => (b.points || 0) - (a.points || 0));
+    sorted.forEach((t: TeamProfile, i: number) => t.position = i + 1);
     return sorted;
   }, [drivers]);
 
@@ -148,7 +149,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P1 --</option>
-                  {originalDrivers.map(d => <option key={`p1-${d.id}`} value={d.id}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`p1-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -160,7 +161,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-slate-300/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P2 --</option>
-                  {originalDrivers.map(d => <option key={`p2-${d.id}`} value={d.id}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`p2-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -172,7 +173,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P3 --</option>
-                  {originalDrivers.map(d => <option key={`p3-${d.id}`} value={d.id}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`p3-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -184,7 +185,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select Fastest Lap --</option>
-                  {originalDrivers.map(d => <option key={`fl-${d.id}`} value={d.id}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`fl-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -196,7 +197,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select Sprint Winner --</option>
-                  {originalDrivers.map(d => <option key={`sw-${d.id}`} value={d.id}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`sw-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -267,14 +268,14 @@ const SimulatorPage = () => {
                   
                   {/* Drivers View */}
                   {viewMode === 'drivers' && drivers.slice(0, 10).map((d) => {
-                    const original = originalDrivers.find(o => o.id === d.id);
-                    const posChange = original.position - d.position;
-                    const ptsGained = d.points - original.points;
+                    const original = originalDrivers.find(o => o.driverId === d.driverId);
+                    const posChange = (original?.position || 0) - (d.position || 0);
+                    const ptsGained = (d.points || 0) - (original?.points || 0);
                     const teamColor = teamColors[d.team] || '#666';
                     
                     return (
                       <div 
-                        key={d.id} 
+                        key={d.driverId} 
                         className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-2xl p-4 flex items-center gap-4 md:gap-6 transition-all duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
                       >
                         <div className="absolute left-0 top-0 bottom-0 w-1.5 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: teamColor, color: teamColor }}></div>
@@ -322,12 +323,12 @@ const SimulatorPage = () => {
                   })}
 
                   {/* Constructors View */}
-                  {viewMode === 'constructors' && simulatedConstructors.map((team) => {
+                  {viewMode === 'constructors' && simulatedConstructors.map((team: TeamProfile) => {
                     const original = originalConstructors.find(o => o.id === team.id);
-                    const posChange = original.position - team.position;
-                    const ptsGained = team.points - original.points;
-                    const teamColor = teamColors[team.team] || '#666';
-                    const logo = teamLogos[team.team];
+                    const posChange = (original?.position || 0) - (team.position || 0);
+                    const ptsGained = (team.points || 0) - (original?.points || 0);
+                    const teamColor = teamColors[team.id] || '#666';
+                    const logo = teamLogos[team.id];
                     
                     return (
                       <div 
@@ -351,10 +352,10 @@ const SimulatorPage = () => {
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-sm group-hover:text-red-400 transition-colors flex items-center gap-3">
-                            {team.team} {logo && <img src={logo} alt={team.team} className="h-5 md:h-6 object-contain opacity-80" />}
+                            {team.name} {logo && <img src={logo} alt={team.name} className="h-5 md:h-6 object-contain opacity-80" />}
                           </h4>
                           <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest truncate">
-                            {team.drivers.join(' / ')}
+                            {(team.drivers || []).join(' / ')}
                           </span>
                         </div>
 

@@ -1,9 +1,10 @@
 // Note: This is dead code, not routed. StatsPage is used instead.
 // src/TeamsPage.jsx - FIXED: shared teamData, config, dynamic year, improved error
 
-import React, { useState, useEffect } from 'react';
+import { TeamProfile } from '../types/f1';
+import { useState, useEffect } from 'react';
 import ErrorState from '../components/layout/ErrorState';
-import { Search, Trophy, ArrowUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Search, Trophy, ArrowUp } from 'lucide-react';
 import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
 
@@ -11,9 +12,9 @@ import { teamLogos, teamColors } from '../data/teamData';
 
 
 function TeamsPage() {
-  const [teams, setTeams] = useState([]);
+  const [teams, setTeams] = useState<TeamProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // FIXED: pakai dinamis, bukan hardcode 2026
@@ -34,8 +35,8 @@ function TeamsPage() {
       if (data.error) setError(data.error);
       else if (data && data.teams) setTeams(data.teams);
       else throw new Error("Invalid data structure from API.");
-    } catch (err) {
-      setError(`Failed to fetch data: ${err.message}`);
+    } catch (err: unknown) {
+      setError(`Failed to fetch data: ${(err instanceof Error ? err.message : String(err))}`);
       console.error("Fetch error:", err);
     } finally {
       setLoading(false);
@@ -162,9 +163,9 @@ function TeamsPage() {
                         <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Points</span>
                         <div className="flex flex-col items-end leading-none">
                           <span className="text-4xl md:text-5xl font-black italic text-white tracking-tighter">{team.points}</span>
-                          {team.points_last_race > 0 && (
+                          {(team.points_last_race || 0) > 0 && (
                             <span className="text-green-500 text-xs font-bold flex items-center gap-0.5 mt-2 bg-green-500/10 px-1.5 py-0.5 rounded-sm">
-                              <ArrowUp size={12} strokeWidth={3} /> {team.points_last_race}
+                              <ArrowUp size={12} strokeWidth={3} /> {(team.points_last_race || 0)}
                             </span>
                           )}
                         </div>

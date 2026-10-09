@@ -3,9 +3,15 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { teamColors } from '../data/teamData';
-import { TrendingUp, Users, Factory } from 'lucide-react';
+import { DriverProfile, TeamProfile } from '../types/f1';
 
-const ChampionshipWorm = ({ sessionResults = [], drivers = [], teams = [] }) => {
+interface ChampionshipWormProps {
+  sessionResults?: any[];
+  drivers?: DriverProfile[];
+  teams?: TeamProfile[];
+}
+
+const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = [], drivers = [], teams = [] }) => {
   const [viewMode, setViewMode] = useState('drivers'); // 'drivers' or 'constructors'
 
   const { chartData, lines, maxPoints } = useMemo(() => {

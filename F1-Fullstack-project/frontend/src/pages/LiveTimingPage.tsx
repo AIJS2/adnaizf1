@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Zap } from 'lucide-react';
 import { API_URL } from '../config';
 import TyreStrategy from '../components/ui/TyreStrategy';

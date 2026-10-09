@@ -1,5 +1,6 @@
 // src/DashboardPage.jsx - Next-Gen F1 Telemetry & Championship Dashboard
 
+import { Race, DriverProfile, TeamProfile } from '../types/f1';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDashboardData } from '../services/api';

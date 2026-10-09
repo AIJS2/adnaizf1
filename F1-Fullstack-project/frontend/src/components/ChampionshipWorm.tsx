@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import { teamColors } from '../data/teamData';
 import { DriverProfile, TeamProfile } from '../types/f1';
+import { TrendingUp, Users, Factory } from 'lucide-react';
 
 interface ChampionshipWormProps {
   sessionResults?: any[];

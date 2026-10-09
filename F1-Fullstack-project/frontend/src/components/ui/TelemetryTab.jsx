@@ -584,9 +584,9 @@ const TelemetryTab = ({ year, round }) => {
                       <LineChart 
                         data={telemetryData.telemetry} 
                         margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                        onMouseMove={(e) => {
-                          if (e && e.activeLabel !== undefined) {
-                            setActiveDistance(e.activeLabel);
+                        onMouseMove={(chartState) => {
+                          if (chartState && chartState.activeLabel !== undefined) {
+                            setActiveDistance(chartState.activeLabel);
                           }
                         }}
                         onMouseLeave={() => setActiveDistance(null)}
@@ -626,9 +626,9 @@ const TelemetryTab = ({ year, round }) => {
 
               return (
                 <div className="space-y-6">
-                  {renderLineChart("Speed Profile", <Gauge className="text-blue-500"/>, "speed_{drv}", ['auto', 'auto'], 'km/h')}
-                  {renderLineChart("Throttle Application", <Zap className="text-orange-500"/>, "throttle_{drv}", [0, 105], '%')}
-                  {telemetryData.drivers.length > 1 && renderLineChart(`Time Delta (to ${telemetryData.drivers[0]})`, <TrendingUp className="text-green-500"/>, "delta_{drv}", ['auto', 'auto'], 's')}
+                  {renderLineChart("Speed Profile", <Gauge className="text-blue-500"/>, "speed_{drv}", ['auto', 'auto'])}
+                  {renderLineChart("Throttle Application", <Zap className="text-orange-500"/>, "throttle_{drv}", [0, 105])}
+                  {telemetryData.drivers.length > 1 && renderLineChart(`Time Delta (to ${telemetryData.drivers[0]})`, <TrendingUp className="text-green-500"/>, "delta_{drv}", ['auto', 'auto'])}
                 </div>
               );
             })()}

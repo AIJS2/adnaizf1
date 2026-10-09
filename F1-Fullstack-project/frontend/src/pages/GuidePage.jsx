@@ -145,7 +145,6 @@ const GuidePage = () => {
               title="Race Progression (Gap to Leader)" 
               icon={<Activity size={28} />} 
               colorClass="orange"
-              activeSection={activeSection}
               setActiveSection={setActiveSection}
             >
               <p className="text-lg">
@@ -173,7 +172,6 @@ const GuidePage = () => {
               title="Lap Telemetry Analysis" 
               icon={<GitCommitVertical size={28} />} 
               colorClass="blue"
-              activeSection={activeSection}
               setActiveSection={setActiveSection}
             >
               <p className="text-lg">
@@ -205,7 +203,6 @@ const GuidePage = () => {
               title="Speed & Sectors Matrix" 
               icon={<Flag size={28} />} 
               colorClass="purple"
-              activeSection={activeSection}
               setActiveSection={setActiveSection}
             >
               <p className="text-lg">
@@ -228,7 +225,6 @@ const GuidePage = () => {
               title="Tyre Strategy" 
               icon={<AlertCircle size={28} />} 
               colorClass="zinc"
-              activeSection={activeSection}
               setActiveSection={setActiveSection}
             >
               <p className="text-lg">
@@ -259,7 +255,6 @@ const GuidePage = () => {
               title="Championship Simulator" 
               icon={<Calculator size={28} />} 
               colorClass="emerald"
-              activeSection={activeSection}
               setActiveSection={setActiveSection}
             >
               <p className="text-lg">

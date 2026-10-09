@@ -1,18 +1,21 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies (gcc for compiling some python packages if needed)
-RUN apt-get update && apt-get install -y gcc curl && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install redis
+
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-
-# Create cache directory for FastF1
-RUN mkdir -p cache
 
 EXPOSE 8000
 

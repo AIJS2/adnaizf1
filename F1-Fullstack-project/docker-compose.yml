@@ -3,33 +3,44 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
+    container_name: f1-redis
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   backend:
     build: 
       context: ./Backend
+      dockerfile: Dockerfile
+    container_name: f1-backend
     ports:
       - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CACHE_ADMIN_SECRET=${CACHE_ADMIN_SECRET:-}
-      - UPSTREAM_TIMEOUT_SECONDS=${UPSTREAM_TIMEOUT_SECONDS:-15}
-      - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost
-    volumes:
-      - ./Backend/cache:/app/cache
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=http://localhost:5173,http://localhost
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
       args:
-        - VITE_API_URL=
+        # Menghubungkan frontend build argument agar fetching data mengarah ke exposed localhost backend
+        - VITE_API_URL=http://localhost:8000
+    container_name: f1-frontend
     ports:
-      - "5173:80"
+      - "5173:80" # Nginx jalan di port 80, di-expose ke 5173 di host mesin lo
     depends_on:
       - backend
     restart: unless-stopped

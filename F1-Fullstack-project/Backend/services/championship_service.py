@@ -32,7 +32,7 @@ def compute_fastf1_championship(year: int):
                     session = fastf1.get_session(year, race["RoundNumber"], session_type)
                     session.load(telemetry=False, weather=False, laps=False, messages=False)
                     if hasattr(session, "results") and not session.results.empty:
-                        needed = ["DriverNumber", "Abbreviation", "FirstName", "LastName", "TeamName", "Position"]
+                        needed = ["DriverNumber", "Abbreviation", "FirstName", "LastName", "TeamName", "Position", "Status"]
                         if all(c in session.results.columns for c in needed):
                             sub_df = session.results[needed].copy()
                             sub_df["Points"] = pd.to_numeric(session.results.get("Points", 0), errors="coerce").fillna(0.0)
@@ -104,7 +104,7 @@ def compute_fastf1_championship(year: int):
             "year": year, 
             "teams": team_standings.to_dict(orient="records"), 
             "drivers": driver_standings.to_dict(orient="records"),
-            "session_results": df_full[['RoundNumber', 'FullName', 'TeamName', 'Position', 'Points', 'SessionType', 'Abbreviation', 'EventName', 'Location']].to_dict(orient="records")
+            "session_results": df_full[['RoundNumber', 'FullName', 'TeamName', 'Position', 'Points', 'SessionType', 'Abbreviation', 'EventName', 'Location', 'Status']].to_dict(orient="records")
         }
         return final_data
     except Exception as e:

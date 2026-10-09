@@ -24,6 +24,7 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         cum_points = 0.0
         positions_classified = []
         dnfs = 0
+        dnss = 0
 
         for r in driver_races:
             rnd = r["RoundNumber"]
@@ -34,8 +35,14 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             cum_points += total_round_pts
 
             pos = int(r["Position"])
+            status_str = str(r.get("Status", "")).lower()
+            
+            is_dns = "did not start" in status_str or "dns" in status_str
+            
             if pos < 90:
                 positions_classified.append(pos)
+            elif is_dns:
+                dnss += 1
             else:
                 dnfs += 1
 
@@ -45,7 +52,8 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                 "round": rnd,
                 "race_name": r.get("EventName", f"Round {rnd}"),
                 "location": r.get("Location", ""),
-                "position": pos if pos < 90 else "DNF",
+                "position": pos if pos < 90 else ("DNS" if is_dns else "DNF"),
+                "status": str(r.get("Status", "")),
                 "points": total_round_pts,
                 "cumulative_points": cum_points,
                 "teammate_position": int(tm_r["Position"]) if (tm_r and int(tm_r["Position"]) < 90) else ("DNF" if tm_r else "-"),
@@ -98,6 +106,7 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             "best_finish": best_finish,
             "avg_finish": avg_finish,
             "dnfs": dnfs,
+            "dnss": dnss,
             "progression": progression,
             "teammate": {
                 "name": teammate["name"],

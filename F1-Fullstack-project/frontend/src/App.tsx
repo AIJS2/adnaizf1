@@ -1,7 +1,7 @@
-// src/App.jsx - Main Home / Starting Portal
+// src/App - Main Home / Starting Portal
 
 
-import LandingPage from './pages/LandingPage.jsx';
+import LandingPage from './pages/LandingPage';
 
 function App() {
   return (

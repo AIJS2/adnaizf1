@@ -1,5 +1,5 @@
 // Note: This is dead code, not routed. StatsPage is used instead.
-// src/DriversPage.jsx - FIXED: shared teamData, config, dynamic year, improved error
+// src/DriversPage - FIXED: shared teamData, config, dynamic year, improved error
 
 import { DriverProfile } from '../types/f1';
 import { useState, useEffect } from 'react';

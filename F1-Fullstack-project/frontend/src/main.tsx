@@ -1,23 +1,23 @@
-// src/main.jsx
+// src/main
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Layout from './components/layout/Layout.jsx';
+import Layout from './components/layout/Layout';
 
-const App = lazy(() => import('./App.jsx'));
-const Dashboard = lazy(() => import('./pages/DashboardPage.jsx'));
-const DriversPage = lazy(() => import('./pages/DriversPage.jsx'));
-const TeamsPage = lazy(() => import('./pages/TeamsPage.jsx'));
-const RacesPage = lazy(() => import('./pages/RacesPage.jsx'));
-const RaceDetailPage = lazy(() => import('./pages/RaceDetailPage.jsx'));
-const StatsPage = lazy(() => import('./pages/StatsPage.jsx'));
-const DriverProfilePage = lazy(() => import('./pages/DriverProfilePage.jsx'));
-const TeamProfilePage = lazy(() => import('./pages/TeamProfilePage.jsx'));
-const DriverComparePage = lazy(() => import('./pages/DriverComparePage.jsx'));
-const LiveTimingPage = lazy(() => import('./pages/LiveTimingPage.jsx'));
-const SimulatorPage = lazy(() => import('./pages/SimulatorPage.jsx'));
-const GuidePage = lazy(() => import('./pages/GuidePage.jsx'));
+const App = lazy(() => import('./App'));
+const Dashboard = lazy(() => import('./pages/DashboardPage'));
+const DriversPage = lazy(() => import('./pages/DriversPage'));
+const TeamsPage = lazy(() => import('./pages/TeamsPage'));
+const RacesPage = lazy(() => import('./pages/RacesPage'));
+const RaceDetailPage = lazy(() => import('./pages/RaceDetailPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+const DriverProfilePage = lazy(() => import('./pages/DriverProfilePage'));
+const TeamProfilePage = lazy(() => import('./pages/TeamProfilePage'));
+const DriverComparePage = lazy(() => import('./pages/DriverComparePage'));
+const LiveTimingPage = lazy(() => import('./pages/LiveTimingPage'));
+const SimulatorPage = lazy(() => import('./pages/SimulatorPage'));
+const GuidePage = lazy(() => import('./pages/GuidePage'));
 
 const router = createBrowserRouter([
   {
@@ -90,7 +90,7 @@ const queryClient = new QueryClient({
   },
 });
 
-import { GlobalErrorBoundary } from './ErrorBoundary.jsx';
+import { GlobalErrorBoundary } from './ErrorBoundary';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

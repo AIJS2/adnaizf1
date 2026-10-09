@@ -1,4 +1,4 @@
-// src/DashboardPage.jsx - Next-Gen F1 Telemetry & Championship Dashboard
+// src/DashboardPage - Next-Gen F1 Telemetry & Championship Dashboard
 
 import { Race, DriverProfile, TeamProfile } from '../types/f1';
 import React from 'react';

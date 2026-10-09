@@ -1,4 +1,4 @@
-// src/RaceDetailPage.jsx - FIXED: shared teamData & config, improved error state
+// src/RaceDetailPage - FIXED: shared teamData & config, improved error state
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';

@@ -1,5 +1,5 @@
 // Note: This is dead code, not routed. StatsPage is used instead.
-// src/TeamsPage.jsx - FIXED: shared teamData, config, dynamic year, improved error
+// src/TeamsPage - FIXED: shared teamData, config, dynamic year, improved error
 
 import { TeamProfile } from '../types/f1';
 import { useState, useEffect } from 'react';

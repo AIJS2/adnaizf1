@@ -1,4 +1,4 @@
-// src/DriverComparePage.jsx - Ultimate Driver vs Driver H2H Comparator
+// src/DriverComparePage - Ultimate Driver vs Driver H2H Comparator
 // Major UI/UX overhaul with contextual icons & polished design
 
 import { Race, DriverProfile, TeamProfile } from '../types/f1';

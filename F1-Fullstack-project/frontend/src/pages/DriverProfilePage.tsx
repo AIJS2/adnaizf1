@@ -162,24 +162,28 @@ const DriverProfilePage = () => {
         </section>
 
         {/* Key Stats Grid */}
-        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-10">
           {[
             { label: 'Wins', value: profile.wins, color: 'text-yellow-400' },
             { label: 'Podiums', value: profile.podiums, color: 'text-white' },
             { label: 'Pole Positions', value: profile.poles, color: 'text-purple-400' },
             { label: 'Best Finish', value: profile.best_finish ? `P${profile.best_finish}` : '-', color: 'text-green-400' },
             { label: 'Avg. Finish', value: profile.avg_finish ? `P${profile.avg_finish}` : '-', color: 'text-neutral-300' },
-            { label: 'DNFs', value: profile.dnfs, color: 'text-red-500' }
+            { label: 'DNFs', value: profile.dnfs, color: 'text-red-500', 
+              tooltip: profile.progression.filter((p: any) => p.position === 'DNF').map((p: any) => p.race_name).join(', ') },
+            { label: 'DNSs', value: profile.dnss, color: 'text-orange-500',
+              tooltip: profile.progression.filter((p: any) => p.position === 'DNS').map((p: any) => p.race_name).join(', ') }
           ].map((stat, idx) => (
             <div 
               key={idx}
+              title={stat.tooltip}
               className="bg-neutral-900/60 border-t border-l border-neutral-800 relative group overflow-hidden"
               style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300" style={{ backgroundColor: teamColor }} />
               <div className="p-5 flex flex-col items-start relative z-10">
                 <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-[0.2em] mb-2">{stat.label}</span>
-                <div className={`text-3xl lg:text-4xl font-black font-mono tracking-tighter ${stat.color}`}>
+                <div className={`text-3xl lg:text-4xl font-black font-mono tracking-tighter ${stat.color} ${stat.tooltip ? 'cursor-help border-b border-dashed border-current' : ''}`}>
                   {stat.value}
                 </div>
               </div>
@@ -306,12 +310,13 @@ const DriverProfilePage = () => {
                       <div className="text-xs text-neutral-500 font-normal">{row.location}</div>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono ${
+                      <span title={row.status || ''} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
                         row.position === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
                         row.position === 2 ? 'bg-slate-300/20 text-slate-300 border border-slate-300/40' :
                         row.position === 3 ? 'bg-amber-600/20 text-amber-500 border border-amber-600/40' :
                         row.position <= 10 ? 'bg-green-500/10 text-green-400' :
-                        row.position === 'DNF' ? 'bg-red-500/10 text-red-500' : 'bg-neutral-800 text-neutral-400'
+                        row.position === 'DNF' ? 'bg-red-500/10 text-red-500' :
+                        row.position === 'DNS' ? 'bg-orange-500/10 text-orange-500' : 'bg-neutral-800 text-neutral-400'
                       }`}>
                         {typeof row.position === 'number' ? `P${row.position}` : row.position}
                       </span>

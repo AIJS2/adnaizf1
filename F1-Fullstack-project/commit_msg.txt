@@ -1,0 +1,10 @@
+fix(ui): prevent mobile layout overflow and handle ws reconnects
+
+- Add `min-w-0 w-full` to Recharts containers to stop flex children 
+  from breaking mobile viewports in profile pages.
+- Wrap LiveTimingPage tables in `overflow-hidden` grid containers to 
+  guarantee horizontal scroll instead of page overflow.
+- Replace boolean websocket state with connecting/connected/lost state 
+  machine and a 3s auto-reconnect loop.
+- Apply `min-w-0 flex-1 truncate` to list items on SimulatorPage so 
+  long names stay within bounds.

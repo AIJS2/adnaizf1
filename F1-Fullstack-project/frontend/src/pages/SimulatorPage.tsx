@@ -8,6 +8,7 @@ const SimulatorPage = () => {
   const [originalDrivers, setOriginalDrivers] = useState<DriverProfile[]>([]);
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Simulation inputs
   const [p1, setP1] = useState('');
@@ -21,23 +22,29 @@ const SimulatorPage = () => {
 
   const currentYear = new Date().getFullYear();
 
-  useEffect(() => {
-    const fetchStandings = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/championship/${currentYear}`);
-        const data = await response.json();
-        if (data.drivers) {
-          const sorted = data.drivers.sort((a: DriverProfile, b: DriverProfile) => (b.points || 0) - (a.points || 0));
-          sorted.forEach((d: DriverProfile, i: number) => d.position = i + 1);
-          setOriginalDrivers(sorted);
-          setDrivers(JSON.parse(JSON.stringify(sorted)));
-        }
-      } catch (err: unknown) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const fetchStandings = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/api/championship/${currentYear}`);
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
+      if (data.drivers) {
+        const sorted = data.drivers.sort((a: DriverProfile, b: DriverProfile) => (b.points || 0) - (a.points || 0));
+        sorted.forEach((d: DriverProfile, i: number) => d.position = i + 1);
+        setOriginalDrivers(sorted);
+        setDrivers(JSON.parse(JSON.stringify(sorted)));
       }
-    };
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchStandings();
   }, [currentYear]);
 
@@ -103,6 +110,21 @@ const SimulatorPage = () => {
     sorted.forEach((t: TeamProfile, i: number) => t.position = i + 1);
     return sorted;
   }, [drivers]);
+
+  if (error) {
+    return (
+      <div className="bg-neutral-950 min-h-screen text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 mb-4 flex justify-center"><Activity size={48} /></div>
+          <h2 className="text-3xl font-black mb-2">Failed to load Championship</h2>
+          <p className="text-neutral-400 mb-6">{error}</p>
+          <button onClick={fetchStandings} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold transition-colors">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans relative">

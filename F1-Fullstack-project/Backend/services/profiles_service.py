@@ -36,27 +36,38 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
 
             pos = int(r["Position"])
             status_str = str(r.get("Status", "")).lower()
+            classified_pos = str(r.get("ClassifiedPosition", ""))
             
             is_dns = "did not start" in status_str or "dns" in status_str
+            is_dnf = classified_pos in ['R', 'D', 'E', 'W']
             
-            if pos < 90:
-                positions_classified.append(pos)
-            elif is_dns:
+            if is_dns:
                 dnss += 1
-            else:
+            elif is_dnf:
                 dnfs += 1
+            elif pos < 90:
+                positions_classified.append(pos)
 
             tm_r = next((x for x in session_results if x["FullName"] == (teammate["name"] if teammate else "") and x["RoundNumber"] == rnd and x["SessionType"] == "R"), None)
             
+            grid_val = r.get("GridPosition", 0)
+            try:
+                grid_pos = int(float(grid_val)) if str(grid_val).lower() not in ['nan', ''] else 0
+            except (ValueError, TypeError):
+                grid_pos = 0
+
             progression.append({
                 "round": rnd,
                 "race_name": r.get("EventName", f"Round {rnd}"),
                 "location": r.get("Location", ""),
-                "position": pos if pos < 90 else ("DNS" if is_dns else "DNF"),
+                "position": "DNS" if is_dns else ("DNF" if is_dnf else pos),
+                "grid_position": grid_pos,
                 "status": str(r.get("Status", "")),
                 "points": total_round_pts,
+                "race_points": pts,
+                "sprint_points": sprint_pts,
                 "cumulative_points": cum_points,
-                "teammate_position": int(tm_r["Position"]) if (tm_r and int(tm_r["Position"]) < 90) else ("DNF" if tm_r else "-"),
+                "teammate_position": "DNS" if (tm_r and ("did not start" in str(tm_r.get("Status", "")).lower() or "dns" in str(tm_r.get("Status", "")).lower())) else ("DNF" if (tm_r and str(tm_r.get("ClassifiedPosition", "")) in ['R', 'D', 'E', 'W']) else (int(tm_r["Position"]) if tm_r else "-")),
                 "teammate_points": float(tm_r.get("Points", 0)) if tm_r else 0.0
             })
 

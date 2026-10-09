@@ -245,7 +245,7 @@ const DriverProfilePage = () => {
             <span className="text-xs text-neutral-400 font-mono">Cumulative PTS by Round</span>
           </div>
 
-          <div className="h-[320px]">
+          <div className="h-[320px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={profile.progression} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
                 <defs>
@@ -310,7 +310,7 @@ const DriverProfilePage = () => {
                       <div className="text-xs text-neutral-500 font-normal">{row.location}</div>
                     </td>
                     <td className="p-4 text-center">
-                      <span title={row.status || ''} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
+                      <span title={`${row.position === 'DNF' || row.position === 'DNS' ? row.position : 'P'+row.position} • Race: ${row.race_points} pts${row.sprint_points > 0 ? ' | Sprint: '+row.sprint_points+' pts' : ''} • Started ${row.grid_position > 0 ? 'P'+row.grid_position : 'Pitlane/DNS'} • ${row.status}`} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
                         row.position === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
                         row.position === 2 ? 'bg-slate-300/20 text-slate-300 border border-slate-300/40' :
                         row.position === 3 ? 'bg-amber-600/20 text-amber-500 border border-amber-600/40' :

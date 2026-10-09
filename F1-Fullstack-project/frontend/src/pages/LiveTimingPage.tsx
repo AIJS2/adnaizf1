@@ -68,30 +68,50 @@ const LiveTimingPage: React.FC = () => {
     isLiveSession: false
   });
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'lost'>('connecting');
 
   useEffect(() => {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = API_URL.replace(/^https?:\/\//, '');
-    const wsUrl = `${wsProtocol}//${wsHost}/ws/livetiming`;
+    let ws: WebSocket;
+    let reconnectTimer: NodeJS.Timeout;
 
-    const socket = new WebSocket(wsUrl);
+    const connect = () => {
+      setConnectionStatus(prev => prev === 'connected' ? 'lost' : 'connecting');
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = API_URL.replace(/^https?:\/\//, '');
+      const wsUrl = `${wsProtocol}//${wsHost}/ws/livetiming`;
 
-    socket.onopen = () => setIsConnected(true);
-    socket.onmessage = (event: MessageEvent) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'TimingData') {
-        setData(prev => ({
-          lines: msg.lines || prev.lines,
-          trackStatus: msg.trackStatus || prev.trackStatus,
-          weather: msg.weather || prev.weather,
-          messages: msg.messages || prev.messages,
-          isLiveSession: msg.is_live_session
-        }));
-      }
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setIsConnected(true);
+        setConnectionStatus('connected');
+      };
+      
+      ws.onmessage = (event: MessageEvent) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'TimingData') {
+          setData(prev => ({
+            lines: msg.lines || prev.lines,
+            trackStatus: msg.trackStatus || prev.trackStatus,
+            weather: msg.weather || prev.weather,
+            messages: msg.messages || prev.messages,
+            isLiveSession: msg.is_live_session
+          }));
+        }
+      };
+      
+      ws.onclose = () => {
+        setIsConnected(false);
+        setConnectionStatus('lost');
+        reconnectTimer = setTimeout(connect, 3000); // Auto reconnect
+      };
     };
-    socket.onclose = () => setIsConnected(false);
 
-    return () => socket.close();
+    connect();
+    return () => {
+      clearTimeout(reconnectTimer);
+      if (ws) ws.close();
+    };
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -101,25 +121,32 @@ const LiveTimingPage: React.FC = () => {
     return 'bg-green-500 text-black';
   };
 
-  const sortedLines = [...data.lines].sort((a, b) => parseInt(String(a.position)) - parseInt(String(b.position)));
+  const sortedLines = [...data.lines].sort((a, b) => {
+    const posA = parseInt(String(a.position));
+    const posB = parseInt(String(b.position));
+    if (isNaN(posA) && isNaN(posB)) return 0;
+    if (isNaN(posA)) return 1;
+    if (isNaN(posB)) return -1;
+    return posA - posB;
+  });
 
   return (
-    <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600" style={{ overflowAnchor: 'none' }}>
+    <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600 w-full overflow-hidden" style={{ overflowAnchor: 'none' }}>
       <main className="w-full max-w-[1920px] mx-auto px-2 md:px-4 lg:px-8 pt-24 pb-10">
         
         {/* Header Bar */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
           <div>
-            <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]'}`}>
-              <Activity size={12} className={isConnected ? 'animate-pulse' : ''} /> 
-              {!isConnected ? 'AWAITING CONNECTION...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'SIMULATED TELEMETRY (DEMO)'}
+            <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]'}`}>
+              <Activity size={12} className={connectionStatus === 'connected' ? 'animate-pulse' : ''} /> 
+              {connectionStatus === 'connecting' ? 'AWAITING CONNECTION...' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'SIMULATED TELEMETRY (DEMO)'}
             </div>
             <h1 className="text-4xl font-black tracking-tighter uppercase flex items-center gap-2">
               Pit Wall <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Telemetry</span>
             </h1>
           </div>
           
-          <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold bg-[#0a0a0a] border border-[#222] rounded-md px-4 py-2 uppercase tracking-wider shadow-inner">
+          <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold bg-[#0a0a0a] border border-[#222] rounded-md px-4 py-2 uppercase tracking-wider shadow-inner w-full md:w-auto">
             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,1)]"></div> Overall Best</span>
             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(74,222,128,1)]"></div> Personal Best</span>
             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-yellow-400"></div> No Improvement</span>
@@ -129,7 +156,7 @@ const LiveTimingPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Main Timing Table (Left 3 cols) */}
-          <div className="lg:col-span-3 bg-[#080808] border border-[#1a1a1a] rounded-xl overflow-hidden shadow-2xl flex flex-col relative">
+          <div className="lg:col-span-3 bg-[#080808] border border-[#1a1a1a] rounded-xl overflow-hidden shadow-2xl flex flex-col relative min-w-0">
             {/* Glossy top highlight */}
             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
             
@@ -158,7 +185,7 @@ const LiveTimingPage: React.FC = () => {
                         <div className="w-1 h-5 rounded-sm shadow-sm" style={{ backgroundColor: teamColors[row.team] || '#fff' }}></div>
                         {row.driver}
                         {row.status === 'PIT' && <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[9px] rounded-sm animate-pulse uppercase tracking-wider">IN PIT</span>}
-                        {row.status !== 'PIT' && parseFloat(row.interval) < 1.0 && (
+                        {row.status !== 'PIT' && row.interval && !isNaN(parseFloat(row.interval)) && parseFloat(row.interval) < 1.0 && (
                           <span className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[9px] rounded-sm uppercase tracking-wider drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]" title="Manual Override Available">
                             OVR
                           </span>

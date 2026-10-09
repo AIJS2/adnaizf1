@@ -1,65 +1,75 @@
 import logging
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
+from typing import Any, Optional, List
+
 import fastf1
+import redis
+
+# Enable FastF1 default file cache for its own requests (required by fastf1)
 fastf1.Cache.enable_cache("cache")
+
 CACHE_DURATION_HOURS = 6
 
-# Redis Advanced Caching Setup
-import redis
-REDIS_URL = os.environ.get("REDIS_URL")
-redis_client = None
-if REDIS_URL:
-    try:
-        redis_client = redis.from_url(REDIS_URL)
-        redis_client.ping()
-        print("'? Connected to Redis for Advanced Caching!")
-    except Exception as e:
-        logging.error(f"Failed to connect to Redis: {e}", exc_info=True)
-        redis_client = None
+# Modern Redis configuration with connection pooling
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
-def get_advanced_cache(key, hours=CACHE_DURATION_HOURS):
-    if redis_client:
-        try:
-            cached = redis_client.get(key)
-            if cached:
-                return json.loads(cached)
-        except: pass
-    if os.path.exists(key):
-        file_mod_time = datetime.fromtimestamp(os.path.getmtime(key))
-        if datetime.now() - file_mod_time < timedelta(hours=hours):
-            with open(key, "r", encoding="utf-8") as f:
-                return json.load(f)
+# Setup robust connection pool
+try:
+    pool = redis.ConnectionPool.from_url(
+        REDIS_URL,
+        decode_responses=True,
+        socket_timeout=5,
+        socket_connect_timeout=5,
+        retry_on_timeout=True,
+        health_check_interval=30
+    )
+    redis_client = redis.Redis(connection_pool=pool)
+    # Validate connection
+    redis_client.ping()
+    logging.info(f"Successfully connected to Redis cache at {REDIS_URL.split('@')[-1] if '@' in REDIS_URL else REDIS_URL}")
+except Exception as e:
+    logging.error(f"Failed to connect to Redis at {REDIS_URL}: {e}")
+    redis_client = None
+
+def get_advanced_cache(key: str, hours: int = CACHE_DURATION_HOURS) -> Optional[Any]:
+    """Retrieve data from Redis cache."""
+    if not redis_client:
+        return None
+    
+    try:
+        cached_data = redis_client.get(key)
+        if cached_data:
+            return json.loads(cached_data)
+    except Exception as e:
+        logging.warning(f"Error reading from Redis cache for key '{key}': {e}")
+    
     return None
 
-def set_advanced_cache(key, data, hours=CACHE_DURATION_HOURS):
-    if redis_client:
-        try:
-            redis_client.setex(key, int(hours * 3600), json.dumps(data))
-        except: pass
-    dirname = os.path.dirname(key)
-    if dirname:
-        os.makedirs(dirname, exist_ok=True)
-    with open(key, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+def set_advanced_cache(key: str, data: Any, hours: int = CACHE_DURATION_HOURS) -> None:
+    """Store data in Redis cache with an expiration."""
+    if not redis_client:
+        return
 
+    try:
+        ttl_seconds = int(hours * 3600)
+        # Using json.dumps to serialize complex dictionaries and lists
+        redis_client.setex(key, ttl_seconds, json.dumps(data))
+    except Exception as e:
+        logging.warning(f"Error writing to Redis cache for key '{key}': {e}")
 
+def clear_advanced_cache(keys: Optional[List[str]] = None) -> None:
+    """Clear specific keys or flush the entire Redis database."""
+    if not redis_client:
+        return
 
-def clear_advanced_cache(keys=None):
-    if redis_client:
-        try:
-            if keys:
-                redis_client.delete(*keys)
-            else:
-                redis_client.flushdb()
-        except Exception as e:
-            logging.error(f"Failed to clear Redis cache: {e}")
-            
-    if keys:
-        for k in keys:
-            if os.path.exists(k):
-                try:
-                    os.remove(k)
-                except Exception as e:
-                    logging.error(f"Failed to remove local cache file {k}: {e}")
+    try:
+        if keys:
+            redis_client.delete(*keys)
+            logging.info(f"Cleared cache keys: {keys}")
+        else:
+            redis_client.flushdb()
+            logging.info("Flushed all Redis cache")
+    except Exception as e:
+        logging.error(f"Failed to clear Redis cache: {e}")

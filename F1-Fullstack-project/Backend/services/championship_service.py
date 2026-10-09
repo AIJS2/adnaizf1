@@ -4,7 +4,7 @@ import fastf1
 
 def compute_fastf1_championship(year: int):
     try:
-        print("⚙️ Menghitung total klasemen (Teams & Drivers) dengan data lengkap...")
+        print("Menghitung total klasemen (Teams & Drivers) dengan data lengkap...")
         schedule = fastf1.get_event_schedule(year, include_testing=False)
         official_races = schedule[schedule["EventName"].str.contains("Grand Prix", na=False)]
         today = pd.to_datetime("today").normalize()
@@ -32,7 +32,7 @@ def compute_fastf1_championship(year: int):
                     session = fastf1.get_session(year, race["RoundNumber"], session_type)
                     session.load(telemetry=False, weather=False, laps=False, messages=False)
                     if hasattr(session, "results") and not session.results.empty:
-                        needed = ["DriverNumber", "Abbreviation", "FirstName", "LastName", "TeamName", "Position", "Status"]
+                        needed = ["DriverNumber", "Abbreviation", "FirstName", "LastName", "TeamName", "Position", "Status", "ClassifiedPosition", "GridPosition"]
                         if all(c in session.results.columns for c in needed):
                             sub_df = session.results[needed].copy()
                             sub_df["Points"] = pd.to_numeric(session.results.get("Points", 0), errors="coerce").fillna(0.0)
@@ -59,9 +59,11 @@ def compute_fastf1_championship(year: int):
         team_points = df_points_sessions.groupby("TeamName")["Points"].sum()
         team_wins = df_race_only[df_race_only["Position"] == 1].groupby("TeamName").size()
         team_podiums = df_race_only[df_race_only["Position"] <= 3].groupby("TeamName").size()
+        team_dnfs = df_race_only[df_race_only['ClassifiedPosition'].isin(['R', 'D', 'E', 'W'])].groupby("TeamName").size()
         team_standings = pd.DataFrame(team_points).rename(columns={"Points": "points"})
         team_standings["wins"] = team_wins
         team_standings["podiums"] = team_podiums
+        team_standings["dnfs"] = team_dnfs
         team_standings.fillna(0, inplace=True); team_standings = team_standings.astype(int).reset_index()
         team_standings.rename(columns={"TeamName": "name"}, inplace=True)
         
@@ -85,13 +87,17 @@ def compute_fastf1_championship(year: int):
 
         driver_wins = df_race_only[df_race_only["Position"] == 1].groupby("FullName").size().rename('wins')
         driver_podiums = df_race_only[df_race_only["Position"] <= 3].groupby("FullName").size().rename('podiums')
+        # DNF calculation using ClassifiedPosition
+        is_dnf = df_race_only['ClassifiedPosition'].isin(['R', 'D', 'E', 'W'])
+        driver_dnfs = df_race_only[is_dnf].groupby("FullName").size().rename('dnfs')
         last_race_driver_points = df_last_race.groupby("FullName")["Points"].sum().rename('points_last_race')
         
         driver_standings = driver_standings.merge(driver_wins, on="FullName", how="left")
         driver_standings = driver_standings.merge(driver_podiums, on="FullName", how="left")
+        driver_standings = driver_standings.merge(driver_dnfs, on="FullName", how="left")
         driver_standings = driver_standings.merge(last_race_driver_points, on="FullName", how="left")
         
-        cols_to_fill = ['wins', 'podiums', 'points_last_race']
+        cols_to_fill = ['wins', 'podiums', 'dnfs', 'points_last_race']
         driver_standings[cols_to_fill] = driver_standings[cols_to_fill].fillna(0).astype(int)
         driver_standings['driver_number'] = pd.to_numeric(driver_standings['driver_number'], errors='coerce').fillna(0).astype(int)
 
@@ -104,9 +110,20 @@ def compute_fastf1_championship(year: int):
             "year": year, 
             "teams": team_standings.to_dict(orient="records"), 
             "drivers": driver_standings.to_dict(orient="records"),
-            "session_results": df_full[['RoundNumber', 'FullName', 'TeamName', 'Position', 'Points', 'SessionType', 'Abbreviation', 'EventName', 'Location', 'Status']].to_dict(orient="records")
+            "session_results": df_full[['RoundNumber', 'FullName', 'TeamName', 'Position', 'Points', 'SessionType', 'Abbreviation', 'EventName', 'Location', 'Status', 'ClassifiedPosition', 'GridPosition']].to_dict(orient="records")
         }
-        return final_data
+        
+        def clean_nans(obj):
+            if isinstance(obj, list):
+                return [clean_nans(i) for i in obj]
+            elif isinstance(obj, dict):
+                return {k: clean_nans(v) for k, v in obj.items()}
+            else:
+                if pd.isna(obj):
+                    return None
+            return obj
+            
+        return clean_nans(final_data)
     except Exception as e:
         logging.error(f"Error pada server: {e}", exc_info=True)
         return {"error": "Terjadi kesalahan internal saat memproses data."}

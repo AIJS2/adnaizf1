@@ -6,7 +6,7 @@ from config.cache import set_advanced_cache
 
 def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = None):
     try:
-        print(f"⚙️ Menghitung data DETAIL SUPER LENGKAP untuk {year} Ronde {round_number}...")
+        print(f"Menghitung data DETAIL SUPER LENGKAP untuk {year} Ronde {round_number}...")
         
         def format_lap_time(delta):
             if pd.isna(delta): return ""
@@ -78,7 +78,7 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
         today = pd.to_datetime("today").normalize()
         event_date = pd.to_datetime(event["EventDate"]).normalize()
         if today < (event_date - timedelta(days=3)):
-            print(f"  ⚡ Balapan {event['EventName']} masih di masa depan ({event['EventDate'].strftime('%Y-%m-%d')}). Returning instant response.")
+            print(f"  Balapan {event['EventName']} masih di masa depan ({event['EventDate'].strftime('%Y-%m-%d')}). Returning instant response.")
             final_data = {
                 "race_info": { "name": event['EventName'], "location": event['Location'], "country": str(event.get('Country', '')) },
                 "status": "Upcoming",
@@ -113,7 +113,7 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
                             if s_date.tz is None:
                                 s_date = s_date.tz_localize("UTC")
                             if s_date > now_utc:
-                                print(f"  ⚡ Sesi '{name}' belum berlangsung ({s_date}). Melewati.")
+                                print(f"  Sesi '{name}' belum berlangsung ({s_date}). Melewati.")
                                 continue
                         except Exception:
                             pass
@@ -127,6 +127,8 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
         
         pole_sitter_info, race_winner_info, results, fastest_lap_info, starting_grid, qualifying_results, sprint_results, sprint_grid_results, sprint_qualifying_results = None, None, [], None, [], [], [], [], []
         practice1_results, practice2_results, practice3_results = [], [], []
+        tyre_strategy, speed_traps, sector_matrix, weather_info = [], [], [], []
+        lap_chart, gap_chart, lap_times_chart = [], [], []
         available_tabs = []
 
         if 'Practice 1' in available_sessions:
@@ -207,7 +209,13 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
                 driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
                 current_laps = int(res.get('Laps', 0))
                 time_display, gap_display, interval_display = res['Status'], "", ""
-                if current_laps == max_laps and pd.notna(res.get('Time')):
+                res_status = res['Status']
+                
+                classified_pos = str(res.get('ClassifiedPosition', ''))
+                if classified_pos in ['R', 'D', 'E', 'W']:
+                    time_display = "DNF"
+                    res_status = "DNF"
+                elif current_laps == max_laps and pd.notna(res.get('Time')):
                     total_time, gap, interval = None, None, None
                     if position == 1: total_time = res['Time']
                     else:
@@ -227,7 +235,7 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
                             ahead = ahead_row.iloc[0]
                             lap_diff = int(ahead.get('Laps', 0)) - current_laps
                             if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
-                sprint_results.append({ "position": position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res['Status'], "points": int(res.get('Points', 0)), "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
+                sprint_results.append({ "position": position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)), "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
         
         if 'Race' in available_sessions and hasattr(available_sessions['Race'], 'results') and not available_sessions['Race'].results.empty:
             available_tabs.extend(['Starting Grid', 'Race'])
@@ -247,7 +255,13 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
                 driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
                 current_laps = int(res.get('Laps', 0))
                 time_display, gap_display, interval_display = res['Status'], "", ""
-                if current_laps == max_laps and pd.notna(res.get('Time')):
+                res_status = res['Status']
+                
+                classified_pos = str(res.get('ClassifiedPosition', ''))
+                if classified_pos in ['R', 'D', 'E', 'W']:
+                    time_display = "DNF"
+                    res_status = "DNF"
+                elif current_laps == max_laps and pd.notna(res.get('Time')):
                     total_time, gap, interval = None, None, None
                     if position == 1: total_time = res['Time']
                     else:
@@ -267,7 +281,7 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
                             ahead = ahead_row.iloc[0]
                             lap_diff = int(ahead.get('Laps', 0)) - current_laps
                             if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
-                results.append({ "position": position, "abbreviation": str(res.get('Abbreviation', '')), "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res['Status'], "points": int(res.get('Points', 0)), "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
+                results.append({ "position": position, "abbreviation": str(res.get('Abbreviation', '')), "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)), "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
             
             fastest = race_session.laps.pick_fastest()
             if fastest is not None:
@@ -525,7 +539,17 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
             "lap_times_chart": lap_times_chart if lap_times_chart else None,
         }
 
-        return final_data
+        def clean_nans(obj):
+            if isinstance(obj, list):
+                return [clean_nans(i) for i in obj]
+            elif isinstance(obj, dict):
+                return {k: clean_nans(v) for k, v in obj.items()}
+            else:
+                if pd.isna(obj):
+                    return None
+            return obj
+            
+        return clean_nans(final_data)
     except Exception as e:
         logging.error(f"Error pada server: {e}", exc_info=True)
         return {"error": "Terjadi kesalahan internal saat memproses data."}

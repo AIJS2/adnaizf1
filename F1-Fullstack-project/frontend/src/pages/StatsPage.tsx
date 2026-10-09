@@ -18,6 +18,7 @@ interface EntryProps {
   points?: number;
   wins?: number;
   podiums?: number;
+  dnfs?: number;
   abbreviation?: string;
 }
 
@@ -136,6 +137,13 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
                 <span className="text-[9px] text-neutral-500 uppercase font-bold">Podiums</span>
               </div>
             )}
+            {entry.dnfs !== undefined && entry.dnfs > 0 && (
+              <div className="bg-neutral-950/60 border border-neutral-800 px-3 py-2 rounded-xl">
+                <AlertTriangle size={14} className="text-red-500 mx-auto mb-1" />
+                <span className="font-black text-white text-lg block leading-none">{entry.dnfs}</span>
+                <span className="text-[9px] text-neutral-500 uppercase font-bold">DNFs</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -219,6 +227,12 @@ const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }
               <div className="text-center">
                 <Medal size={12} className="text-amber-400/60 mx-auto mb-0.5" />
                 <span className="font-black text-base text-white">{entry.podiums}</span>
+              </div>
+            )}
+            {entry.dnfs !== undefined && entry.dnfs > 0 && (
+              <div className="text-center">
+                <AlertTriangle size={12} className="text-red-500/60 mx-auto mb-0.5" />
+                <span className="font-black text-base text-white">{entry.dnfs}</span>
               </div>
             )}
           </div>

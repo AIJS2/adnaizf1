@@ -265,7 +265,7 @@ const TeamProfilePage = () => {
             <span className="text-xs text-neutral-400 font-mono">Cumulative PTS by Round</span>
           </div>
 
-          <div className="h-[320px]">
+          <div className="h-[320px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={profile.progression} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
                 <defs>

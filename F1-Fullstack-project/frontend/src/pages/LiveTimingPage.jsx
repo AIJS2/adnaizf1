@@ -77,7 +77,8 @@ const LiveTimingPage = () => {
           lines: msg.lines || prev.lines,
           trackStatus: msg.trackStatus || prev.trackStatus,
           weather: msg.weather || prev.weather,
-          messages: msg.messages || prev.messages
+          messages: msg.messages || prev.messages,
+          isLiveSession: msg.is_live_session
         }));
       }
     };
@@ -102,9 +103,9 @@ const LiveTimingPage = () => {
         {/* Header Bar */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
           <div>
-            <div className="inline-flex items-center gap-2 bg-red-600/10 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+            <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]'}`}>
               <Activity size={12} className={isConnected ? 'animate-pulse' : ''} /> 
-              {isConnected ? 'LIVE SIGNAL DETECTED' : 'AWAITING TELEMETRY...'}
+              {!isConnected ? 'AWAITING CONNECTION...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'SIMULATED TELEMETRY (DEMO)'}
             </div>
             <h1 className="text-4xl font-black tracking-tighter uppercase flex items-center gap-2">
               Pit Wall <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Telemetry</span>
@@ -203,7 +204,7 @@ const LiveTimingPage = () => {
             <div className="bg-[#080808] border border-[#1a1a1a] rounded-xl p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
               <h3 className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
-                <Activity size={14} /> Live Track Map
+                <Activity size={14} /> Track Map Simulation
               </h3>
               <div className="relative w-full aspect-[2/1] bg-[#050505] rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
                 <svg viewBox="0 0 300 150" className="w-full h-full">

@@ -45,3 +45,21 @@ def set_advanced_cache(key, data, hours=CACHE_DURATION_HOURS):
         json.dump(data, f, indent=2)
 
 
+
+def clear_advanced_cache(keys=None):
+    if redis_client:
+        try:
+            if keys:
+                redis_client.delete(*keys)
+            else:
+                redis_client.flushdb()
+        except Exception as e:
+            logging.error(f"Failed to clear Redis cache: {e}")
+            
+    if keys:
+        for k in keys:
+            if os.path.exists(k):
+                try:
+                    os.remove(k)
+                except Exception as e:
+                    logging.error(f"Failed to remove local cache file {k}: {e}")

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Trophy, Calendar, Activity, TrendingUp, Wrench, Route, Gauge, Sun, List, LayoutGrid, Timer, Flag } from 'lucide-react';
+import { Trophy, Calendar, Activity, TrendingUp, Wrench, Route, Gauge, Sun, List, LayoutGrid, Timer, Flag, GitCommitVertical } from 'lucide-react';
 import { API_URL } from '../config';
 import { getTrackMap } from '../data/trackData';
 import TelemetryTab from '../components/ui/TelemetryTab';

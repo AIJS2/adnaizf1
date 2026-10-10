@@ -6,6 +6,11 @@ export interface Race {
   round: number;
   season: number;
   status: 'upcoming' | 'ongoing' | 'completed' | 'Upcoming' | 'Ongoing' | 'Finished' | string;
+  location?: string;
+  country?: string;
+  /** `null` until the race is classified; `"Data not available"` when the session load failed. */
+  winner?: string | null;
+  winner_team?: string | null;
 }
 
 export interface DriverProfile {
@@ -132,8 +137,8 @@ export interface TeamProfile {
   wins?: number; 
   podiums?: number; 
   points_last_race?: number; 
-  drivers?: DriverProfile[]; 
-  progression?: Record<string, number>[]; 
+  drivers?: DriverProfile[];
+  progression?: TeamProgressionEntry[];
 }
 
 /**
@@ -379,6 +384,18 @@ export interface DriverTeammateInfo {
   position?: NumericString;
   race_h2h?: { driver_ahead: number; teammate_ahead: number };
   quali_h2h?: { driver_ahead: number; teammate_ahead: number };
+}
+
+/**
+ * One race-by-race entry of a team profile's `progression` array
+ * (`Backend/services/profiles_service.py`, process_team_profile).
+ */
+export interface TeamProgressionEntry {
+  round: number;
+  race_name: string;
+  location?: string;
+  points: number;
+  cumulative_points: number;
 }
 
 /** One race-by-race entry of a driver profile's `progression` array. */

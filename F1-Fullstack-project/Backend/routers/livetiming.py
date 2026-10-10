@@ -331,23 +331,71 @@ def _tick_demo(state: list[dict], overall_best: dict, messages: list, track_stat
 #  Broadcast coroutine
 # ======================================================================
 
-async def _broadcast_loop(is_live: bool) -> None:
+# How often the broadcast loop re-checks whether a session is actually live.
+# The mode is NOT latched on first connect: a session can start or finish while
+# clients stay connected, so we re-evaluate periodically and switch modes.
+_LIVE_RECHECK_SECONDS = 60.0
+
+# Demo state is rebuilt when switching modes; keep one instance per direction
+# so a live -> demo transition starts from a clean simulation.
+async def _broadcast_loop(initial_is_live: bool) -> None:
     """
     Periodically build a snapshot and send it to every connected client.
-    If *is_live* is True, the snapshot comes from the real SignalR state;
-    otherwise we tick the demo simulation.
+    If live, the snapshot comes from the real SignalR state; otherwise we tick
+    the demo simulation.
+
+    The live/demo decision is re-evaluated every ``_LIVE_RECHECK_SECONDS``
+    rather than fixed at connect time, so a session starting (or ending) while
+    clients are already connected still switches the feed over.
     """
+    is_live = initial_is_live
     demo_state = None if is_live else _build_demo_state()
     overall_best = {"s1": 999.0, "s2": 999.0, "s3": 999.0, "lap": 999.0}
     demo_messages: list[dict] = [
         {"time": "14:00:00", "msg": "DEMO SESSION ACTIVE", "type": "system"},
     ]
     demo_track_status = "GREEN"
+    last_check = time.monotonic()
+
+    def _switch_to(new_live: bool) -> None:
+        """Enter *new_live* mode, resetting whatever the other mode owns."""
+        nonlocal demo_state, overall_best, demo_messages, demo_track_status
+        if new_live:
+            _state.is_live = True
+            demo_state = None
+            logger.info("Live session detected – switching WS feed to live mode")
+        else:
+            _state.is_live = False
+            demo_state = _build_demo_state()
+            overall_best = {"s1": 999.0, "s2": 999.0, "s3": 999.0, "lap": 999.0}
+            demo_messages = [{"time": "14:00:00", "msg": "DEMO SESSION ACTIVE", "type": "system"}]
+            demo_track_status = "GREEN"
+            logger.info("No live session – switching WS feed to demo mode")
 
     while _connected_clients:
+        # Re-evaluate the mode periodically, not just on first connect.
+        now = time.monotonic()
+        if now - last_check >= _LIVE_RECHECK_SECONDS:
+            last_check = now
+            detected = await asyncio.to_thread(_check_live_session)
+            if detected != is_live:
+                if detected:
+                    # Only claim live mode once SignalR data actually flows;
+                    # otherwise stay in demo so clients keep seeing something.
+                    await asyncio.to_thread(_ensure_signalr)
+                    if _state.timing_data:
+                        is_live = True
+                        _switch_to(True)
+                else:
+                    is_live = False
+                    _switch_to(False)
+
         if is_live:
             payload = _state.snapshot()
         else:
+            # Invariant: demo mode always has a live simulation to tick.
+            if demo_state is None:
+                demo_state = _build_demo_state()
             demo_track_status = _tick_demo(
                 demo_state, overall_best, demo_messages, demo_track_status,
             )

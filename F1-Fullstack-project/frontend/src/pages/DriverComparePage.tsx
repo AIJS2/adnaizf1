@@ -56,8 +56,12 @@ const DriverComparePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
 
-    const [driver1Id, setDriver1Id] = useState(searchParams.get('d1') || 'charles_leclerc');
-  const [driver2Id, setDriver2Id] = useState(searchParams.get('d2') || 'max_verstappen');
+  // No hardcoded fallback drivers: a name like 'charles_leclerc' is not
+  // guaranteed to exist in the current season, so the initial state is empty
+  // and the effect below fills in driversList[0] / driversList[1] once the
+  // championship payload actually arrives.
+  const [driver1Id, setDriver1Id] = useState(searchParams.get('d1') || '');
+  const [driver2Id, setDriver2Id] = useState(searchParams.get('d2') || '');
 
     
       const [activeTab, setActiveTab] = useState('overview');
@@ -72,10 +76,20 @@ const DriverComparePage = () => {
   const driversList: DriverProfile[] = championshipData?.drivers || [];
 
   useEffect(() => {
-    if (driversList.length > 0) {
-      if (!searchParams.get('d1') && driversList[0]?.id) setDriver1Id(driversList[0].id);
-      if (!searchParams.get('d2') && driversList[1]?.id) setDriver2Id(driversList[1].id);
-    }
+    if (driversList.length === 0) return;
+
+    const validIds = new Set(driversList.map(d => d.id).filter((id): id is string => !!id));
+
+    // Only seed defaults when the URL does not already pin a driver.
+    if (!searchParams.get('d1') && driversList[0]?.id) setDriver1Id(driversList[0].id);
+    if (!searchParams.get('d2') && driversList[1]?.id) setDriver2Id(driversList[1].id);
+
+    // A URL-pinned driver that no longer races this season would 404 forever,
+    // so fall back to the list defaults in that case too.
+    const pinned1 = searchParams.get('d1');
+    const pinned2 = searchParams.get('d2');
+    if (pinned1 && !validIds.has(pinned1) && driversList[0]?.id) setDriver1Id(driversList[0].id);
+    if (pinned2 && !validIds.has(pinned2) && driversList[1]?.id) setDriver2Id(driversList[1].id);
   }, [driversList, searchParams]);
 
   // 2. Fetch both driver profiles using useQuery

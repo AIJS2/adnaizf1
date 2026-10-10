@@ -77,7 +77,14 @@ const SeasonProgress = ({ completed, total }: { completed: number; total: number
 };
 
 // --- FILTER TABS ---
-const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (key: string) => void; counts: any }) => {
+interface RaceFilterCounts {
+  all: number;
+  completed: number;
+  upcoming: number;
+  ongoing?: number;
+}
+
+const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (key: string) => void; counts: RaceFilterCounts }) => {
   const tabs = [
     { key: 'all', label: 'All Races', icon: Calendar, count: counts.all },
     { key: 'completed', label: 'Completed', icon: CheckCircle2, count: counts.completed },
@@ -120,7 +127,7 @@ const MonthDivider = ({ month, year, raceCount }: { month: string; year: number;
 );
 
 // --- RACE CARD ---
-const RaceCard = ({ race, isNextRace, index }: { race: Race | any; isNextRace: boolean; index: number }) => {
+const RaceCard = ({ race, isNextRace, index }: { race: Race; isNextRace: boolean; index: number }) => {
   const raceDate = new Date(race.date + 'T00:00:00');
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);

@@ -48,6 +48,9 @@ class LiveTimingState:
         self.session_info: dict[str, Any] = {}
         self.session_status: str = ""
         self.race_control_messages: list[dict] = []
+        # Composite (Utc|Message) keys already buffered, so SignalR retries
+        # that re-send the whole list cannot duplicate entries.
+        self._race_control_keys: set[str] = set()
         self.lap_count: dict[str, Any] = {}
         self.is_live: bool = True
 
@@ -147,17 +150,39 @@ class LiveTimingState:
             self.session_status = payload.get("Status", "")
 
     def _handle_race_control(self, payload: Any) -> None:
+        # SignalR re-sends the full message list on reconnect, so every retry
+        # would otherwise re-insert messages we already have and the buffer
+        # would fill with duplicates. Track a composite (Utc, Message) key per
+        # message and skip anything already seen.
         if isinstance(payload, dict):
             msgs = payload.get("Messages", {})
             if isinstance(msgs, dict):
+                new_entries: list[tuple[str, dict]] = []
                 for _, m in msgs.items():
-                    self.race_control_messages.insert(0, {
-                        "time": m.get("Utc", datetime.utcnow().strftime("%H:%M:%S")),
-                        "msg": m.get("Message", ""),
+                    utc = m.get("Utc") or datetime.utcnow().strftime("%H:%M:%S")
+                    text = m.get("Message", "")
+                    entry = {
+                        "time": utc,
+                        "msg": text,
                         "type": self._classify_rc_msg(m),
-                    })
+                    }
+                    new_entries.append((f"{utc}|{text}", entry))
+
+                # Skip keys we already hold, then prepend newest-first.
+                fresh: list[dict] = []
+                for key, entry in new_entries:
+                    if key in self._race_control_keys:
+                        continue
+                    self._race_control_keys.add(key)
+                    fresh.append(entry)
+                self.race_control_messages = fresh + self.race_control_messages
                 # Keep last 30
                 self.race_control_messages = self.race_control_messages[:30]
+                # Drop keys whose entry fell out of the buffer so the set
+                # cannot grow without bound over a long session.
+                self._race_control_keys = {
+                    f"{m['time']}|{m['msg']}" for m in self.race_control_messages
+                }
 
     def _handle_lap_count(self, payload: Any) -> None:
         if isinstance(payload, dict):

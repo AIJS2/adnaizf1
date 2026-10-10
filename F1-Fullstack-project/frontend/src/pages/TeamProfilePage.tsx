@@ -1,4 +1,4 @@
-import { DriverProfile, TeamProfile } from '../types/f1';
+import { DriverProfile, TeamProfile, TeamProgressionEntry } from '../types/f1';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { API_URL } from '../config';
@@ -320,8 +320,8 @@ const TeamProfilePage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800/60">
-                {profile.progression && profile.progression.map((row: any) => (
-                  <tr key={row.round as React.Key} className="hover:bg-neutral-800/30 transition-colors">
+                {profile.progression && profile.progression.map((row: TeamProgressionEntry) => (
+                  <tr key={row.round} className="hover:bg-neutral-800/30 transition-colors">
                     <td className="p-4 text-center font-mono font-bold text-neutral-500">{row.round}</td>
                     <td className="p-4 font-bold text-white">
                       <div>{row.race_name}</div>

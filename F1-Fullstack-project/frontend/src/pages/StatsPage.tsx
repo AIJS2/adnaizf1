@@ -1,10 +1,11 @@
-import { DriverProfile, TeamProfile } from '../types/f1';
+import { DriverProfile, SessionResultEntry, TeamProfile } from '../types/f1';
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Search, Trophy, Crown, User, AlertTriangle, Loader2,
   Medal, ChevronRight, GitCompareArrows, Star,
-  Factory, Shield, TrendingUp, TrendingDown, Sparkles
+  Factory, Shield, TrendingUp, TrendingDown, Sparkles,
+  type LucideIcon
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
@@ -64,7 +65,7 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
   const teamName = type === 'driver' && entry.team ? entry.team : entry.name;
   const logoNeedsBrightening = darkLogos.includes(teamName);
 
-  const rankConfig: Record<number, { border: string; bg: string; shadow: string; icon: any; iconColor: string; label: string; labelBg: string }> = {
+  const rankConfig: Record<number, { border: string; bg: string; shadow: string; icon: LucideIcon; iconColor: string; label: string; labelBg: string }> = {
     0: { border: 'border-yellow-500/60', bg: 'from-yellow-500/10 via-yellow-900/5', shadow: 'shadow-yellow-500/20', icon: Crown, iconColor: 'text-yellow-400', label: '1ST', labelBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
     1: { border: 'border-slate-400/40', bg: 'from-slate-400/10 via-slate-800/5', shadow: 'shadow-slate-400/15', icon: Medal, iconColor: 'text-slate-300', label: '2ND', labelBg: 'bg-slate-400/20 text-slate-300 border-slate-400/40' },
     2: { border: 'border-amber-600/40', bg: 'from-amber-600/10 via-amber-900/5', shadow: 'shadow-amber-600/15', icon: Medal, iconColor: 'text-amber-500', label: '3RD', labelBg: 'bg-amber-600/20 text-amber-500 border-amber-600/40' },
@@ -283,7 +284,7 @@ const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }
 const StatsPage = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'drivers');
-  const [data, setData] = useState<{ drivers: DriverProfile[]; teams: TeamProfile[]; session_results: any[] }>({ drivers: [], teams: [], session_results: [] });
+  const [data, setData] = useState<{ drivers: DriverProfile[]; teams: TeamProfile[]; session_results: SessionResultEntry[] }>({ drivers: [], teams: [], session_results: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

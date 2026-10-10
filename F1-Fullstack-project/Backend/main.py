@@ -19,6 +19,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 from config.limiter import limiter
+from config.cache import redis_status
 
 app = FastAPI()
 app.state.limiter = limiter
@@ -63,6 +64,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Health check — reports Redis cache connectivity so orchestrators and the
+# dashboard can distinguish "slow because uncached" from "down".
+# ---------------------------------------------------------------------------
+@app.get("/health")
+async def health() -> dict:
+    redis_state = redis_status()
+    return {
+        "status": "ok" if redis_state["connected"] else "degraded",
+        "cache": redis_state,
+    }
+
 
 from routers.dashboard import router as dashboard_router
 from routers.races import router as races_router

@@ -17,6 +17,7 @@ import LapTimesChartComponent from '../components/race/LapTimesChart';
 import RaceControlMessages from '../components/race/RaceControlMessages';
 import { PracticeResultTable, QualifyingResultTable, SprintQualifyingResultTable, SprintResultTable, RaceResultTable, GridTable, TyreStrategyTable, SpeedSectorsTable, WeatherChart } from '../components/race/RaceTables';
 import { SummaryCard } from '../components/race/RaceMiniComponents';
+import type { Race, SessionResultRow } from '../types/f1';
 
 
 // --- KOMPONEN UTAMA HALAMAN DETAIL BALAPAN ---
@@ -93,7 +94,7 @@ function RaceDetailPage() {
     }
   }, [raceData]);
 
-  const handleRaceChange = (event: any) => {
+  const handleRaceChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     navigate(`/race/${year}/${event.target.value}`);
   };
 
@@ -137,7 +138,7 @@ function RaceDetailPage() {
     ? { ...raceData.race_winner, team_name: raceData.results?.[0]?.team_name }
     : null;
   const poleSitterData = raceData?.pole_position
-    ? { ...raceData.pole_position, team_name: raceData.qualifying_results?.find((d: any) => d.full_name === raceData.pole_position.full_name)?.team_name }
+    ? { ...raceData.pole_position, team_name: raceData.qualifying_results?.find((d: SessionResultRow) => d.full_name === raceData.pole_position.full_name)?.team_name }
     : null;
   const fastestLapData = raceData?.fastest_lap;
   const trackMapImg = getTrackMap(raceData?.race_info);
@@ -230,7 +231,7 @@ function RaceDetailPage() {
               value={round}
               className="bg-neutral-900/80 backdrop-blur border border-neutral-700/50 py-2.5 px-4 rounded-xl font-bold appearance-none cursor-pointer shadow-lg focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
             >
-              {schedule.map((race: any) => (
+              {schedule.map((race: Race) => (
                 <option key={race.round} value={race.round}>{race.location}</option>
               ))}
             </select>

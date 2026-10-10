@@ -43,7 +43,7 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
 
   const getVisibleLaps = () => {
     if (!currentLap) return [1, 2, 3, 4, 5];
-    let start = Math.max(1, currentLap - 2);
+    const start = Math.max(1, currentLap - 2);
     return Array.from({ length: 5 }, (_, i) => start + i);
   };
 

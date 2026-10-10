@@ -71,7 +71,7 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2 
       }
       
       // 5. Impact: based on total points (assume 400 is dominant season for scaling)
-      let impact = 60 + (points / 400) * 40;
+      const impact = 60 + (points / 400) * 40;
 
       const clamp = (val: number): number => Math.min(99, Math.max(40, Math.round(val)));
 

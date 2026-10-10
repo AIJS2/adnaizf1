@@ -266,7 +266,10 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
         
         sprint_grid_df = sprint_session.results.sort_values(by="GridPosition")
         for _, res in sprint_grid_df.iterrows():
-            grid_pos = int(res['GridPosition'])
+            try:
+                grid_pos = int(res['GridPosition'])
+            except (ValueError, TypeError):
+                grid_pos = 0
             if grid_pos > 0:
                 driver_num = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
                 qual_time = sprint_qual_times.get(driver_num)
@@ -279,14 +282,20 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 })
 
         leader = sprint_session.results.iloc[0]
-        leader_time, max_laps = leader.get('Time'), int(leader.get('Laps', 0))
+        leader_time = leader.get('Time')
+        # F1 returns NaN for Laps on sessions whose results are not finalised
+        # yet; int(nan) raises ValueError and took the whole payload down.
+        leader_laps = leader.get('Laps', 0)
+        max_laps = int(leader_laps) if pd.notna(leader_laps) else 0
         # Index results by Position once; the interval math below looked up
         # the row one place ahead with a full-frame boolean scan per driver.
         results_by_position = sprint_session.results.set_index('Position')
         for index, (_, res) in enumerate(sprint_session.results.iterrows()):
             position = index + 1
             driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
-            current_laps = int(res.get('Laps', 0))
+            # NaN-safe: an unfinalised session has no Laps yet.
+            res_laps = res.get('Laps', 0)
+            current_laps = int(res_laps) if pd.notna(res_laps) else 0
             time_display, gap_display, interval_display = res['Status'], "", ""
             res_status = res['Status']
             
@@ -309,16 +318,22 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 if position > 1:
                     ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
                     if ahead is not None:
-                        lap_diff = int(ahead.get('Laps', 0)) - current_laps
+                        ahead_laps = ahead.get('Laps', 0)
+                        ahead_laps = int(ahead_laps) if pd.notna(ahead_laps) else 0
+                        lap_diff = ahead_laps - current_laps
                         if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
-            sprint_results.append({ "position": position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)), "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
+            sprint_results.append({ "position": position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)) if pd.notna(res.get('Points', 0)) else 0, "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
     
     if 'Race' in available_sessions and has_rows(available_sessions['Race'], 'results'):
         available_tabs.extend(['Starting Grid', 'Race'])
         race_session = available_sessions['Race']
         race_session.results['FullName'] = race_session.results['FirstName'] + ' ' + race_session.results['LastName']
         leader = race_session.results.iloc[0]
-        leader_time, max_laps = leader.get('Time'), int(leader.get('Laps', 0))
+        leader_time = leader.get('Time')
+        # Same NaN guard as the Sprint block: an unfinalised session reports
+        # NaN for Laps and int(nan) kills the whole endpoint.
+        race_leader_laps = leader.get('Laps', 0)
+        max_laps = int(race_leader_laps) if pd.notna(race_leader_laps) else 0
         race_winner_info = { "full_name": leader['FullName'], "time": format_lap_time(leader_time) }
         grid_df = race_session.results.sort_values(by="GridPosition")
         # Index results by Position once (same reason as the sprint block).
@@ -332,7 +347,9 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
         for index, (_, res) in enumerate(race_session.results.iterrows()):
             position = index + 1
             driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
-            current_laps = int(res.get('Laps', 0))
+            # NaN-safe: an unfinalised session has no Laps yet.
+            res_laps = res.get('Laps', 0)
+            current_laps = int(res_laps) if pd.notna(res_laps) else 0
             time_display, gap_display, interval_display = res['Status'], "", ""
             res_status = res['Status']
             
@@ -355,9 +372,11 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 if position > 1:
                     ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
                     if ahead is not None:
-                        lap_diff = int(ahead.get('Laps', 0)) - current_laps
+                        ahead_laps = ahead.get('Laps', 0)
+                        ahead_laps = int(ahead_laps) if pd.notna(ahead_laps) else 0
+                        lap_diff = ahead_laps - current_laps
                         if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
-            results.append({ "position": position, "abbreviation": str(res.get('Abbreviation', '')), "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)), "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
+            results.append({ "position": position, "abbreviation": str(res.get('Abbreviation', '')), "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)) if pd.notna(res.get('Points', 0)) else 0, "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
         
         fastest = safe_getattr(race_session, 'laps')
         if fastest is not None and not fastest.empty:

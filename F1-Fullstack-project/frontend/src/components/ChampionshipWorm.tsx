@@ -156,7 +156,13 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
                 }}
                 itemStyle={{ fontSize: '13px', paddingTop: '4px' }}
                 labelStyle={{ color: '#aaa', marginBottom: '8px', borderBottom: '1px solid #333', paddingBottom: '4px' }}
-                formatter={(value, name, props) => [`${value} pts`, props.payload[name + '_name'] || name]}
+                formatter={(value, name, props) => {
+                  const friendly = props?.payload?.[`${name}_name`];
+                  return [
+                    `${value} pts`,
+                    typeof friendly === 'string' && friendly ? friendly : name,
+                  ];
+                }}
               />
               <Legend 
                 wrapperStyle={{ paddingTop: '20px' }}

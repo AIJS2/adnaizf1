@@ -33,9 +33,15 @@ function DashboardPage() {
     queryKey: ['dashboard', currentYear],
     queryFn: async () => {
       const dataCurrent = await fetchDashboardData(currentYear);
-      if (dataCurrent.status === "pre_season" || (dataCurrent.driver_standings && dataCurrent.driver_standings.length === 0)) {
+      // `fetchDashboardData` already throws on the backend `{ error }` envelope,
+      // so `dataCurrent` is a real dashboard payload here. The season is empty
+      // when the backend flags it as pre-season or when it has no standings.
+      const hasStandings = Array.isArray(dataCurrent.driver_standings) && dataCurrent.driver_standings.length > 0;
+      if (dataCurrent.status === 'pre_season' || !hasStandings) {
+        // Fall back to the previous season so the dashboard still has content,
+        // but keep the current season's next-race event when there is one.
         const dataPrev = await fetchDashboardData(prevYear);
-        return { ...dataPrev, year: prevYear, next_race_event: dataCurrent.next_race_event };
+        return { ...dataPrev, year: prevYear, next_race_event: dataCurrent.next_race_event ?? null };
       }
       return dataCurrent;
     }
@@ -69,13 +75,16 @@ function DashboardPage() {
   const finishedRaces = raceAnalytics.filter(r => r.status === 'Finished');
   const lastRace = finishedRaces.length > 0 ? finishedRaces[finishedRaces.length - 1] : null;
 
-  const p1Driver = dashboardData?.driver_standings?.[0];
-  const p2Driver = dashboardData?.driver_standings?.[1];
+  const driverStandings = dashboardData?.driver_standings ?? [];
+  const p1Driver = driverStandings[0];
+  const p2Driver = driverStandings[1];
   const p1Team = dashboardData?.team_standings?.[0];
   const p2Team = dashboardData?.team_standings?.[1];
 
   const targetCountdownDate = dashboardData?.next_race_event?.date || (upcomingRace ? `${upcomingRace.date}T13:00:00Z` : null);
-  const trackMapImg = getTrackMap(upcomingRace || { name: dashboardData?.next_race_event?.name });
+  const trackMapImg = getTrackMap(
+    upcomingRace ?? (dashboardData?.next_race_event?.name ? { name: dashboardData.next_race_event.name } : null)
+  );
 
   const teamStandings = dashboardData?.team_standings ?? [];
   const maxTeamPoints = safeMax(teamStandings.map(t => toNumber(t.points)), 1);
@@ -85,6 +94,8 @@ function DashboardPage() {
   const p2Points = Number(p2Driver?.points) || 0;
 
   // Title Fight gap calculation
+  const p1Name = p1Driver?.name ?? '';
+  const p2Name = p2Driver?.name ?? '';
   const titleGap = (p1Driver && p2Driver) ? Math.round(p1Points - p2Points) : 0;
   const totalDuelPoints = (p1Driver && p2Driver) ? (p1Points + p2Points) : 1;
   const p1DuelPct = (p1Driver && p2Driver) ? Math.round((p1Points / totalDuelPoints) * 100) : 50;
@@ -105,7 +116,7 @@ function DashboardPage() {
             <div className="min-w-0 relative z-10">
               <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-red-400 transition-colors">Season Calendar</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
-                {lastRace ? <>{lastRace.round} <span className="text-neutral-500 font-medium">/ {dashboardData?.total_races || 24}</span> Races</> : `${dashboardData?.year} FIA F1 Season`}
+                {lastRace ? <>{lastRace.round} <span className="text-neutral-500 font-medium">/ {dashboardData?.total_races || 24}</span> Races</> : `${dashboardData?.year ?? currentYear} FIA F1 Season`}
               </p>
               {lastRace && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-red-300/80 transition-colors">Next: {upcomingRace?.name || 'End of Season'}</p>}
             </div>
@@ -119,9 +130,9 @@ function DashboardPage() {
             <div className="min-w-0 relative z-10">
               <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-yellow-500 transition-colors">Drivers Leader</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
-                {p1Driver ? `${p1Driver.name} (${parseInt(String(p1Driver.points), 10)} PTS)` : '-'}
+                {p1Driver ? `${p1Name || 'Unknown Driver'} (${parseInt(String(p1Driver.points), 10)} PTS)` : '-'}
               </p>
-              {p2Driver && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-yellow-400/80 transition-colors">+{Math.round(p1Points - p2Points)} PTS ahead of {p2Driver.name.split(' ').pop()}</p>}
+              {p2Driver && p2Name && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-yellow-400/80 transition-colors">+{Math.round(p1Points - p2Points)} PTS ahead of {p2Name.split(' ').pop()}</p>}
             </div>
           </div>
 
@@ -180,7 +191,7 @@ function DashboardPage() {
               <p className="text-neutral-400 text-sm sm:text-base mt-2 mb-6">
                 {dashboardData?.next_race_event ? (
                   <>
-                    Next live session: <strong className="text-white">{dashboardData.next_race_event.name.split(' - ')[1] || 'Track Session'}</strong>
+                    Next live session: <strong className="text-white">{dashboardData.next_race_event.name?.split(' - ')[1] || dashboardData.next_race_event.name?.split(' - ')[0] || 'Track Session'}</strong>
                   </>
                 ) : 'Upcoming championship battle on the official Formula 1 calendar.'}
               </p>
@@ -258,7 +269,7 @@ function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 relative z-10">
               {/* P1 Driver Card */}
               <Link
-                to={`/driver/${p1Driver.name.toLowerCase().replace(/\s+/g, '_')}`}
+                to={`/driver/${p1Name ? p1Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
                 className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-2xl p-5 transition-all duration-300 flex items-center justify-between relative overflow-hidden hover:-translate-y-1 shadow-lg"
               >
                 <div 
@@ -270,15 +281,15 @@ function DashboardPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
-                        {p1Driver.name}
+                        {p1Name || 'Unknown Driver'}
                       </h3>
                       <span className="text-[10px] font-bold bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 flex items-center gap-1">
                         <Crown size={10} /> LEADER
                       </span>
                     </div>
                     <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
-                      {teamLogos[p1Driver.team] && <img src={teamLogos[p1Driver.team]} alt={p1Driver.team} className="h-4 w-auto drop-shadow-md" />}
-                      <span className="font-semibold uppercase tracking-wider">{p1Driver.team}</span>
+                      {teamLogos[p1Driver.team ?? ''] && <img src={teamLogos[p1Driver.team ?? '']} alt={p1Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
+                      <span className="font-semibold uppercase tracking-wider">{p1Driver.team || 'Unknown Team'}</span>
                     </div>
                   </div>
                 </div>
@@ -290,7 +301,7 @@ function DashboardPage() {
 
               {/* P2 Driver Card */}
               <Link
-                to={`/driver/${p2Driver.name.toLowerCase().replace(/\s+/g, '_')}`}
+                to={`/driver/${p2Name ? p2Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
                 className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-2xl p-5 transition-all duration-300 flex items-center justify-between relative overflow-hidden hover:-translate-y-1 shadow-lg"
               >
                 <div 
@@ -302,15 +313,15 @@ function DashboardPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
-                        {p2Driver.name}
+                        {p2Name || 'Unknown Driver'}
                       </h3>
                       <span className="text-[10px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 flex items-center gap-1">
                         <Target size={10} /> HUNTING
                       </span>
                     </div>
                     <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
-                      {teamLogos[p2Driver.team] && <img src={teamLogos[p2Driver.team]} alt={p2Driver.team} className="h-4 w-auto drop-shadow-md" />}
-                      <span className="font-semibold uppercase tracking-wider">{p2Driver.team}</span>
+                      {teamLogos[p2Driver.team ?? ''] && <img src={teamLogos[p2Driver.team ?? '']} alt={p2Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
+                      <span className="font-semibold uppercase tracking-wider">{p2Driver.team || 'Unknown Team'}</span>
                     </div>
                   </div>
                 </div>
@@ -324,11 +335,11 @@ function DashboardPage() {
             {/* Duel Gap Bar */}
             <div className="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-4 md:p-5 relative z-10 shadow-inner">
               <div className="flex justify-between items-center text-xs font-mono text-neutral-300 mb-3">
-                <span className="font-black text-white text-sm tracking-tight">{p1Driver.name} <span className="text-neutral-500 ml-1">({p1DuelPct}%)</span></span>
+                <span className="font-black text-white text-sm tracking-tight">{p1Name || 'Unknown Driver'} <span className="text-neutral-500 ml-1">({p1DuelPct}%)</span></span>
                 <span className="bg-neutral-900 text-red-500 border border-red-500/30 px-3 py-1 rounded-full font-black text-[10px] tracking-widest shadow-[0_0_10px_rgba(239,68,68,0.2)]">
                   GAP: {titleGap} PTS
                 </span>
-                <span className="font-black text-white text-sm tracking-tight"><span className="text-neutral-500 mr-1">({100 - p1DuelPct}%)</span> {p2Driver.name}</span>
+                <span className="font-black text-white text-sm tracking-tight"><span className="text-neutral-500 mr-1">({100 - p1DuelPct}%)</span> {p2Name || 'Unknown Driver'}</span>
               </div>
               <div className="w-full bg-neutral-900 rounded-full h-3 overflow-hidden flex border border-neutral-800">
                 <div 
@@ -375,8 +386,8 @@ function DashboardPage() {
 
         {/* 5. TWO-COLUMN MAIN HUB: DRIVER STANDINGS + RECENT RACES */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <DriverStandingsList 
-            drivers={dashboardData?.driver_standings?.slice(0, 7) || []} 
+          <DriverStandingsList
+            drivers={driverStandings.slice(0, 7)}
           />
 
           <RaceAnalyticsCard
@@ -384,6 +395,21 @@ function DashboardPage() {
             year={dashboardData?.year ?? currentYear}
           />
         </section>
+
+        {/* 5b. EMPTY SEASON NOTICE */}
+        {driverStandings.length === 0 && raceAnalytics.length === 0 && (
+          <section className="mb-8 rounded-3xl border border-neutral-800 bg-neutral-900/60 p-8 text-center backdrop-blur-xl">
+            <FlagTriangleRight className="mx-auto mb-3 text-neutral-600" size={36} />
+            <h3 className="text-lg font-black uppercase tracking-tight text-white">
+              No live data available
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-sm text-neutral-400">
+              {dashboardData?.status === 'pre_season'
+                ? (dashboardData.message || 'The season has not started yet. Standings will appear once the first race weekend is completed.')
+                : 'The backend returned no standings and no calendar for this season. Try another season or check back later.'}
+            </p>
+          </section>
+        )}
 
 
 

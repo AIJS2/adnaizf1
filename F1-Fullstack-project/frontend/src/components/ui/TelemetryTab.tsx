@@ -195,11 +195,24 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
         throw new Error(data?.detail || data?.error || rawText || "Failed to fetch telemetry data.");
       }
       if (data?.error) throw new Error(data.error);
-      
-      setTelemetryData(data ?? null);
-      if (data?.unavailable_drivers?.length) {
-        const warningParts = data.unavailable_drivers.map((drv: string) => {
-          const reason = data?.unavailable_reasons?.[drv] || 'No data available';
+
+      // The endpoint answers with several partial shapes: a payload with no
+      // `drivers`/`driver_info`/`telemetry` keys at all (just the unavailable
+      // reasons), the "no drivers selected" envelope, and the full one. Keep
+      // only the fields the render code actually reads, defaulted, so no
+      // render path can trip over a missing key.
+      const normalized = {
+        ...data,
+        drivers: Array.isArray(data?.drivers) ? data.drivers : [],
+        driver_info: data?.driver_info ?? {},
+        telemetry: Array.isArray(data?.telemetry) ? data.telemetry : [],
+        unavailable_drivers: Array.isArray(data?.unavailable_drivers) ? data.unavailable_drivers : [],
+        unavailable_reasons: data?.unavailable_reasons ?? {},
+      } as TelemetryResponse & Required<Pick<TelemetryResponse, 'drivers' | 'driver_info' | 'telemetry' | 'unavailable_drivers' | 'unavailable_reasons'>>;
+      setTelemetryData(normalized);
+      if (normalized.unavailable_drivers.length) {
+        const warningParts = normalized.unavailable_drivers.map((drv: string) => {
+          const reason = normalized.unavailable_reasons[drv] || 'No data available';
           return `${drv}: ${reason}`;
         });
         setWarning(warningParts.join(' | '));
@@ -325,7 +338,16 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
         </div>
       )}
 
-      {telemetryData && (
+      {/* A payload with no selected drivers still carries a `message`; show it
+          instead of rendering an empty card with nothing to read. */}
+      {telemetryData && telemetryData.drivers.length === 0 && typeof telemetryData.message === 'string' && telemetryData.message && (
+        <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-10 mb-8 text-center">
+          <Radio className="mx-auto text-neutral-600 mb-3" size={32} />
+          <p className="text-sm font-semibold text-neutral-300">{telemetryData.message}</p>
+        </div>
+      )}
+
+      {telemetryData && telemetryData.drivers.length > 0 && (
         <div className={`space-y-8 transition-opacity duration-300 ${loading ? 'opacity-40 pointer-events-none blur-[2px]' : 'opacity-100'}`}>
           <div className="flex justify-between items-center">
             {loading && (

@@ -128,3 +128,41 @@ export interface TeamProfile {
   drivers?: DriverProfile[]; 
   progression?: Record<string, number>[]; 
 }
+
+/**
+ * A driver/team entry inside the race `results` array.
+ * Only the fields consumed by the race chart components are declared;
+ * extra FastF1 payload fields are permitted via the index signature.
+ */
+export interface RaceResultEntry {
+  full_name?: string;
+  abbreviation?: string;
+  team_name?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * A single row of the per-driver race series charts (lap chart, gap chart,
+ * lap times chart). `lap` is the X axis; every other key is a driver
+ * abbreviation mapped to that driver's value for the lap.
+ */
+export interface RaceSeriesPoint {
+  lap: number | string;
+  [driverAbbr: string]: number | string | null | undefined;
+}
+
+/**
+ * A single row of the championship session-results payload.
+ * `Points` arrives as a numeric string from FastF1, hence parseFloat() at
+ * every call site.
+ */
+export interface SessionResultEntry {
+  RoundNumber: number;
+  Points?: NumericString;
+  FullName?: string;
+  TeamName?: string;
+  [key: string]: unknown;
+}
+
+/** A value that may arrive as a JSON number or a numeric string. */
+export type NumericString = string | number;

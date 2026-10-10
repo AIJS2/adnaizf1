@@ -1,23 +1,35 @@
 import React, { useState } from 'react';
-import { Trophy, Clock, Flag, AlertTriangle, Target, Zap, Activity, Navigation, Thermometer, Droplets, CloudRain } from 'lucide-react';
 import { teamColors } from '../../data/teamData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { RaceResultEntry, RaceSeriesPoint } from '../../types/f1';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
-const LapTimesChartComponent = ({ lapTimesChart, results }) => {
-  const sample = lapTimesChart && lapTimesChart[0] ? lapTimesChart[0] : {};
+interface DriverMeta {
+  name: string;
+  team: string;
+  color: string;
+}
+
+interface LapTimesChartProps {
+  lapTimesChart?: RaceSeriesPoint[];
+  results?: RaceResultEntry[];
+}
+
+const LapTimesChartComponent: React.FC<LapTimesChartProps> = ({ lapTimesChart, results }) => {
+  const sample: RaceSeriesPoint | Record<string, unknown> = lapTimesChart && lapTimesChart[0] ? lapTimesChart[0] : {};
   const activeKeys = Object.keys(sample).filter(k => k !== 'lap');
 
-  const driverMeta = {};
+  const driverMeta: Record<string, DriverMeta> = {};
   if (results) {
-    results.forEach(r => {
-      const parts = (r.full_name || '').split(' ');
+    results.forEach((r: RaceResultEntry) => {
+      const parts = String(r.full_name || '').split(' ');
       const last = parts[parts.length - 1] || '';
       const fallbackAbbr = last.slice(0, 3).toUpperCase();
-      const abbr = r.abbreviation || fallbackAbbr;
+      const abbr = String(r.abbreviation || fallbackAbbr);
+      const team = String(r.team_name || '');
       driverMeta[abbr] = {
-        name: r.full_name,
-        team: r.team_name,
-        color: teamColors[r.team_name] || '#888888'
+        name: String(r.full_name || abbr),
+        team,
+        color: teamColors[team] || '#888888'
       };
     });
   }
@@ -25,7 +37,7 @@ const LapTimesChartComponent = ({ lapTimesChart, results }) => {
   const [selectedDrivers, setSelectedDrivers] = useState(activeKeys);
   const [filterOutliers, setFilterOutliers] = useState(true);
 
-  const toggleDriver = (drv) => {
+  const toggleDriver = (drv: string) => {
     if (selectedDrivers.includes(drv)) {
       if (selectedDrivers.length > 1) {
         setSelectedDrivers(selectedDrivers.filter(d => d !== drv));
@@ -38,22 +50,24 @@ const LapTimesChartComponent = ({ lapTimesChart, results }) => {
   const selectTop5 = () => setSelectedDrivers(activeKeys.slice(0, 5));
   const selectAll = () => setSelectedDrivers(activeKeys);
 
-  const formatLapTime = (seconds) => {
-    if (!seconds) return '';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 1000);
+  const formatLapTime = (seconds: number | string) => {
+    const value = Number(seconds ?? 0);
+    if (!value) return '';
+    const m = Math.floor(value / 60);
+    const s = Math.floor(value % 60);
+    const ms = Math.floor((value % 1) * 1000);
     return `${m}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
   };
 
   // Calculate domain manually to avoid Recharts domain function crash
-  let yDomain = ['dataMin', 'dataMax'];
+  let yDomain: [number | string, number | string] = ['dataMin', 'dataMax'];
   if (filterOutliers && lapTimesChart && lapTimesChart.length > 0) {
     let minTime = Infinity;
-    lapTimesChart.forEach(row => {
+    lapTimesChart.forEach((row: RaceSeriesPoint) => {
       selectedDrivers.forEach(drv => {
-        if (row[drv] && row[drv] < minTime) {
-          minTime = row[drv];
+        const value = row[drv];
+        if (value !== null && value !== undefined && Number(value) < minTime) {
+          minTime = Number(value);
         }
       });
     });
@@ -145,7 +159,7 @@ const LapTimesChartComponent = ({ lapTimesChart, results }) => {
             <RechartsTooltip 
               contentStyle={{ backgroundColor: 'rgba(15,15,15,0.95)', border: '1px solid #333', borderRadius: '12px', color: '#fff' }}
               labelFormatter={(lbl) => `Lap ${lbl}`}
-              formatter={(val, name) => [formatLapTime(val), name]}
+              formatter={(val) => [formatLapTime(val as number | string), String(name)]}
             />
             {selectedDrivers.map(drv => {
               const meta = driverMeta[drv];

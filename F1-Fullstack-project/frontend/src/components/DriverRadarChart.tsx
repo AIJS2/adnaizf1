@@ -1,40 +1,68 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { teamColors } from '../data/teamData';
 
-const DriverRadarChart = ({ profile1, profile2 }) => {
-  const chartData = useMemo(() => {
+interface RadarTeammate {
+  points?: number;
+}
+
+interface RadarDriverProfile {
+  name: string;
+  team: string;
+  points?: number;
+  poles?: number;
+  wins?: number;
+  podiums?: number;
+  dnfs?: number;
+  avg_finish?: number;
+  teammate?: RadarTeammate | null;
+}
+
+interface RadarChartPoint {
+  subject: string;
+  A: number;
+  B: number;
+  fullMark: number;
+}
+
+interface DriverRadarChartProps {
+  profile1: RadarDriverProfile | null | undefined;
+  profile2: RadarDriverProfile | null | undefined;
+}
+
+const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2 }) => {
+  const chartData = useMemo<RadarChartPoint[]>(() => {
     if (!profile1 || !profile2) return [];
 
-    const calculateAttributes = (profile) => {
+    const calculateAttributes = (profile: RadarDriverProfile): Record<string, number> => {
       // 1. Pace: based on poles and avg_finish
       const poles = profile.poles || 0;
       const avgF = profile.avg_finish || 10;
-      let pace = 60 + (poles * 3.5) + ((20 - avgF) * 1.8);
+      const pace = 60 + (poles * 3.5) + ((20 - avgF) * 1.8);
       
       // 2. Racecraft: based on wins and podiums
       const wins = profile.wins || 0;
       const podiums = profile.podiums || 0;
-      let racecraft = 65 + (wins * 4) + (podiums * 2);
+      const racecraft = 65 + (wins * 4) + (podiums * 2);
       
       // 3. Consistency: penalize DNFs, reward low avg_finish
       const dnfs = profile.dnfs || 0;
-      let consistency = 95 - (dnfs * 8) - (avgF * 1.5);
+      const consistency = 95 - (dnfs * 8) - (avgF * 1.5);
       
       // 4. Domination: Points relative to teammate
       let domination = 70;
-      if (profile.teammate && (profile.points + profile.teammate.points > 0)) {
-         const totalTeamPts = profile.points + profile.teammate.points;
-         const ratio = profile.points / totalTeamPts; // 0 to 1
+      if (profile.teammate && (profile.points || 0) + (profile.teammate.points || 0) > 0) {
+         const totalTeamPts = (profile.points || 0) + (profile.teammate.points || 0);
+         const ratio = (profile.points || 0) / totalTeamPts; // 0 to 1
          domination = 40 + (ratio * 60); 
-      } else if (profile.points > 0) {
+      } else if ((profile.points || 0) > 0) {
          domination = 95;
       }
       
       // 5. Impact: based on total points (assume 400 is dominant season for scaling)
       let impact = 60 + ((profile.points || 0) / 400) * 40;
 
-      const clamp = (val) => Math.min(99, Math.max(40, Math.round(val)));
+      const clamp = (val: number): number => Math.min(99, Math.max(40, Math.round(val)));
 
       return {
         Pace: clamp(pace),
@@ -48,7 +76,7 @@ const DriverRadarChart = ({ profile1, profile2 }) => {
     const attrs1 = calculateAttributes(profile1);
     const attrs2 = calculateAttributes(profile2);
 
-    const categories = ['Pace', 'Racecraft', 'Consistency', 'Domination', 'Impact'];
+    const categories: Array<keyof ReturnType<typeof calculateAttributes>> = ['Pace', 'Racecraft', 'Consistency', 'Domination', 'Impact'];
     
     return categories.map(cat => ({
       subject: cat,

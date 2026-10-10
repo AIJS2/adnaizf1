@@ -3,19 +3,27 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { teamColors } from '../data/teamData';
-import { DriverProfile, TeamProfile } from '../types/f1';
+import { DriverProfile, SessionResultEntry, TeamProfile } from '../types/f1';
 import { TrendingUp, Users, Factory } from 'lucide-react';
 
 interface ChampionshipWormProps {
-  sessionResults?: any[];
+  sessionResults?: SessionResultEntry[];
   drivers?: DriverProfile[];
   teams?: TeamProfile[];
 }
 
+/**
+ * A single round on the championship worm: the X-axis label plus one numeric
+ * series per driver/team. `name`/`round` are the reserved axis keys, so the
+ * numeric index signature is declared alongside them with a union type.
+ */
+type ChampionshipPoint = { name: string; round: number } & Record<string, string | number>;
+type ChampionshipLine = { key: string; name: string; color: string };
+
 const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = [], drivers = [], teams = [] }) => {
   const [viewMode, setViewMode] = useState('drivers'); // 'drivers' or 'constructors'
 
-  const { chartData, lines, maxPoints } = useMemo(() => {
+  const { chartData, lines, maxPoints } = useMemo<{ chartData: ChampionshipPoint[]; lines: ChampionshipLine[]; maxPoints: number }>(() => {
     if (!sessionResults.length || (!drivers.length && !teams.length)) {
       return { chartData: [], lines: [], maxPoints: 0 };
     }
@@ -25,53 +33,53 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
 
     if (viewMode === 'drivers') {
       // Pick Top 10 Drivers
-      const top10 = drivers.slice(0, 10).map(d => d.name);
+      const top10 = drivers.slice(0, 10).map(d => d.name || d.abbreviation || d.driverId);
       
-      const data = rounds.map(round => {
-        const point = { name: `Round ${round}`, round };
+      const data: ChampionshipPoint[] = rounds.map(round => {
+        const point: ChampionshipPoint = { name: `Round ${round}`, round };
         top10.forEach(driver => {
           const pointsUpToRound = sessionResults
             .filter(r => r.FullName === driver && r.RoundNumber <= round)
-            .reduce((sum, r) => sum + (parseFloat(r.Points) || 0), 0);
+            .reduce((sum, r) => sum + (Number(r.Points) || 0), 0);
           point[driver] = pointsUpToRound;
         });
         return point;
       });
 
-      const lines = top10.map(driver => {
+      const lines: ChampionshipLine[] = top10.map(driver => {
         const dObj = drivers.find(d => d.name === driver);
         return {
           key: driver,
-          name: dObj ? dObj.abbreviation || driver : driver,
-          color: teamColors[dObj?.team] || '#ffffff'
+          name: dObj?.abbreviation || driver,
+          color: teamColors[dObj?.team || ''] || '#ffffff'
         };
       });
 
-      const maxPts = top10.length > 0 ? Math.max(...top10.map(d => data[data.length - 1]?.[d] || 0)) : 100;
+      const maxPts = top10.length > 0 ? Math.max(...top10.map(d => Number(data[data.length - 1]?.[d]) || 0)) : 100;
       return { chartData: data, lines, maxPoints: maxPts };
     } else {
       // Constructors
-      const allTeams = teams.map(t => t.name);
+      const allTeams = teams.map(t => t.name || t.id);
       
-      const data = rounds.map(round => {
-        const point = { name: `Round ${round}`, round };
+      const data: ChampionshipPoint[] = rounds.map(round => {
+        const point: ChampionshipPoint = { name: `Round ${round}`, round };
         allTeams.forEach(team => {
           // Team points are accumulated from all drivers in that team
           const pointsUpToRound = sessionResults
             .filter(r => r.TeamName === team && r.RoundNumber <= round)
-            .reduce((sum, r) => sum + (parseFloat(r.Points) || 0), 0);
+            .reduce((sum, r) => sum + (Number(r.Points) || 0), 0);
           point[team] = pointsUpToRound;
         });
         return point;
       });
 
-      const lines = allTeams.map(team => ({
+      const lines: ChampionshipLine[] = allTeams.map(team => ({
         key: team,
         name: team,
         color: teamColors[team] || '#ffffff'
       }));
 
-      const maxPts = allTeams.length > 0 ? Math.max(...allTeams.map(t => data[data.length - 1]?.[t] || 0)) : 100;
+      const maxPts = allTeams.length > 0 ? Math.max(...allTeams.map(t => Number(data[data.length - 1]?.[t]) || 0)) : 100;
       return { chartData: data, lines, maxPoints: maxPts };
     }
   }, [sessionResults, drivers, teams, viewMode]);

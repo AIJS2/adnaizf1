@@ -1,23 +1,35 @@
 import React, { useState } from 'react';
-import { Trophy, Clock, Flag, AlertTriangle, Target, Zap, Activity, Navigation, Thermometer, Droplets, CloudRain } from 'lucide-react';
 import { teamColors } from '../../data/teamData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { RaceResultEntry, RaceSeriesPoint } from '../../types/f1';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
-const GapChartComponent = ({ gapChart, results }) => {
-  const sample = gapChart && gapChart[0] ? gapChart[0] : {};
+interface DriverMeta {
+  name: string;
+  team: string;
+  color: string;
+}
+
+interface GapChartProps {
+  gapChart?: RaceSeriesPoint[];
+  results?: RaceResultEntry[];
+}
+
+const GapChartComponent: React.FC<GapChartProps> = ({ gapChart, results }) => {
+  const sample: RaceSeriesPoint | Record<string, unknown> = gapChart && gapChart[0] ? gapChart[0] : {};
   const activeKeys = Object.keys(sample).filter(k => k !== 'lap');
 
-  const driverMeta = {};
+  const driverMeta: Record<string, DriverMeta> = {};
   if (results) {
-    results.forEach(r => {
-      const parts = (r.full_name || '').split(' ');
+    results.forEach((r: RaceResultEntry) => {
+      const parts = String(r.full_name || '').split(' ');
       const last = parts[parts.length - 1] || '';
       const fallbackAbbr = last.slice(0, 3).toUpperCase();
-      const abbr = r.abbreviation || fallbackAbbr;
+      const abbr = String(r.abbreviation || fallbackAbbr);
+      const team = String(r.team_name || '');
       driverMeta[abbr] = {
-        name: r.full_name,
-        team: r.team_name,
-        color: teamColors[r.team_name] || '#888888'
+        name: String(r.full_name || abbr),
+        team,
+        color: teamColors[team] || '#888888'
       };
     });
   }
@@ -25,7 +37,7 @@ const GapChartComponent = ({ gapChart, results }) => {
   const [selectedDrivers, setSelectedDrivers] = useState(activeKeys);
   const [zoomFront, setZoomFront] = useState(false);
 
-  const toggleDriver = (drv) => {
+  const toggleDriver = (drv: string) => {
     if (selectedDrivers.includes(drv)) {
       if (selectedDrivers.length > 1) {
         setSelectedDrivers(selectedDrivers.filter(d => d !== drv));
@@ -110,7 +122,7 @@ const GapChartComponent = ({ gapChart, results }) => {
               label={{ value: 'Race Lap Number', position: 'insideBottom', fill: '#666', fontSize: 11, offset: -10 }}
             />
             <YAxis 
-              domain={zoomFront ? [0, 30] : ['auto', 'auto']} 
+              domain={zoomFront ? [0, 30] as [number, number] : ['auto', 'auto'] as const} 
               allowDataOverflow={true}
               reversed={true} 
               tickFormatter={(v) => `+${v}s`}

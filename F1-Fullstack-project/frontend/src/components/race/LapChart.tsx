@@ -1,30 +1,42 @@
 import React, { useState } from 'react';
-import { Trophy, Clock, Flag, AlertTriangle, Target, Zap, Activity, Navigation, Thermometer, Droplets, CloudRain } from 'lucide-react';
 import { teamColors } from '../../data/teamData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { RaceResultEntry, RaceSeriesPoint } from '../../types/f1';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
-const LapChartComponent = ({ lapChart, results }) => {
-  const sample = lapChart && lapChart[0] ? lapChart[0] : {};
+interface DriverMeta {
+  name: string;
+  team: string;
+  color: string;
+}
+
+interface LapChartProps {
+  lapChart?: RaceSeriesPoint[];
+  results?: RaceResultEntry[];
+}
+
+const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
+  const sample: RaceSeriesPoint | Record<string, unknown> = lapChart && lapChart[0] ? lapChart[0] : {};
   const activeKeys = Object.keys(sample).filter(k => k !== 'lap');
 
-  const driverMeta = {};
+  const driverMeta: Record<string, DriverMeta> = {};
   if (results) {
-    results.forEach(r => {
-      const parts = (r.full_name || '').split(' ');
+    results.forEach((r: RaceResultEntry) => {
+      const parts = String(r.full_name || '').split(' ');
       const last = parts[parts.length - 1] || '';
       const fallbackAbbr = last.slice(0, 3).toUpperCase();
-      const abbr = r.abbreviation || fallbackAbbr;
+      const abbr = String(r.abbreviation || fallbackAbbr);
+      const team = String(r.team_name || '');
       driverMeta[abbr] = {
-        name: r.full_name,
-        team: r.team_name,
-        color: teamColors[r.team_name] || '#888888'
+        name: String(r.full_name || abbr),
+        team,
+        color: teamColors[team] || '#888888'
       };
     });
   }
 
   const [selectedDrivers, setSelectedDrivers] = useState(activeKeys);
 
-  const toggleDriver = (drv) => {
+  const toggleDriver = (drv: string) => {
     if (selectedDrivers.includes(drv)) {
       if (selectedDrivers.length > 1) {
         setSelectedDrivers(selectedDrivers.filter(d => d !== drv));
@@ -46,7 +58,7 @@ const LapChartComponent = ({ lapChart, results }) => {
             Lap-by-Lap Position Chart
           </h3>
           <p className="text-xs text-neutral-400 mt-1">
-            Track positional changes, overtakes, and pit stops from Lap 1 to {lapChart.length}
+            Track positional changes, overtakes, and pit stops from Lap 1 to {lapChart?.length ?? 0}
           </p>
         </div>
 

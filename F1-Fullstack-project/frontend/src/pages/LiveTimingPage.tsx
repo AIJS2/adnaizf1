@@ -67,14 +67,26 @@ const LiveTimingPage: React.FC = () => {
     messages: [],
     isLiveSession: false
   });
-  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'lost'>('connecting');
 
   useEffect(() => {
-    let ws: WebSocket;
-    let reconnectTimer: NodeJS.Timeout;
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
+    let attempt = 0;
 
     const connect = () => {
+      if (disposed) return;
+      // Close any previous socket before opening a new one, otherwise a
+      // flaky connection stacks parallel WebSockets and reconnect timers,
+      // each triggering a backend live-session check. This was a connection
+      // leak: reconnectTimer was reassigned without being cleared first.
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+        ws = null;
+      }
+
       setConnectionStatus(prev => prev === 'connected' ? 'lost' : 'connecting');
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHost = API_URL.replace(/^https?:\/\//, '');
@@ -83,7 +95,7 @@ const LiveTimingPage: React.FC = () => {
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        setIsConnected(true);
+        attempt = 0;
         setConnectionStatus('connected');
       };
       
@@ -101,16 +113,23 @@ const LiveTimingPage: React.FC = () => {
       };
       
       ws.onclose = () => {
-        setIsConnected(false);
         setConnectionStatus('lost');
-        reconnectTimer = setTimeout(connect, 3000); // Auto reconnect
+        // Exponential backoff, capped at 30s, so a hard-down backend is not
+        // hammered with reconnect attempts.
+        const delay = Math.min(3000 * 2 ** attempt, 30000);
+        attempt += 1;
+        reconnectTimer = setTimeout(connect, delay);
       };
     };
 
     connect();
     return () => {
+      disposed = true;
       clearTimeout(reconnectTimer);
-      if (ws) ws.close();
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+      }
     };
   }, []);
 

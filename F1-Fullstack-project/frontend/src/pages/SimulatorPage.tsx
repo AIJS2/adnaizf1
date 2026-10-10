@@ -22,6 +22,12 @@ const SimulatorPage = () => {
 
   const currentYear = new Date().getFullYear();
 
+  // The championship API emits `id` (e.g. "max_verstappen"), not `driverId`.
+  // Every lookup must go through this helper; matching on the wrong key makes
+  // the whole simulation silently add zero points.
+  const driverKey = (d: DriverProfile): string =>
+    d.id ?? d.driverId ?? d.name?.toLowerCase().replace(/\s+/g, '_') ?? '';
+
   const fetchStandings = async () => {
     setLoading(true);
     setError(null);
@@ -32,7 +38,7 @@ const SimulatorPage = () => {
       if (data.error) throw new Error(data.error);
       
       if (data.drivers) {
-        const sorted = data.drivers.sort((a: DriverProfile, b: DriverProfile) => (b.points || 0) - (a.points || 0));
+        const sorted = [...data.drivers].sort((a: DriverProfile, b: DriverProfile) => (b.points || 0) - (a.points || 0));
         sorted.forEach((d: DriverProfile, i: number) => d.position = i + 1);
         setOriginalDrivers(sorted);
         setDrivers(JSON.parse(JSON.stringify(sorted)));
@@ -53,23 +59,23 @@ const SimulatorPage = () => {
 
     // Apply predictions
     if (p1) {
-      const d = simulated.find((x: DriverProfile) => x.driverId === p1);
+      const d = simulated.find((x: DriverProfile) => driverKey(x) === p1);
       if (d) { d.points = (d.points || 0) + 25; d.wins = (d.wins || 0) + 1; d.podiums = (d.podiums || 0) + 1; }
     }
     if (p2) {
-      const d = simulated.find((x: DriverProfile) => x.driverId === p2);
+      const d = simulated.find((x: DriverProfile) => driverKey(x) === p2);
       if (d) { d.points = (d.points || 0) + 18; d.podiums = (d.podiums || 0) + 1; }
     }
     if (p3) {
-      const d = simulated.find((x: DriverProfile) => x.driverId === p3);
+      const d = simulated.find((x: DriverProfile) => driverKey(x) === p3);
       if (d) { d.points = (d.points || 0) + 15; d.podiums = (d.podiums || 0) + 1; }
     }
     if (fastestLap) {
-      const d = simulated.find((x: DriverProfile) => x.driverId === fastestLap);
+      const d = simulated.find((x: DriverProfile) => driverKey(x) === fastestLap);
       if (d) { d.points = (d.points || 0) + 1; }
     }
     if (sprintWinner) {
-      const d = simulated.find((x: DriverProfile) => x.driverId === sprintWinner);
+      const d = simulated.find((x: DriverProfile) => driverKey(x) === sprintWinner);
       if (d) { d.points = (d.points || 0) + 8; }
     }
 
@@ -171,7 +177,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P1 --</option>
-                  {originalDrivers.map(d => <option key={`p1-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`p1-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -183,7 +189,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-slate-300/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P2 --</option>
-                  {originalDrivers.map(d => <option key={`p2-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`p2-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -195,7 +201,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P3 --</option>
-                  {originalDrivers.map(d => <option key={`p3-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`p3-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -207,7 +213,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select Fastest Lap --</option>
-                  {originalDrivers.map(d => <option key={`fl-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`fl-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -219,7 +225,7 @@ const SimulatorPage = () => {
                 <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
                 <select value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select Sprint Winner --</option>
-                  {originalDrivers.map(d => <option key={`sw-${d.driverId}`} value={d.driverId}>{d.name} ({d.team})</option>)}
+                  {originalDrivers.map(d => <option key={`sw-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
               </div>
 
@@ -290,14 +296,14 @@ const SimulatorPage = () => {
                   
                   {/* Drivers View */}
                   {viewMode === 'drivers' && drivers.slice(0, 10).map((d) => {
-                    const original = originalDrivers.find(o => o.driverId === d.driverId);
+                    const original = originalDrivers.find(o => driverKey(o) === driverKey(d));
                     const posChange = (original?.position || 0) - (d.position || 0);
                     const ptsGained = (d.points || 0) - (original?.points || 0);
                     const teamColor = teamColors[d.team] || '#666';
                     
                     return (
                       <div 
-                        key={d.driverId} 
+                        key={driverKey(d)} 
                         className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-2xl p-4 flex items-center gap-4 md:gap-6 transition-all duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
                       >
                         <div className="absolute left-0 top-0 bottom-0 w-1.5 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: teamColor, color: teamColor }}></div>

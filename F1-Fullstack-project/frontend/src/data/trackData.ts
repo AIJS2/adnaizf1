@@ -23,7 +23,12 @@ import singapore from '../assets/tracks/Singapore.png';
 import spain from '../assets/tracks/Spain.png';
 import usa from '../assets/tracks/Usa.png';
 
-export const trackMaps = {
+/**
+ * Circuit-name → track-map asset. Keys are matched against a race's
+ * `location`, `country` and `name` by `getTrackMap`, so aliases (city,
+ * official GP name, country) are all present alongside the canonical name.
+ */
+export const trackMaps: Record<string, string> = {
   // Abu Dhabi
   "Abu Dhabi": abuDhabi, "Yas Island": abuDhabi, "Yas Marina": abuDhabi, "Abu Dhabi Grand Prix": abuDhabi, "United Arab Emirates": abuDhabi, "UAE": abuDhabi,
   // Australia
@@ -74,7 +79,14 @@ export const trackMaps = {
   "United States": usa, "USA": usa, "Austin": usa, "COTA": usa, "United States Grand Prix": usa,
 };
 
-export const getTrackMap = (raceInfo) => {
+/** The race fields `getTrackMap` matches against; all optional and stringy. */
+export interface TrackMapLookup {
+  location?: string;
+  country?: string;
+  name?: string;
+}
+
+export const getTrackMap = (raceInfo?: TrackMapLookup | null): string | null => {
   if (!raceInfo) return null;
   const location = (raceInfo.location || '').trim();
   const country = (raceInfo.country || '').trim();

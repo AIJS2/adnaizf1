@@ -23,6 +23,8 @@ export interface DriverProfile {
   wins?: number;
   podiums?: number;
   points_share?: number;
+  points_last_race?: number;
+  dnfs?: number;
   id?: string;
   abbreviation?: string;
   driver_number?: number;
@@ -310,5 +312,88 @@ export interface SpeedSectorsTableProps {
 /** Payload accepted by `WeatherChart`. */
 export interface WeatherChartProps {
   weatherData?: WeatherSample[];
+}
+
+// ---------------------------------------------------------------------------
+// `/api/dashboard/{year}` payload shapes
+// ---------------------------------------------------------------------------
+
+/**
+ * One entry of the `race_analytics` array — the single source of truth for the
+ * race-calendar payload. `RaceAnalyticsCard`'s former local `RaceSummary` and
+ * the dashboard response type both consume this, so the calendar card and the
+ * page can no longer disagree about the shape.
+ *
+ * `round` accepts a numeric string because it is interpolated into a route
+ * path, and `winner` is `null` for any race the backend has not classified yet.
+ */
+export interface RaceSummary {
+  round: number | string;
+  name: string;
+  date: string;
+  location?: string;
+  status: string;
+  winner?: string | null;
+}
+
+/** `/api/dashboard/{year}` → driver standings row. */
+export interface DashboardDriverStanding {
+  name: string;
+  team: string;
+  points: NumericString;
+}
+
+/** `/api/dashboard/{year}` → team standings row. */
+export interface DashboardTeamStanding {
+  name: string;
+  points: NumericString;
+  points_last_race?: NumericString;
+}
+
+/** `/api/dashboard/{year}` → the `next_race_event` object (null when the season is over). */
+export interface NextRaceEvent {
+  name: string;
+  date: string;
+}
+
+/** `/api/dashboard/{year}` response body. */
+export interface DashboardData {
+  year: number;
+  status?: string;
+  message?: string;
+  last_race_name?: string;
+  total_races?: number;
+  driver_standings?: DashboardDriverStanding[];
+  team_standings?: DashboardTeamStanding[];
+  race_analytics?: RaceSummary[];
+  next_race_event?: NextRaceEvent | null;
+}
+
+/** The `teammate` sub-object of a driver profile, when one exists. */
+export interface DriverTeammateInfo {
+  name: string;
+  id?: string;
+  abbreviation?: string;
+  driver_number?: NumericString;
+  points?: NumericString;
+  position?: NumericString;
+  race_h2h?: { driver_ahead: number; teammate_ahead: number };
+  quali_h2h?: { driver_ahead: number; teammate_ahead: number };
+}
+
+/** One race-by-race entry of a driver profile's `progression` array. */
+export interface DriverProgressionEntry {
+  round: number;
+  race_name?: string;
+  location?: string;
+  position: NumericString;
+  grid_position?: NumericString;
+  status?: string;
+  points?: NumericString;
+  race_points?: NumericString;
+  sprint_points?: NumericString;
+  cumulative_points?: NumericString;
+  teammate_position?: NumericString;
+  teammate_points?: NumericString;
 }
 

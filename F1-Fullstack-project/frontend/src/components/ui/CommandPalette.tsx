@@ -2,7 +2,7 @@ import  { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, X, User, Users, Flag, Trophy, Activity, 
-  LayoutDashboard, MapPin, CornerDownLeft, Sparkles 
+  LayoutDashboard, MapPin, CornerDownLeft, Sparkles, type LucideIcon
 } from 'lucide-react';
 import { teamColors, teamLogos } from '../../data/teamData';
 import { API_URL } from '../../config';
@@ -10,7 +10,27 @@ import { API_URL } from '../../config';
 const year = new Date().getFullYear();
 
 // Static base items for instant zero-latency search
-const defaultSearchItems = [
+/** One searchable entry in the palette (a page, team, circuit, or driver). */
+interface SearchItem {
+  id: string;
+  type: string;
+  title: string;
+  subtitle?: string;
+  link?: string;
+  icon?: LucideIcon;
+  keywords?: string[];
+  team?: string;
+  code?: string;
+  number?: string | number;
+  round?: number | string;
+}
+
+interface CommandPaletteProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+}
+
+const defaultSearchItems: SearchItem[] = [
   // Pages & Tools
   {
     id: 'page-dashboard',
@@ -583,14 +603,14 @@ const defaultSearchItems = [
 
 const CATEGORIES = ['All', 'Drivers', 'Teams', 'Circuits', 'Pages'];
 
-export default function CommandPalette({ isOpen, setIsOpen }) {
+export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [items, setItems] = useState(defaultSearchItems);
+  const [items, setItems] = useState<SearchItem[]>(defaultSearchItems);
   
-  const inputRef = useRef(null);
-  const listRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   // Focus input whenever opened
@@ -679,7 +699,7 @@ export default function CommandPalette({ isOpen, setIsOpen }) {
   }, [selectedIndex]);
 
   // Handle keyboard events (ArrowUp, ArrowDown, Enter, Esc)
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex(prev => (prev < filteredItems.length - 1 ? prev + 1 : 0));
@@ -697,7 +717,7 @@ export default function CommandPalette({ isOpen, setIsOpen }) {
     }
   };
 
-  const handleSelect = (item) => {
+  const handleSelect = (item: SearchItem) => {
     setIsOpen(false);
     if (item.link) {
       navigate(item.link);

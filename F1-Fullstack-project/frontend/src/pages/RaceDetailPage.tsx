@@ -140,6 +140,7 @@ function RaceDetailPage() {
     ? { ...raceData.pole_position, team_name: raceData.qualifying_results?.find((d: any) => d.full_name === raceData.pole_position.full_name)?.team_name }
     : null;
   const fastestLapData = raceData?.fastest_lap;
+  const trackMapImg = getTrackMap(raceData?.race_info);
 
   const baseAvailableTabs = ALL_POSSIBLE_TABS.filter(tab => raceData?.available_tabs?.includes(tab));
   const availableTabs = [...baseAvailableTabs];
@@ -240,10 +241,10 @@ function RaceDetailPage() {
         <section className="mb-10 flex justify-center bg-neutral-900/40 backdrop-blur-md border border-neutral-800/80 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
           <div className="absolute top-5 left-6 text-neutral-500 font-black text-xs uppercase tracking-[0.2em]">Circuit Layout</div>
           <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-[80px] rounded-full pointer-events-none"></div>
-          {getTrackMap(raceData?.race_info) ? (
+          {trackMapImg ? (
             <img 
-              src={getTrackMap(raceData?.race_info)} 
-              alt={`Track map for ${raceData?.race_info?.name || raceData?.race_info?.location}`} 
+              src={trackMapImg} 
+              alt={`Track map for ${raceData?.race_info?.name || raceData?.race_info?.location}`}
               className="h-32 md:h-64 object-contain brightness-0 invert opacity-70 transition-all duration-500 hover:opacity-100 hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
             />
           ) : (

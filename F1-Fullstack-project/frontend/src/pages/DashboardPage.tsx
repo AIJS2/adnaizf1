@@ -14,7 +14,7 @@ import { getTrackMap } from '../data/trackData';
 import HeroCountdown from '../components/ui/HeroCountdown';
 import TeamCard, { TeamStanding } from '../components/dashboard/TeamCard';
 import DriverStandingsList from '../components/dashboard/DriverStandingsList';
-import RaceAnalyticsCard, { RaceSummary } from '../components/dashboard/RaceAnalyticsCard';
+import RaceAnalyticsCard from '../components/dashboard/RaceAnalyticsCard';
 
 
 
@@ -63,24 +63,31 @@ function DashboardPage() {
   if (error) return <ErrorState message={error.message} onRetry={refetch} />;
 
   // Derived Values
-  const upcomingRace = dashboardData?.race_analytics?.find((r: RaceSummary) => r.status === 'Upcoming') || dashboardData?.race_analytics?.[dashboardData.race_analytics.length - 1];
-  const finishedRaces = dashboardData?.race_analytics?.filter((r: RaceSummary) => r.status === 'Finished') || [];
+  const raceAnalytics = dashboardData?.race_analytics ?? [];
+  const upcomingRace = raceAnalytics.find(r => r.status === 'Upcoming') || raceAnalytics[raceAnalytics.length - 1];
+  const finishedRaces = raceAnalytics.filter(r => r.status === 'Finished');
   const lastRace = finishedRaces.length > 0 ? finishedRaces[finishedRaces.length - 1] : null;
 
   const p1Driver = dashboardData?.driver_standings?.[0];
   const p2Driver = dashboardData?.driver_standings?.[1];
   const p1Team = dashboardData?.team_standings?.[0];
+  const p2Team = dashboardData?.team_standings?.[1];
 
   const targetCountdownDate = dashboardData?.next_race_event?.date || (upcomingRace ? `${upcomingRace.date}T13:00:00Z` : null);
   const trackMapImg = getTrackMap(upcomingRace || { name: dashboardData?.next_race_event?.name });
 
-  const maxTeamPoints = dashboardData?.team_standings?.length > 0 ? Math.max(...dashboardData.team_standings.map((t: TeamStanding) => Number(t.points))) : 1;
-  
+  const teamStandings = dashboardData?.team_standings ?? [];
+  const maxTeamPoints = teamStandings.length > 0 ? Math.max(...teamStandings.map(t => Number(t.points))) : 1;
+
+  // Points arrive as NumericString from the API, so coerce once at the boundary.
+  const p1Points = Number(p1Driver?.points) || 0;
+  const p2Points = Number(p2Driver?.points) || 0;
 
   // Title Fight gap calculation
-  const titleGap = (p1Driver && p2Driver) ? Math.round(p1Driver.points - p2Driver.points) : 0;
-  const totalDuelPoints = (p1Driver && p2Driver) ? (p1Driver.points + p2Driver.points) : 1;
-  const p1DuelPct = (p1Driver && p2Driver) ? Math.round((p1Driver.points / totalDuelPoints) * 100) : 50;
+  const titleGap = (p1Driver && p2Driver) ? Math.round(p1Points - p2Points) : 0;
+  const totalDuelPoints = (p1Driver && p2Driver) ? (p1Points + p2Points) : 1;
+  const p1DuelPct = (p1Driver && p2Driver) ? Math.round((p1Points / totalDuelPoints) * 100) : 50;
+  const teamGap = (p1Team && p2Team) ? Math.round(Number(p1Team.points) - Number(p2Team.points)) : null;
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans selection:bg-red-600">
@@ -113,7 +120,7 @@ function DashboardPage() {
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Driver ? `${p1Driver.name} (${parseInt(String(p1Driver.points), 10)} PTS)` : '-'}
               </p>
-              {p2Driver && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-yellow-400/80 transition-colors">+{Math.round(Number(p1Driver.points) - Number(p2Driver.points))} PTS ahead of {p2Driver.name.split(' ').pop()}</p>}
+              {p2Driver && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-yellow-400/80 transition-colors">+{Math.round(p1Points - p2Points)} PTS ahead of {p2Driver.name.split(' ').pop()}</p>}
             </div>
           </div>
 
@@ -127,7 +134,7 @@ function DashboardPage() {
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Team ? `${p1Team.name} (${parseInt(String(p1Team.points), 10)} PTS)` : '-'}
               </p>
-              {dashboardData?.team_standings?.[1] && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-cyan-300/80 transition-colors">+{Math.round(Number(p1Team.points) - Number(dashboardData.team_standings[1].points))} PTS ahead of {dashboardData.team_standings[1].name}</p>}
+              {p2Team && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-cyan-300/80 transition-colors">+{teamGap} PTS ahead of {p2Team.name}</p>}
             </div>
           </div>
 
@@ -275,7 +282,7 @@ function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-4xl font-black font-mono text-white tracking-tighter">{parseInt(p1Driver.points)}</div>
+                  <div className="text-4xl font-black font-mono text-white tracking-tighter">{Math.round(p1Points)}</div>
                   <span className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest">PTS</span>
                 </div>
               </Link>
@@ -307,7 +314,7 @@ function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-4xl font-black font-mono text-white tracking-tighter">{parseInt(p2Driver.points)}</div>
+                  <div className="text-4xl font-black font-mono text-white tracking-tighter">{Math.round(p2Points)}</div>
                   <span className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest">PTS</span>
                 </div>
               </Link>
@@ -372,8 +379,8 @@ function DashboardPage() {
           />
 
           <RaceAnalyticsCard
-            races={dashboardData?.race_analytics || []}
-            year={dashboardData?.year}
+            races={raceAnalytics}
+            year={dashboardData?.year ?? currentYear}
           />
         </section>
 

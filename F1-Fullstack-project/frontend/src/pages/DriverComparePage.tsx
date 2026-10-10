@@ -18,8 +18,39 @@ import {
   XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
+import type { LucideIcon } from 'lucide-react';
+import type { NumericString, DriverProfile } from '../types/f1';
+import type { ChampionshipPayload } from '../services/api';
 import html2canvas from 'html2canvas';
 import DriverRadarChart from '../components/DriverRadarChart';
+
+/** One row of the head-to-head comparison bars in the Overview tab. */
+interface MetricConfig {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  iconColor: string;
+  val1?: NumericString | null;
+  val2?: NumericString | null;
+  unit?: string;
+  format?: (v: NumericString | null | undefined) => string;
+  /** When true the lower value is the better one (best/avg finishing position). */
+  invert?: boolean;
+}
+
+/** One merged round of the two drivers' progression arrays. */
+interface MergedProgressionRow {
+  round: number;
+  race_name: string;
+  location: string;
+  d1_points: NumericString;
+  d1_cum: NumericString;
+  d1_pos: NumericString;
+  d2_points: NumericString;
+  d2_cum: NumericString;
+  d2_pos: NumericString;
+  winner: string | null;
+}
 
 const DriverComparePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -33,17 +64,17 @@ const DriverComparePage = () => {
 
   
   // 1. Fetch available drivers list
-  const { data: championshipData } = useQuery({
+  const { data: championshipData } = useQuery<ChampionshipPayload>({
     queryKey: ['championship', currentYear],
     queryFn: () => fetch(`${API_URL}/api/championship/${currentYear}`).then(r => r.json()),
   });
 
-  const driversList = championshipData?.drivers || [];
+  const driversList: DriverProfile[] = championshipData?.drivers || [];
 
   useEffect(() => {
     if (driversList.length > 0) {
-      if (!searchParams.get('d1') && driversList[0]) setDriver1Id(driversList[0].id);
-      if (!searchParams.get('d2') && driversList[1]) setDriver2Id(driversList[1].id);
+      if (!searchParams.get('d1') && driversList[0]?.id) setDriver1Id(driversList[0].id);
+      if (!searchParams.get('d2') && driversList[1]?.id) setDriver2Id(driversList[1].id);
     }
   }, [driversList, searchParams]);
 
@@ -89,7 +120,7 @@ const DriverComparePage = () => {
       const image = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = image;
-      link.download = `H2H_${profile1.name}_vs_${profile2.name}.png`;
+      link.download = `H2H_${profile1?.name}_vs_${profile2?.name}.png`;
       link.click();
     } catch (err: unknown) {
       console.error('Export failed', err);
@@ -99,7 +130,7 @@ const DriverComparePage = () => {
   // Calculate Head-to-Head shared finish races
   const { d1Ahead, d2Ahead, sharedRaces, mergedProgression } = useMemo(() => {
     let d1A = 0, d2A = 0, shared = 0;
-    const merged = [];
+    const merged: MergedProgressionRow[] = [];
 
     if (profile1?.progression && profile2?.progression) {
       const p1Map = new Map(profile1.progression.map(r => [r.round, r]));
@@ -109,7 +140,7 @@ const DriverComparePage = () => {
       for (const rnd of allRounds) {
         const r1 = p1Map.get(rnd);
         const r2 = p2Map.get(rnd);
-        let winner = null;
+        let winner: string | null = null;
         if (r1 && r2) {
           shared++;
           const pos1 = typeof r1.position === 'number' ? r1.position : 999;
@@ -135,7 +166,7 @@ const DriverComparePage = () => {
   }, [profile1, profile2]);
 
   // Metric config with contextual icons
-  const metricConfigs = useMemo(() => [
+  const metricConfigs = useMemo<MetricConfig[]>(() => [
     { key: 'points', label: 'Championship Points', icon: Star, iconColor: 'text-yellow-400', val1: profile1?.points, val2: profile2?.points, unit: ' PTS' },
     { key: 'wins', label: 'Race Wins', icon: Trophy, iconColor: 'text-yellow-500', val1: profile1?.wins, val2: profile2?.wins },
     { key: 'podiums', label: 'Podium Finishes', icon: Medal, iconColor: 'text-amber-400', val1: profile1?.podiums, val2: profile2?.podiums },
@@ -144,7 +175,7 @@ const DriverComparePage = () => {
     { key: 'avg', label: 'Average Finish', icon: Target, iconColor: 'text-blue-400', val1: profile1?.avg_finish, val2: profile2?.avg_finish, format: v => v ? `P${v}` : '-', invert: true },
   ], [profile1, profile2]);
 
-  const renderComparisonBar = (metric) => {
+  const renderComparisonBar = (metric: MetricConfig) => {
     const { label, icon: Icon, iconColor, val1, val2, unit = '', format, invert } = metric;
     const displayVal1 = format ? format(val1) : val1;
     const displayVal2 = format ? format(val2) : val2;
@@ -227,7 +258,7 @@ const DriverComparePage = () => {
               >
                 {driversList.map(d => (
                   <option key={d.id} value={d.id}>
-                    {d.name} ({d.team}) - P{d.position} ({parseInt(d.points)} PTS)
+                    {d.name} ({d.team}) - P{d.position} ({Math.round(Number(d.points) || 0)} PTS)
                   </option>
                 ))}
               </select>
@@ -255,7 +286,7 @@ const DriverComparePage = () => {
               >
                 {driversList.map(d => (
                   <option key={d.id} value={d.id}>
-                    {d.name} ({d.team}) - P{d.position} ({parseInt(d.points)} PTS)
+                    {d.name} ({d.team}) - P{d.position} ({Math.round(Number(d.points) || 0)} PTS)
                   </option>
                 ))}
               </select>
@@ -348,7 +379,7 @@ const DriverComparePage = () => {
                     </div>
                     <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
                       <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
-                      <span className="text-2xl font-black font-mono" style={{ color: d1Color }}>{parseInt(profile1.points)}</span>
+                      <span className="text-2xl font-black font-mono" style={{ color: d1Color }}>{Math.round(Number(profile1.points) || 0)}</span>
                     </div>
                     <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
                       <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
@@ -400,7 +431,7 @@ const DriverComparePage = () => {
                     </div>
                     <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
                       <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
-                      <span className="text-2xl font-black font-mono" style={{ color: d2Color }}>{parseInt(profile2.points)}</span>
+                      <span className="text-2xl font-black font-mono" style={{ color: d2Color }}>{Math.round(Number(profile2.points) || 0)}</span>
                     </div>
                     <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
                       <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>

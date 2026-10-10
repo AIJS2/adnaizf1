@@ -4,72 +4,19 @@
 
 import { API_URL } from '../config';
 import type {
+  DashboardData,
+  DashboardDriverStanding,
+  DashboardTeamStanding,
   DriverProfile,
+  DriverProgressionEntry,
   DriverStatsInfo,
+  DriverTeammateInfo,
   NumericString,
   Race,
+  RaceSummary,
   SessionResultEntry,
   TelemetryFlatPoint,
 } from '../types/f1';
-
-/** `/api/dashboard/{year}` → driver standings row. */
-export interface DashboardDriverStanding {
-  name: string;
-  team: string;
-  points: NumericString;
-}
-
-/** `/api/dashboard/{year}` → team standings row. */
-export interface DashboardTeamStanding {
-  name: string;
-  points: NumericString;
-  points_last_race?: NumericString;
-}
-
-/** `/api/dashboard/{year}` → one entry of the `race_analytics` array. */
-export interface RaceAnalyticsEntry {
-  round: number;
-  name: string;
-  date: string;
-  location?: string;
-  status: string;
-  winner: string | null;
-}
-
-/** `/api/dashboard/{year}` → the `next_race_event` object (null when the season is over). */
-export interface NextRaceEvent {
-  name: string;
-  date: string;
-}
-
-/** `/api/dashboard/{year}` response body. */
-export interface DashboardData {
-  year: number;
-  status?: string;
-  message?: string;
-  last_race_name?: string;
-  total_races?: number;
-  driver_standings?: DashboardDriverStanding[];
-  team_standings?: DashboardTeamStanding[];
-  race_analytics?: RaceAnalyticsEntry[];
-  next_race_event?: NextRaceEvent | null;
-}
-
-/** One race-by-race entry of a driver profile's `progression` array. */
-export interface DriverProgressionEntry {
-  round: number;
-  race_name?: string;
-  location?: string;
-  position: NumericString;
-  grid_position?: NumericString;
-  status?: string;
-  points?: NumericString;
-  race_points?: NumericString;
-  sprint_points?: NumericString;
-  cumulative_points?: NumericString;
-  teammate_position?: NumericString;
-  teammate_points?: NumericString;
-}
 
 /** `/api/driver/{year}/{driver_id}` response body. */
 export interface DriverProfilePayload {
@@ -88,8 +35,17 @@ export interface DriverProfilePayload {
   dnfs?: NumericString;
   dnss?: NumericString;
   progression?: DriverProgressionEntry[];
-  teammate?: unknown;
+  teammate?: DriverTeammateInfo | null;
 }
+
+export type {
+  DashboardData,
+  DashboardDriverStanding,
+  DashboardTeamStanding,
+  DriverProgressionEntry,
+  DriverTeammateInfo,
+  RaceSummary,
+};
 
 /** `/api/races/{year}` response body. */
 export interface RacesPayload {

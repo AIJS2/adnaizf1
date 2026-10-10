@@ -13,14 +13,28 @@ import ChampionshipWorm from '../components/ChampionshipWorm';
 interface EntryProps {
   id?: string;
   driverId?: string;
-  name?: string;
+  name: string;
   team?: string;
-  points?: number;
+  points: number;
   wins?: number;
   podiums?: number;
   dnfs?: number;
   abbreviation?: string;
 }
+
+/**
+ * Normalize a championship row into the props the card/row components need.
+ * The payload declares `name`/`points` optional, so coerce both at this one
+ * boundary instead of scattering `?? 0` through the render sites.
+ */
+const toEntry = (
+  row: { name?: string; points?: number },
+  extra: Partial<EntryProps> = {},
+): EntryProps => ({
+  ...extra,
+  name: row.name ?? '-',
+  points: row.points ?? 0,
+});
 
 interface PodiumCardProps {
   entry: EntryProps;
@@ -478,7 +492,7 @@ const StatsPage = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {podiumDrivers.map((driver, idx) => (
-                        <PodiumCard key={driver.name} entry={driver} rank={idx} type="driver" maxPoints={maxDriverPoints} leaderPoints={leaderDriverPoints} />
+                        <PodiumCard key={driver.name} entry={toEntry(driver, { id: driver.id, team: driver.team, wins: driver.wins, podiums: driver.podiums, dnfs: driver.dnfs, abbreviation: driver.abbreviation })} rank={idx} type="driver" maxPoints={maxDriverPoints} leaderPoints={leaderDriverPoints} />
                       ))}
                     </div>
                   </section>
@@ -495,7 +509,7 @@ const StatsPage = () => {
                     )}
                     <div className="space-y-3">
                       {restDrivers.map((driver, idx) => (
-                        <StandingRow key={driver.name} entry={driver} index={searchTerm ? idx : idx + 3} type="driver" maxPoints={maxDriverPoints} leaderPoints={leaderDriverPoints} searchTerm={searchTerm} />
+                        <StandingRow key={driver.name} entry={toEntry(driver, { id: driver.id, team: driver.team, wins: driver.wins, podiums: driver.podiums, dnfs: driver.dnfs, abbreviation: driver.abbreviation })} index={searchTerm ? idx : idx + 3} type="driver" maxPoints={maxDriverPoints} leaderPoints={leaderDriverPoints} searchTerm={searchTerm} />
                       ))}
                     </div>
                   </section>
@@ -515,7 +529,7 @@ const StatsPage = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {podiumTeams.map((team, idx) => (
-                        <PodiumCard key={team.name} entry={team} rank={idx} type="constructor" maxPoints={maxTeamPoints} leaderPoints={leaderTeamPoints} />
+                        <PodiumCard key={team.name} entry={toEntry(team, { id: team.id, wins: team.wins, podiums: team.podiums })} rank={idx} type="constructor" maxPoints={maxTeamPoints} leaderPoints={leaderTeamPoints} />
                       ))}
                     </div>
                   </section>
@@ -532,7 +546,7 @@ const StatsPage = () => {
                     )}
                     <div className="space-y-3">
                       {restTeams.map((team, idx) => (
-                        <StandingRow key={team.name} entry={team} index={searchTerm ? idx : idx + 3} type="constructor" maxPoints={maxTeamPoints} leaderPoints={leaderTeamPoints} searchTerm={searchTerm} />
+                        <StandingRow key={team.name} entry={toEntry(team, { id: team.id, wins: team.wins, podiums: team.podiums })} index={searchTerm ? idx : idx + 3} type="constructor" maxPoints={maxTeamPoints} leaderPoints={leaderTeamPoints} searchTerm={searchTerm} />
                       ))}
                     </div>
                   </section>

@@ -320,6 +320,8 @@ const RacesPage = () => {
     }) || races.find((r: Race) => r.status === 'Upcoming') || null;
   }, [races]);
 
+  const nextRaceTrackImg = getTrackMap(nextRace);
+
   // Filter races
   const filteredRaces = useMemo(() => {
     switch (filter) {
@@ -422,8 +424,8 @@ const RacesPage = () => {
           <section className="mb-10" ref={nextRaceRef}>
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-950/50 via-neutral-900/80 to-neutral-950/80 backdrop-blur-xl border border-red-500/20 p-6 md:p-8">
               {/* Track bg */}
-              {getTrackMap(nextRace) && (
-                <img src={getTrackMap(nextRace)} alt="" className="absolute right-4 top-1/2 -translate-y-1/2 w-48 md:w-64 opacity-[0.07] invert pointer-events-none" />
+              {nextRaceTrackImg && (
+                <img src={nextRaceTrackImg} alt="" className="absolute right-4 top-1/2 -translate-y-1/2 w-48 md:w-64 opacity-[0.07] invert pointer-events-none" />
               )}
               <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 to-transparent pointer-events-none" />
               

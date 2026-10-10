@@ -1,15 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ChevronRight, Clock, MapPin, Trophy } from 'lucide-react';
+import type { RaceSummary } from '../../types/f1';
 
-export interface RaceSummary {
-  round: number | string;
-  name: string;
-  status: string;
-  location: string;
-  date: string;
-  winner?: string;
-}
+export type { RaceSummary };
 
 interface RaceAnalyticsCardProps {
   races: RaceSummary[];

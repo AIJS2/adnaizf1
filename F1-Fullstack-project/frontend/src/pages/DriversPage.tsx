@@ -14,7 +14,7 @@ import { teamLogos, teamColors } from '../data/teamData';
 function DriversPage() {
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // FIXED: pakai dinamis, bukan hardcode 2026
@@ -43,11 +43,11 @@ function DriversPage() {
   }, [currentYear]);
 
   const filteredDrivers = drivers.filter(driver =>
-    driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    driver.team.toLowerCase().includes(searchTerm.toLowerCase())
+    (driver.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (driver.team ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const leaderPoints = drivers.length > 0 ? Math.max(...drivers.map(d => d.points)) : 0;
+  const leaderPoints = drivers.length > 0 ? Math.max(...drivers.map(d => d.points ?? 0)) : 0;
 
   if (loading) {
     return (
@@ -98,8 +98,8 @@ function DriversPage() {
 
               const isP1 = driver.position === 1;
               const animationDelay = `${index * 0.1}s`;
-              const pointsGap = isP1 ? 'LEADER' : `-${leaderPoints - driver.points}`;
-              const dominancePercentage = leaderPoints > 0 ? (driver.points / leaderPoints) * 100 : 0;
+              const pointsGap = isP1 ? 'LEADER' : `-${leaderPoints - (driver.points ?? 0)}`;
+              const dominancePercentage = leaderPoints > 0 ? ((driver.points ?? 0) / leaderPoints) * 100 : 0;
 
               return (
                 <div key={driver.id} className="relative group animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay }}>
@@ -150,7 +150,7 @@ function DriversPage() {
                         <div className="flex flex-col items-end leading-none">
                           <div className="flex items-center gap-2">
                             <span className="text-4xl md:text-5xl font-black italic text-white tracking-tighter">{driver.points}</span>
-                            {driver.points_last_race > 0 && (
+                            {(driver.points_last_race ?? 0) > 0 && (
                               <span className="text-green-500 text-xs font-bold flex items-center gap-0.5 mt-2 bg-green-500/10 px-1.5 py-0.5 rounded-sm">
                                 <ArrowUp size={12} strokeWidth={3} /> {driver.points_last_race}
                               </span>

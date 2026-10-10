@@ -1,28 +1,32 @@
-import { DriverProfile } from '../types/f1';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
 import { Trophy, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { fetchDriverProfile } from '../services/api';
+import type { DriverProfilePayload } from '../services/api';
+import type { DriverProgressionEntry } from '../types/f1';
+
+/** Total H2H count for one session, or null when the payload omits that split. */
+const h2hTotal = (
+  h2h?: { driver_ahead: number; teammate_ahead: number },
+): number | null =>
+  h2h ? h2h.driver_ahead + h2h.teammate_ahead : null;
 
 const DriverProfilePage = () => {
   const { id } = useParams();
   const currentYear = new Date().getFullYear();
 
-  const [profile, setProfile] = useState<DriverProfile | any>(null);
+  const [profile, setProfile] = useState<DriverProfilePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = async () => {
+    if (!id) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/driver/${currentYear}/${id}`);
-      if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setProfile(data);
+      setProfile(await fetchDriverProfile(currentYear, id));
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : String(err)));
     } finally {
@@ -74,11 +78,15 @@ const DriverProfilePage = () => {
   }
 
   const tm = profile.teammate;
-  const totalRacesH2H = tm ? (tm.race_h2h.driver_ahead + tm.race_h2h.teammate_ahead) : 0;
-  const raceH2HPct = totalRacesH2H > 0 ? (tm.race_h2h.driver_ahead / totalRacesH2H) * 100 : 50;
+  const totalRacesH2H = h2hTotal(tm?.race_h2h);
+  const raceH2HPct = totalRacesH2H && totalRacesH2H > 0 && tm?.race_h2h
+    ? (tm.race_h2h.driver_ahead / totalRacesH2H) * 100 : 50;
 
-  const totalQualiH2H = tm ? (tm.quali_h2h.driver_ahead + tm.quali_h2h.teammate_ahead) : 0;
-  const qualiH2HPct = totalQualiH2H > 0 ? (tm.quali_h2h.driver_ahead / totalQualiH2H) * 100 : 50;
+  const totalQualiH2H = h2hTotal(tm?.quali_h2h);
+  const qualiH2HPct = totalQualiH2H && totalQualiH2H > 0 && tm?.quali_h2h
+    ? (tm.quali_h2h.driver_ahead / totalQualiH2H) * 100 : 50;
+
+  const progression: DriverProgressionEntry[] = profile.progression ?? [];
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
@@ -170,9 +178,9 @@ const DriverProfilePage = () => {
             { label: 'Best Finish', value: profile.best_finish ? `P${profile.best_finish}` : '-', color: 'text-green-400' },
             { label: 'Avg. Finish', value: profile.avg_finish ? `P${profile.avg_finish}` : '-', color: 'text-neutral-300' },
             { label: 'DNFs', value: profile.dnfs, color: 'text-red-500', 
-              tooltip: profile.progression.filter((p: any) => p.position === 'DNF').map((p: any) => p.race_name).join(', ') },
+              tooltip: progression.filter(p => p.position === 'DNF').map(p => p.race_name).join(', ') },
             { label: 'DNSs', value: profile.dnss, color: 'text-orange-500',
-              tooltip: profile.progression.filter((p: any) => p.position === 'DNS').map((p: any) => p.race_name).join(', ') }
+              tooltip: progression.filter(p => p.position === 'DNS').map(p => p.race_name).join(', ') }
           ].map((stat, idx) => (
             <div 
               key={idx}
@@ -209,9 +217,9 @@ const DriverProfilePage = () => {
               {/* Qualifying H2H */}
               <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-5">
                 <div className="flex justify-between items-center text-sm font-bold mb-2">
-                  <span style={{ color: teamColor }}>{profile.name} ({tm.quali_h2h.driver_ahead})</span>
+                  <span style={{ color: teamColor }}>{profile.name} ({tm?.quali_h2h?.driver_ahead})</span>
                   <span className="text-neutral-500 uppercase text-xs tracking-wider">Qualifying</span>
-                  <span className="text-neutral-400">({tm.quali_h2h.teammate_ahead}) {tm.name}</span>
+                  <span className="text-neutral-400">({tm?.quali_h2h?.teammate_ahead}) {tm.name}</span>
                 </div>
                 <div className="w-full bg-neutral-800 rounded-full h-3 overflow-hidden flex">
                   <div className="h-full transition-all duration-500" style={{ width: `${qualiH2HPct}%`, backgroundColor: teamColor }}></div>
@@ -222,9 +230,9 @@ const DriverProfilePage = () => {
               {/* Race H2H */}
               <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-5">
                 <div className="flex justify-between items-center text-sm font-bold mb-2">
-                  <span style={{ color: teamColor }}>{profile.name} ({tm.race_h2h.driver_ahead})</span>
+                  <span style={{ color: teamColor }}>{profile.name} ({tm?.race_h2h?.driver_ahead})</span>
                   <span className="text-neutral-500 uppercase text-xs tracking-wider">Race Finish</span>
-                  <span className="text-neutral-400">({tm.race_h2h.teammate_ahead}) {tm.name}</span>
+                  <span className="text-neutral-400">({tm?.race_h2h?.teammate_ahead}) {tm.name}</span>
                 </div>
                 <div className="w-full bg-neutral-800 rounded-full h-3 overflow-hidden flex">
                   <div className="h-full transition-all duration-500" style={{ width: `${raceH2HPct}%`, backgroundColor: teamColor }}></div>
@@ -247,7 +255,7 @@ const DriverProfilePage = () => {
 
           <div className="h-[320px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={profile.progression} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
+              <AreaChart data={progression} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
                 <defs>
                   <linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={teamColor} stopOpacity={0.6}/>
@@ -286,7 +294,7 @@ const DriverProfilePage = () => {
               <Flag size={20} className="text-red-500" />
               Round-by-Round Results
             </h2>
-            <span className="text-xs text-neutral-500 font-mono">{profile.progression.length} Races Completed</span>
+            <span className="text-xs text-neutral-500 font-mono">{progression.length} Races Completed</span>
           </div>
 
           <div className="overflow-x-auto">
@@ -302,7 +310,13 @@ const DriverProfilePage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800/60">
-                {profile.progression.map((row) => (
+                {progression.map((row) => {
+                  // Numeric fields arrive as NumericString; coerce once per row.
+                  const posNum = Number(row.position);
+                  const sprintPts = Number(row.sprint_points) || 0;
+                  const gridPos = Number(row.grid_position) || 0;
+                  const racePts = Number(row.points) || 0;
+                  return (
                   <tr key={row.round} className="hover:bg-neutral-800/30 transition-colors">
                     <td className="p-4 text-center font-mono font-bold text-neutral-500">{row.round}</td>
                     <td className="p-4 font-bold text-white">
@@ -310,11 +324,11 @@ const DriverProfilePage = () => {
                       <div className="text-xs text-neutral-500 font-normal">{row.location}</div>
                     </td>
                     <td className="p-4 text-center">
-                      <span title={`${row.position === 'DNF' || row.position === 'DNS' ? row.position : 'P'+row.position} • Race: ${row.race_points} pts${row.sprint_points > 0 ? ' | Sprint: '+row.sprint_points+' pts' : ''} • Started ${row.grid_position > 0 ? 'P'+row.grid_position : 'Pitlane/DNS'} • ${row.status}`} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
+                      <span title={`${row.position === 'DNF' || row.position === 'DNS' ? row.position : 'P'+row.position} • Race: ${row.race_points} pts${sprintPts > 0 ? ' | Sprint: '+row.sprint_points+' pts' : ''} • Started ${gridPos > 0 ? 'P'+row.grid_position : 'Pitlane/DNS'} • ${row.status}`} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
                         row.position === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
                         row.position === 2 ? 'bg-slate-300/20 text-slate-300 border border-slate-300/40' :
                         row.position === 3 ? 'bg-amber-600/20 text-amber-500 border border-amber-600/40' :
-                        row.position <= 10 ? 'bg-green-500/10 text-green-400' :
+                        posNum <= 10 ? 'bg-green-500/10 text-green-400' :
                         row.position === 'DNF' ? 'bg-red-500/10 text-red-500' :
                         row.position === 'DNS' ? 'bg-orange-500/10 text-orange-500' : 'bg-neutral-800 text-neutral-400'
                       }`}>
@@ -322,7 +336,7 @@ const DriverProfilePage = () => {
                       </span>
                     </td>
                     <td className="p-4 text-right font-mono font-bold text-white">
-                      {row.points > 0 ? `+${row.points}` : '0'}
+                      {racePts > 0 ? `+${row.points}` : '0'}
                     </td>
                     <td className="p-4 text-right font-mono font-bold text-neutral-300">
                       {row.cumulative_points}
@@ -333,7 +347,8 @@ const DriverProfilePage = () => {
                       </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

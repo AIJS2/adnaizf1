@@ -1,20 +1,27 @@
 import { useMemo } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { teamColors } from '../data/teamData';
+import type { NumericString } from '../types/f1';
 
 interface RadarTeammate {
-  points?: number;
+  name: string;
+  points?: NumericString;
 }
 
+/**
+ * The driver-profile slice the radar chart consumes. Stat fields arrive as
+ * `NumericString` from the backend, so they are coerced with `Number()` inside
+ * the chart rather than at every call site.
+ */
 interface RadarDriverProfile {
   name: string;
   team: string;
-  points?: number;
-  poles?: number;
-  wins?: number;
-  podiums?: number;
-  dnfs?: number;
-  avg_finish?: number;
+  points?: NumericString;
+  poles?: NumericString;
+  wins?: NumericString;
+  podiums?: NumericString;
+  dnfs?: NumericString;
+  avg_finish?: NumericString | null;
   teammate?: RadarTeammate | null;
 }
 
@@ -35,32 +42,36 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2 
     if (!profile1 || !profile2) return [];
 
     const calculateAttributes = (profile: RadarDriverProfile): Record<string, number> => {
+      // Coerce the NumericString payload fields once, up front.
+      const points = Number(profile.points) || 0;
+      const poles = Number(profile.poles) || 0;
+      const wins = Number(profile.wins) || 0;
+      const podiums = Number(profile.podiums) || 0;
+      const dnfs = Number(profile.dnfs) || 0;
+      const teammatePoints = Number(profile.teammate?.points) || 0;
+
       // 1. Pace: based on poles and avg_finish
-      const poles = profile.poles || 0;
-      const avgF = profile.avg_finish || 10;
+      const avgF = Number(profile.avg_finish) || 10;
       const pace = 60 + (poles * 3.5) + ((20 - avgF) * 1.8);
       
       // 2. Racecraft: based on wins and podiums
-      const wins = profile.wins || 0;
-      const podiums = profile.podiums || 0;
       const racecraft = 65 + (wins * 4) + (podiums * 2);
       
       // 3. Consistency: penalize DNFs, reward low avg_finish
-      const dnfs = profile.dnfs || 0;
       const consistency = 95 - (dnfs * 8) - (avgF * 1.5);
       
       // 4. Domination: Points relative to teammate
       let domination = 70;
-      if (profile.teammate && (profile.points || 0) + (profile.teammate.points || 0) > 0) {
-         const totalTeamPts = (profile.points || 0) + (profile.teammate.points || 0);
-         const ratio = (profile.points || 0) / totalTeamPts; // 0 to 1
+      if (profile.teammate && points + teammatePoints > 0) {
+         const totalTeamPts = points + teammatePoints;
+         const ratio = points / totalTeamPts; // 0 to 1
          domination = 40 + (ratio * 60); 
-      } else if ((profile.points || 0) > 0) {
+      } else if (points > 0) {
          domination = 95;
       }
       
       // 5. Impact: based on total points (assume 400 is dominant season for scaling)
-      let impact = 60 + ((profile.points || 0) / 400) * 40;
+      let impact = 60 + (points / 400) * 40;
 
       const clamp = (val: number): number => Math.min(99, Math.max(40, Math.round(val)));
 

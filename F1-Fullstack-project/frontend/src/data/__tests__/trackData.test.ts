@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { getTrackMap, trackMaps } from '../trackData';
+import { getTrackMap, trackMaps, type TrackMapLookup } from '../trackData';
 
 // Factory pattern for creating test race data
-const getMockRaceInfo = (overrides = {}) => {
+const getMockRaceInfo = (overrides: Partial<TrackMapLookup> = {}): TrackMapLookup => {
   return {
     location: '',
     country: '',
@@ -75,7 +75,7 @@ describe('getTrackMap Data Utility', () => {
     });
 
     it('returns null safely with falsy property values', () => {
-      const safeRaceInfo = { location: null, country: undefined, name: '' };
+      const safeRaceInfo: TrackMapLookup = { location: '', country: undefined, name: '' };
       expect(getTrackMap(safeRaceInfo)).toBeNull();
     });
   });

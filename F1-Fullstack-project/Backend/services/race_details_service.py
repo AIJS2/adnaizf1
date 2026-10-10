@@ -11,6 +11,7 @@ from services.fastf1_safe import (
     load_session_safe,
     safe_getattr,
 )
+from services import openf1_service
 
 DETAIL_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=True, messages=True)
 LIGHT_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=False, messages=False)
@@ -64,6 +65,57 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
     def format_gap(delta):
         if pd.isna(delta) or delta.total_seconds() <= 0: return ""
         return f"+{delta.total_seconds():.3f}s"
+
+    # --- OpenF1 fallback -------------------------------------------------
+    # FastF1's results frame is empty or NaN-filled while F1's own archive has
+    # not finalised a session, even hours after the race. OpenF1's
+    # session_result is already complete in that window, so it stands in for
+    # the classification only. Everything derived from FastF1 laps (tyre
+    # strategy, speed traps, sectors, charts) is untouched.
+    _openf1_key_cache: dict[str, int] = {}
+
+    def openf1_rows_for(session_name: str, session_code: str) -> list:
+        """Classification rows from OpenF1, or [] when it has nothing.
+
+        `session_name` is the app's label ('Sprint', 'Race', ...); the cache is
+        keyed on it because a race weekend has at most one of each.
+        """
+        try:
+            key = _openf1_key_cache.get(session_name)
+            if key is None:
+                # The circuit disambiguates a season's 20+ sessions named
+                # "Race"; without it session_key_for refuses to guess.
+                key = openf1_service.session_key_for(
+                    year, round_number, session_code,
+                    circuit=event.get("Location"),
+                )
+                _openf1_key_cache[session_name] = key if key is not None else 0
+
+            rows = openf1_service.fetch_classification(
+                key, year, round_number, session_code,
+            )
+            return rows or []
+        except Exception as e:  # noqa: BLE001 - a fallback must never break the page
+            logging.warning(
+                "OpenF1 fallback failed for %s/%s/%s: %s: %s",
+                year, round_number, session_code, type(e).__name__, e,
+            )
+            return []
+
+    def results_are_finalised(session) -> bool:
+        """True when FastF1's results carry real laps and timing.
+
+        F1's archive reports `Position` immediately but leaves `Laps`, `Time`,
+        `GridPosition` and `Points` as NaN until the classification is locked,
+        so a non-empty frame is not the same thing as a usable one.
+        """
+        results = safe_getattr(session, "results")
+        if results is None or getattr(results, "empty", True):
+            return False
+        laps = results.get("Laps") if "Laps" in results else None
+        if laps is None or laps.isna().all():
+            return False
+        return bool(laps.notna().any())
 
     def process_practice_session(session):
         # `hasattr(session, 'laps')` is True even before load, so the old guard
@@ -259,425 +311,449 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 "time": format_lap_time(best_lap_time), "laps": laps_count 
             })
 
-    if 'Sprint' in available_sessions and has_rows(available_sessions['Sprint'], 'results'):
-        available_tabs.extend(['Sprint Grid', 'Sprint'])
+    if 'Sprint' in available_sessions:
         sprint_session = available_sessions['Sprint']
-        sprint_session.results['FullName'] = sprint_session.results['FirstName'] + ' ' + sprint_session.results['LastName']
-        
-        sprint_grid_df = sprint_session.results.sort_values(by="GridPosition")
-        for _, res in sprint_grid_df.iterrows():
-            try:
-                grid_pos = int(res['GridPosition'])
-            except (ValueError, TypeError):
-                grid_pos = 0
-            if grid_pos > 0:
-                driver_num = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
-                qual_time = sprint_qual_times.get(driver_num)
-                sprint_grid_results.append({
-                    "grid_position": grid_pos,
-                    "driver_number": driver_num,
-                    "full_name": res['FullName'],
-                    "team_name": res['TeamName'],
-                    "time": format_lap_time(qual_time)
-                })
+        if results_are_finalised(sprint_session):
+            available_tabs.extend(['Sprint Grid', 'Sprint'])
+            sprint_session.results['FullName'] = sprint_session.results['FirstName'] + ' ' + sprint_session.results['LastName']
 
-        leader = sprint_session.results.iloc[0]
-        leader_time = leader.get('Time')
-        # F1 returns NaN for Laps on sessions whose results are not finalised
-        # yet; int(nan) raises ValueError and took the whole payload down.
-        leader_laps = leader.get('Laps', 0)
-        max_laps = int(leader_laps) if pd.notna(leader_laps) else 0
-        # Index results by Position once; the interval math below looked up
-        # the row one place ahead with a full-frame boolean scan per driver.
-        results_by_position = sprint_session.results.set_index('Position')
-        for index, (_, res) in enumerate(sprint_session.results.iterrows()):
-            position = index + 1
-            driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
-            # NaN-safe: an unfinalised session has no Laps yet.
-            res_laps = res.get('Laps', 0)
-            current_laps = int(res_laps) if pd.notna(res_laps) else 0
-            time_display, gap_display, interval_display = res['Status'], "", ""
-            res_status = res['Status']
-            
-            classified_pos = str(res.get('ClassifiedPosition', ''))
-            if classified_pos in ['R', 'D', 'E', 'W']:
-                time_display = "DNF"
-                res_status = "DNF"
-            elif current_laps == max_laps and pd.notna(res.get('Time')):
-                total_time, gap, interval = None, None, None
-                if position == 1: total_time = res['Time']
-                else:
-                    gap = res['Time']
-                    if pd.notna(leader_time): total_time = leader_time + gap
-                    if position == 2: interval = gap
+            sprint_grid_df = sprint_session.results.sort_values(by="GridPosition")
+            for _, res in sprint_grid_df.iterrows():
+                try:
+                    grid_pos = int(res['GridPosition'])
+                except (ValueError, TypeError):
+                    grid_pos = 0
+                if grid_pos > 0:
+                    driver_num = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
+                    qual_time = sprint_qual_times.get(driver_num)
+                    sprint_grid_results.append({
+                        "grid_position": grid_pos,
+                        "driver_number": driver_num,
+                        "full_name": res['FullName'],
+                        "team_name": res['TeamName'],
+                        "time": format_lap_time(qual_time)
+                    })
+
+            leader = sprint_session.results.iloc[0]
+            leader_time = leader.get('Time')
+            # F1 returns NaN for Laps on sessions whose results are not finalised
+            # yet; int(nan) raises ValueError and took the whole payload down.
+            leader_laps = leader.get('Laps', 0)
+            max_laps = int(leader_laps) if pd.notna(leader_laps) else 0
+            # Index results by Position once; the interval math below looked up
+            # the row one place ahead with a full-frame boolean scan per driver.
+            results_by_position = sprint_session.results.set_index('Position')
+            for index, (_, res) in enumerate(sprint_session.results.iterrows()):
+                position = index + 1
+                driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
+                # NaN-safe: an unfinalised session has no Laps yet.
+                res_laps = res.get('Laps', 0)
+                current_laps = int(res_laps) if pd.notna(res_laps) else 0
+                time_display, gap_display, interval_display = res['Status'], "", ""
+                res_status = res['Status']
+
+                classified_pos = str(res.get('ClassifiedPosition', ''))
+                if classified_pos in ['R', 'D', 'E', 'W']:
+                    time_display = "DNF"
+                    res_status = "DNF"
+                elif current_laps == max_laps and pd.notna(res.get('Time')):
+                    total_time, gap, interval = None, None, None
+                    if position == 1: total_time = res['Time']
                     else:
-                        ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
-                        if ahead is not None and pd.notna(ahead.get('Time')): interval = gap - ahead.get('Time')
-                time_display, gap_display, interval_display = format_lap_time(total_time), format_gap(gap), format_gap(interval)
-            else:
-                if position > 1:
-                    ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
-                    if ahead is not None:
-                        ahead_laps = ahead.get('Laps', 0)
-                        ahead_laps = int(ahead_laps) if pd.notna(ahead_laps) else 0
-                        lap_diff = ahead_laps - current_laps
-                        if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
-            sprint_results.append({ "position": position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)) if pd.notna(res.get('Points', 0)) else 0, "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
-    
-    if 'Race' in available_sessions and has_rows(available_sessions['Race'], 'results'):
-        available_tabs.extend(['Starting Grid', 'Race'])
-        race_session = available_sessions['Race']
-        race_session.results['FullName'] = race_session.results['FirstName'] + ' ' + race_session.results['LastName']
-        leader = race_session.results.iloc[0]
-        leader_time = leader.get('Time')
-        # Same NaN guard as the Sprint block: an unfinalised session reports
-        # NaN for Laps and int(nan) kills the whole endpoint.
-        race_leader_laps = leader.get('Laps', 0)
-        max_laps = int(race_leader_laps) if pd.notna(race_leader_laps) else 0
-        race_winner_info = { "full_name": leader['FullName'], "time": format_lap_time(leader_time) }
-        grid_df = race_session.results.sort_values(by="GridPosition")
-        # Index results by Position once (same reason as the sprint block).
-        results_by_position = race_session.results.set_index('Position')
-        results_by_abbr = race_session.results.set_index('Abbreviation')
-        for _, res in grid_df.iterrows():
-            grid_position = int(res['GridPosition']) if pd.notna(res['GridPosition']) else 0
-            driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
-            if grid_position > 0:
-                starting_grid.append({ "grid_position": grid_position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'] })
-        for index, (_, res) in enumerate(race_session.results.iterrows()):
-            position = index + 1
-            driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
-            # NaN-safe: an unfinalised session has no Laps yet.
-            res_laps = res.get('Laps', 0)
-            current_laps = int(res_laps) if pd.notna(res_laps) else 0
-            time_display, gap_display, interval_display = res['Status'], "", ""
-            res_status = res['Status']
-            
-            classified_pos = str(res.get('ClassifiedPosition', ''))
-            if classified_pos in ['R', 'D', 'E', 'W']:
-                time_display = "DNF"
-                res_status = "DNF"
-            elif current_laps == max_laps and pd.notna(res.get('Time')):
-                total_time, gap, interval = None, None, None
-                if position == 1: total_time = res['Time']
-                else:
-                    gap = res['Time']
-                    if pd.notna(leader_time): total_time = leader_time + gap
-                    if position == 2: interval = gap
-                    else:
-                        ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
-                        if ahead is not None and pd.notna(ahead.get('Time')): interval = gap - ahead.get('Time')
-                time_display, gap_display, interval_display = format_lap_time(total_time), format_gap(gap), format_gap(interval)
-            else:
-                if position > 1:
-                    ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
-                    if ahead is not None:
-                        ahead_laps = ahead.get('Laps', 0)
-                        ahead_laps = int(ahead_laps) if pd.notna(ahead_laps) else 0
-                        lap_diff = ahead_laps - current_laps
-                        if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
-            results.append({ "position": position, "abbreviation": str(res.get('Abbreviation', '')), "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)) if pd.notna(res.get('Points', 0)) else 0, "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
-        
-        fastest = safe_getattr(race_session, 'laps')
-        if fastest is not None and not fastest.empty:
-            fastest = fastest.pick_fastest()
-        if fastest is not None and not getattr(fastest, 'empty', True):
-            driver_lookup = (
-                results_by_abbr.loc[fastest['Driver']]
-                if fastest['Driver'] in results_by_abbr.index else None
-            )
-            if driver_lookup is not None:
-                driver_data = driver_lookup
-                fastest_lap_info = {
-                    "full_name": driver_data['FullName'], "team_name": driver_data['TeamName'],
-                    "lap_time": format_lap_time(fastest['LapTime']), "lap_number": int(fastest['LapNumber'])
-                }
-
-        # --- EXTRACT TYRE STRATEGY PRO & PIT STOPS ---
-        tyre_strategy = []
-        if has_rows(race_session, 'laps') and has_rows(race_session, 'results'):
-            try:
-                # Pre-group laps by driver ONCE. The previous implementation
-                # called laps.pick_driver(abbr) per driver, which re-scans the
-                # whole lap DataFrame for every row of the results table
-                # (deprecated API + O(drivers x laps) work).
-                laps_by_driver = {
-                    drv: grp.sort_values('LapNumber')
-                    for drv, grp in race_session.laps.groupby('Driver', sort=False)
-                }
-
-                for _, drv_row in race_session.results.iterrows():
-                    abbr = str(drv_row.get('Abbreviation', ''))
-                    full_name = str(drv_row.get('FullName', ''))
-                    team_name = str(drv_row.get('TeamName', ''))
-                    pos = int(drv_row.get('Position', 99)) if pd.notna(drv_row.get('Position')) else 99
-                    dr_num = int(drv_row.get('DriverNumber', 0)) if pd.notna(drv_row.get('DriverNumber')) else 0
-
-                    dr_laps = laps_by_driver.get(abbr)
-                    if dr_laps is None or dr_laps.empty:
-                        continue
-
-                    # Pull the three needed columns into Python lists once,
-                    # then run the stint state machine over plain values
-                    # instead of paying iterrows() boxing per lap.
-                    stint_nums = dr_laps['Stint'].tolist()
-                    compounds = dr_laps['Compound'].tolist()
-                    lap_nums = dr_laps['LapNumber'].tolist()
-
-                    stints = []
-                    current_stint = None
-                    for stint_num, compound, lap_num in zip(stint_nums, compounds, lap_nums):
-                        stint_no = int(stint_num) if pd.notna(stint_num) else 1
-                        comp = str(compound if pd.notna(compound) else 'UNKNOWN').upper()
-                        lap_no = int(lap_num) if pd.notna(lap_num) else 0
-
-                        if current_stint is None:
-                            current_stint = {
-                                "stint": stint_no,
-                                "compound": comp,
-                                "start_lap": lap_no,
-                                "end_lap": lap_no,
-                                "laps": 1
-                            }
-                        elif current_stint["stint"] == stint_no and current_stint["compound"] == comp:
-                            current_stint["end_lap"] = lap_no
-                            current_stint["laps"] += 1
+                        gap = res['Time']
+                        if pd.notna(leader_time): total_time = leader_time + gap
+                        if position == 2: interval = gap
                         else:
-                            stints.append(current_stint)
-                            current_stint = {
-                                "stint": stint_no,
-                                "compound": comp,
-                                "start_lap": lap_no,
-                                "end_lap": lap_no,
-                                "laps": 1
-                            }
-                    if current_stint is not None:
-                        stints.append(current_stint)
-
-                    # Pit stop laps
-                    pit_laps = []
-                    if 'PitInTime' in dr_laps.columns:
-                        pit_rows = dr_laps[dr_laps['PitInTime'].notna()]
-                        pit_laps = [int(p) for p in pit_rows['LapNumber'].tolist() if pd.notna(p)]
-
-                    tyre_strategy.append({
-                        "driver": abbr,
-                        "full_name": full_name,
-                        "team_name": team_name,
-                        "driver_number": dr_num,
-                        "position": pos,
-                        "total_laps": len(dr_laps),
-                        "stints": stints,
-                        "pit_laps": pit_laps
-                    })
-
-                tyre_strategy.sort(key=lambda x: x["position"])
-                if tyre_strategy:
-                    available_tabs.append("Tyre Strategy")
-            except Exception as e:
-                logging.error(f"Error calculating tyre strategy: {e}")
-
-        # --- EXTRACT SPEED TRAP & SECTORS (PURPLE MATRIX) ---
-        speed_traps = []
-        sector_matrix = []
-        try:
-            if has_rows(race_session, 'laps') and has_rows(race_session, 'results'):
-                sector_cols = ['Sector1Time', 'Sector2Time', 'Sector3Time']
-                valid_laps = race_session.laps.dropna(subset=sector_cols)
-
-                overall_best_s1 = valid_laps['Sector1Time'].min() if not valid_laps.empty else None
-                overall_best_s2 = valid_laps['Sector2Time'].min() if not valid_laps.empty else None
-                overall_best_s3 = valid_laps['Sector3Time'].min() if not valid_laps.empty else None
-
-                has_st = 'SpeedST' in race_session.laps.columns
-                has_fl = 'SpeedFL' in race_session.laps.columns
-
-                def fmt_sec(td):
-                    if pd.isna(td) or td is None: return "-"
-                    return f"{td.total_seconds():.3f}"
-
-                # Compute every per-driver reduction ONCE with a single
-                # groupby each, instead of re-scanning that driver's laps
-                # (dropna + three min() + pick_fastest + max) on every
-                # iteration of the results loop.
-                best_sectors_by_driver = (
-                    valid_laps.groupby('Driver', sort=False)[sector_cols].min()
-                    if not valid_laps.empty else None
-                )
-
-                speed_col = 'SpeedST' if has_st else ('SpeedFL' if has_fl else None)
-                if speed_col:
-                    speed_max_by_driver = race_session.laps.groupby('Driver', sort=False)[speed_col].max()
-                    # A driver with an all-NaN speed column must fall back to
-                    # 0.0, preserving the legacy `.notna().any()` guard.
-                    speed_present_by_driver = (
-                        race_session.laps.groupby('Driver', sort=False)[speed_col]
-                        .apply(lambda s: bool(s.notna().any()))
-                    )
+                            ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
+                            if ahead is not None and pd.notna(ahead.get('Time')): interval = gap - ahead.get('Time')
+                    time_display, gap_display, interval_display = format_lap_time(total_time), format_gap(gap), format_gap(interval)
                 else:
-                    speed_max_by_driver = speed_present_by_driver = None
-
-                valid_laptimes = race_session.laps[race_session.laps['LapTime'].notna()]
-                fastest_idx_by_driver = (
-                    valid_laptimes['LapTime'].groupby(valid_laptimes['Driver'], sort=False).idxmin()
-                    if not valid_laptimes.empty else None
-                )
-
-                for _, drv_row in race_session.results.iterrows():
-                    abbr = str(drv_row.get('Abbreviation', ''))
-                    full_name = str(drv_row.get('FullName', ''))
-                    team_name = str(drv_row.get('TeamName', ''))
-                    dr_num = int(drv_row.get('DriverNumber', 0)) if pd.notna(drv_row.get('DriverNumber')) else 0
-                    pos = int(drv_row.get('Position', 99)) if pd.notna(drv_row.get('Position')) else 99
-
-                    # A driver absent from the laps entirely is skipped,
-                    # matching the old `if dr_laps.empty: continue`.
-                    if best_sectors_by_driver is not None and abbr not in best_sectors_by_driver.index \
-                            and (speed_max_by_driver is None or abbr not in speed_max_by_driver.index):
-                        continue
-
-                    # Speed trap
-                    max_speed = 0.0
-                    if speed_max_by_driver is not None and abbr in speed_present_by_driver.index:
-                        if bool(speed_present_by_driver.loc[abbr]):
-                            max_speed = float(speed_max_by_driver.loc[abbr])
-
-                    speed_traps.append({
-                        "driver": abbr,
-                        "full_name": full_name,
-                        "team_name": team_name,
-                        "driver_number": dr_num,
-                        "speed": round(max_speed, 1),
-                        "position": pos
-                    })
-
-                    # Best sectors
-                    if best_sectors_by_driver is not None and abbr in best_sectors_by_driver.index:
-                        best_row = best_sectors_by_driver.loc[abbr]
-                        best_s1, best_s2, best_s3 = best_row[sector_cols[0]], best_row[sector_cols[1]], best_row[sector_cols[2]]
-                    else:
-                        best_s1 = best_s2 = best_s3 = None
-
-                    actual_lap_time = None
-                    if fastest_idx_by_driver is not None and abbr in fastest_idx_by_driver.index:
-                        lt = race_session.laps.loc[fastest_idx_by_driver.loc[abbr], 'LapTime']
-                        actual_lap_time = lt if pd.notna(lt) else None
-
-                    ideal_lap_seconds = 0
-                    if best_s1 is not None and best_s2 is not None and best_s3 is not None:
-                        ideal_lap_seconds = (best_s1 + best_s2 + best_s3).total_seconds()
-
-                    potential_gain = 0.0
-                    if actual_lap_time is not None and ideal_lap_seconds > 0:
-                        actual_seconds = actual_lap_time.total_seconds()
-                        potential_gain = round(actual_seconds - ideal_lap_seconds, 3)
-
-                    sector_matrix.append({
-                        "driver": abbr,
-                        "full_name": full_name,
-                        "team_name": team_name,
-                        "driver_number": dr_num,
-                        "position": pos,
-                        "s1": fmt_sec(best_s1),
-                        "s1_purple": (best_s1 == overall_best_s1) if (best_s1 is not None and overall_best_s1 is not None) else False,
-                        "s2": fmt_sec(best_s2),
-                        "s2_purple": (best_s2 == overall_best_s2) if (best_s2 is not None and overall_best_s2 is not None) else False,
-                        "s3": fmt_sec(best_s3),
-                        "s3_purple": (best_s3 == overall_best_s3) if (best_s3 is not None and overall_best_s3 is not None) else False,
-                        "ideal_lap": format_lap_time(timedelta(seconds=ideal_lap_seconds)) if ideal_lap_seconds > 0 else "-",
-                        "actual_lap": format_lap_time(actual_lap_time) if actual_lap_time is not None else "-",
-                        "potential_gain": potential_gain,
-                        "top_speed": round(max_speed, 1)
-                    })
-
-                speed_traps.sort(key=lambda x: x["speed"], reverse=True)
-                for idx, item in enumerate(speed_traps):
-                    item["rank"] = idx + 1
-
-                sector_matrix.sort(key=lambda x: x["position"])
-
-                if speed_traps or sector_matrix:
-                    available_tabs.append("Speed & Sectors")
-        except Exception as e:
-            logging.error(f"Error calculating speed traps & sectors: {e}")
-
-        weather_info = []
-        weather_rows = safe_getattr(race_session, 'weather_data')
-        if weather_rows is not None and not getattr(weather_rows, 'empty', True):
-            for _, row in weather_rows.iterrows():
-                time_delta = row.get('Time')
-                minutes = 0
-                if pd.notna(time_delta):
-                    minutes = time_delta.total_seconds() / 60.0
-                
-                weather_info.append({
-                    "time_offset": round(minutes, 1),
-                    "air_temp": float(row.get('AirTemp', 0)),
-                    "track_temp": float(row.get('TrackTemp', 0)),
-                    "humidity": float(row.get('Humidity', 0)),
-                    "rainfall": bool(row.get('Rainfall', False))
-                })
+                    if position > 1:
+                        ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
+                        if ahead is not None:
+                            ahead_laps = ahead.get('Laps', 0)
+                            ahead_laps = int(ahead_laps) if pd.notna(ahead_laps) else 0
+                            lap_diff = ahead_laps - current_laps
+                            if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
+                sprint_results.append({ "position": position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)) if pd.notna(res.get('Points', 0)) else 0, "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
+        else:
+            # FastF1 has no usable classification for this session. OpenF1's
+            # session_result is already final in that window, so use it for the
+            # table only — the lap-derived data above is unaffected either way.
+            fallback_rows = openf1_rows_for('Sprint', 'S')
+            if fallback_rows:
+                available_tabs.extend(['Sprint Grid', 'Sprint'])
+                sprint_results = fallback_rows
+                print(f"  -> OpenF1 fallback menyediakan {len(fallback_rows)} baris klasifikasi Sprint.")
     
-        # --- EXTRACT LAP-BY-LAP POSITION CHART, GAP CHART, & LAP TIMES CHART ---
-        lap_chart = []
-        gap_chart = []
-        lap_times_chart = []
-        if has_rows(race_session, 'laps'):
+    if 'Race' in available_sessions:
+        race_session = available_sessions['Race']
+        if results_are_finalised(race_session):
+            available_tabs.extend(['Starting Grid', 'Race'])
+            race_session.results['FullName'] = race_session.results['FirstName'] + ' ' + race_session.results['LastName']
+            leader = race_session.results.iloc[0]
+            leader_time = leader.get('Time')
+            # Same NaN guard as the Sprint block: an unfinalised session reports
+            # NaN for Laps and int(nan) kills the whole endpoint.
+            race_leader_laps = leader.get('Laps', 0)
+            max_laps = int(race_leader_laps) if pd.notna(race_leader_laps) else 0
+            race_winner_info = { "full_name": leader['FullName'], "time": format_lap_time(leader_time) }
+            grid_df = race_session.results.sort_values(by="GridPosition")
+            # Index results by Position once (same reason as the sprint block).
+            results_by_position = race_session.results.set_index('Position')
+            results_by_abbr = race_session.results.set_index('Abbreviation')
+            for _, res in grid_df.iterrows():
+                grid_position = int(res['GridPosition']) if pd.notna(res['GridPosition']) else 0
+                driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
+                if grid_position > 0:
+                    starting_grid.append({ "grid_position": grid_position, "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'] })
+            for index, (_, res) in enumerate(race_session.results.iterrows()):
+                position = index + 1
+                driver_number = int(res['DriverNumber']) if pd.notna(res['DriverNumber']) else 0
+                # NaN-safe: an unfinalised session has no Laps yet.
+                res_laps = res.get('Laps', 0)
+                current_laps = int(res_laps) if pd.notna(res_laps) else 0
+                time_display, gap_display, interval_display = res['Status'], "", ""
+                res_status = res['Status']
+
+                classified_pos = str(res.get('ClassifiedPosition', ''))
+                if classified_pos in ['R', 'D', 'E', 'W']:
+                    time_display = "DNF"
+                    res_status = "DNF"
+                elif current_laps == max_laps and pd.notna(res.get('Time')):
+                    total_time, gap, interval = None, None, None
+                    if position == 1: total_time = res['Time']
+                    else:
+                        gap = res['Time']
+                        if pd.notna(leader_time): total_time = leader_time + gap
+                        if position == 2: interval = gap
+                        else:
+                            ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
+                            if ahead is not None and pd.notna(ahead.get('Time')): interval = gap - ahead.get('Time')
+                    time_display, gap_display, interval_display = format_lap_time(total_time), format_gap(gap), format_gap(interval)
+                else:
+                    if position > 1:
+                        ahead = results_by_position.loc[position - 1] if (position - 1) in results_by_position.index else None
+                        if ahead is not None:
+                            ahead_laps = ahead.get('Laps', 0)
+                            ahead_laps = int(ahead_laps) if pd.notna(ahead_laps) else 0
+                            lap_diff = ahead_laps - current_laps
+                            if lap_diff > 0: interval_display = f"+{lap_diff} Lap" + ("s" if lap_diff > 1 else "")
+                results.append({ "position": position, "abbreviation": str(res.get('Abbreviation', '')), "driver_number": driver_number, "full_name": res['FullName'], "team_name": res['TeamName'], "status": res_status, "points": int(res.get('Points', 0)) if pd.notna(res.get('Points', 0)) else 0, "laps": current_laps, "time": time_display, "gap_to_leader": gap_display, "interval": interval_display })
+        else:
+            # Same fallback as the Sprint block: OpenF1 has the classification
+            # F1's own archive has not published yet. The winner/grid/fastest-lap
+            # data above stays empty rather than being guessed from it.
+            fallback_rows = openf1_rows_for('Race', 'R')
+            if fallback_rows:
+                available_tabs.extend(['Starting Grid', 'Race'])
+                results = fallback_rows
+                print(f"  -> OpenF1 fallback menyediakan {len(fallback_rows)} baris klasifikasi Race.")
+
+            # --- Fastest lap, tyre strategy, speed traps and charts ----------
+            # These are derived from FastF1's LAP data, not from the results
+            # frame, so they stay exactly as they were: no OpenF1 involvement
+            # and no re-indentation beyond this wrapper.
+            fastest = safe_getattr(race_session, 'laps')
+            if fastest is not None and not fastest.empty:
+                fastest = fastest.pick_fastest()
+            if fastest is not None and not getattr(fastest, 'empty', True):
+                driver_lookup = (
+                    results_by_abbr.loc[fastest['Driver']]
+                    if fastest['Driver'] in results_by_abbr.index else None
+                )
+                if driver_lookup is not None:
+                    driver_data = driver_lookup
+                    fastest_lap_info = {
+                        "full_name": driver_data['FullName'], "team_name": driver_data['TeamName'],
+                        "lap_time": format_lap_time(fastest['LapTime']), "lap_number": int(fastest['LapNumber'])
+                    }
+
+            # --- EXTRACT TYRE STRATEGY PRO & PIT STOPS ---
+            tyre_strategy = []
+            if has_rows(race_session, 'laps') and has_rows(race_session, 'results'):
+                try:
+                    # Pre-group laps by driver ONCE. The previous implementation
+                    # called laps.pick_driver(abbr) per driver, which re-scans the
+                    # whole lap DataFrame for every row of the results table
+                    # (deprecated API + O(drivers x laps) work).
+                    laps_by_driver = {
+                        drv: grp.sort_values('LapNumber')
+                        for drv, grp in race_session.laps.groupby('Driver', sort=False)
+                    }
+
+                    for _, drv_row in race_session.results.iterrows():
+                        abbr = str(drv_row.get('Abbreviation', ''))
+                        full_name = str(drv_row.get('FullName', ''))
+                        team_name = str(drv_row.get('TeamName', ''))
+                        pos = int(drv_row.get('Position', 99)) if pd.notna(drv_row.get('Position')) else 99
+                        dr_num = int(drv_row.get('DriverNumber', 0)) if pd.notna(drv_row.get('DriverNumber')) else 0
+
+                        dr_laps = laps_by_driver.get(abbr)
+                        if dr_laps is None or dr_laps.empty:
+                            continue
+
+                        # Pull the three needed columns into Python lists once,
+                        # then run the stint state machine over plain values
+                        # instead of paying iterrows() boxing per lap.
+                        stint_nums = dr_laps['Stint'].tolist()
+                        compounds = dr_laps['Compound'].tolist()
+                        lap_nums = dr_laps['LapNumber'].tolist()
+
+                        stints = []
+                        current_stint = None
+                        for stint_num, compound, lap_num in zip(stint_nums, compounds, lap_nums):
+                            stint_no = int(stint_num) if pd.notna(stint_num) else 1
+                            comp = str(compound if pd.notna(compound) else 'UNKNOWN').upper()
+                            lap_no = int(lap_num) if pd.notna(lap_num) else 0
+
+                            if current_stint is None:
+                                current_stint = {
+                                    "stint": stint_no,
+                                    "compound": comp,
+                                    "start_lap": lap_no,
+                                    "end_lap": lap_no,
+                                    "laps": 1
+                                }
+                            elif current_stint["stint"] == stint_no and current_stint["compound"] == comp:
+                                current_stint["end_lap"] = lap_no
+                                current_stint["laps"] += 1
+                            else:
+                                stints.append(current_stint)
+                                current_stint = {
+                                    "stint": stint_no,
+                                    "compound": comp,
+                                    "start_lap": lap_no,
+                                    "end_lap": lap_no,
+                                    "laps": 1
+                                }
+                        if current_stint is not None:
+                            stints.append(current_stint)
+
+                        # Pit stop laps
+                        pit_laps = []
+                        if 'PitInTime' in dr_laps.columns:
+                            pit_rows = dr_laps[dr_laps['PitInTime'].notna()]
+                            pit_laps = [int(p) for p in pit_rows['LapNumber'].tolist() if pd.notna(p)]
+
+                        tyre_strategy.append({
+                            "driver": abbr,
+                            "full_name": full_name,
+                            "team_name": team_name,
+                            "driver_number": dr_num,
+                            "position": pos,
+                            "total_laps": len(dr_laps),
+                            "stints": stints,
+                            "pit_laps": pit_laps
+                        })
+
+                    tyre_strategy.sort(key=lambda x: x["position"])
+                    if tyre_strategy:
+                        available_tabs.append("Tyre Strategy")
+                except Exception as e:
+                    logging.error(f"Error calculating tyre strategy: {e}")
+
+            # --- EXTRACT SPEED TRAP & SECTORS (PURPLE MATRIX) ---
+            speed_traps = []
+            sector_matrix = []
             try:
-                race_session.laps = safe_getattr(race_session, 'laps')
-                lap_df = race_session.laps[['LapNumber', 'Driver', 'Position', 'Time', 'LapTime']].dropna(subset=['LapNumber', 'Driver', 'Position'])
-                # Pre-group by LapNumber ONCE. The previous code re-filtered
-                # the entire DataFrame for every lap of the race
-                # (lap_df[lap_df['LapNumber'] == n]), i.e. O(laps x rows).
-                grouped_by_lap = {int(k): grp for k, grp in lap_df.groupby('LapNumber', sort=False)}
-                lap_numbers = sorted(grouped_by_lap.keys())
+                if has_rows(race_session, 'laps') and has_rows(race_session, 'results'):
+                    sector_cols = ['Sector1Time', 'Sector2Time', 'Sector3Time']
+                    valid_laps = race_session.laps.dropna(subset=sector_cols)
 
-                for lap_num in lap_numbers:
-                    lap_rows = grouped_by_lap[lap_num]
-                    lap_entry = {"lap": int(lap_num)}
-                    gap_entry = {"lap": int(lap_num)}
-                    times_entry = {"lap": int(lap_num)}
+                    overall_best_s1 = valid_laps['Sector1Time'].min() if not valid_laps.empty else None
+                    overall_best_s2 = valid_laps['Sector2Time'].min() if not valid_laps.empty else None
+                    overall_best_s3 = valid_laps['Sector3Time'].min() if not valid_laps.empty else None
 
-                    # Resolve the leader once instead of masking per row.
-                    leader_time = None
-                    positions = lap_rows['Position'].to_numpy()
-                    leader_mask = positions == 1
-                    if leader_mask.any():
-                        leader_time = lap_rows.loc[leader_mask, 'Time'].iloc[0]
+                    has_st = 'SpeedST' in race_session.laps.columns
+                    has_fl = 'SpeedFL' in race_session.laps.columns
 
-                    # itertuples is markedly cheaper than iterrows here.
-                    for row in lap_rows.itertuples(index=False):
-                        pos_val = int(row.Position)
-                        drv = str(row.Driver)
-                        if pos_val > 0:
-                            lap_entry[drv] = pos_val
+                    def fmt_sec(td):
+                        if pd.isna(td) or td is None: return "-"
+                        return f"{td.total_seconds():.3f}"
 
-                        row_time = row.Time
-                        if leader_time is not None and pd.notna(row_time) and pd.notna(leader_time):
-                            gap = (row_time - leader_time).total_seconds()
-                            if gap >= 0 and gap < 180: # Ignore absurd gaps
-                                gap_entry[drv] = round(gap, 3)
+                    # Compute every per-driver reduction ONCE with a single
+                    # groupby each, instead of re-scanning that driver's laps
+                    # (dropna + three min() + pick_fastest + max) on every
+                    # iteration of the results loop.
+                    best_sectors_by_driver = (
+                        valid_laps.groupby('Driver', sort=False)[sector_cols].min()
+                        if not valid_laps.empty else None
+                    )
 
-                        # Extract individual lap times
-                        if pd.notna(row.LapTime):
-                            lap_time_sec = row.LapTime.total_seconds()
-                            if lap_time_sec > 0 and lap_time_sec < 300: # Filter out absurd lap times
-                                times_entry[drv] = round(lap_time_sec, 3)
+                    speed_col = 'SpeedST' if has_st else ('SpeedFL' if has_fl else None)
+                    if speed_col:
+                        speed_max_by_driver = race_session.laps.groupby('Driver', sort=False)[speed_col].max()
+                        # A driver with an all-NaN speed column must fall back to
+                        # 0.0, preserving the legacy `.notna().any()` guard.
+                        speed_present_by_driver = (
+                            race_session.laps.groupby('Driver', sort=False)[speed_col]
+                            .apply(lambda s: bool(s.notna().any()))
+                        )
+                    else:
+                        speed_max_by_driver = speed_present_by_driver = None
 
-                    lap_chart.append(lap_entry)
-                    if len(gap_entry) > 1:
-                        gap_chart.append(gap_entry)
-                    if len(times_entry) > 1:
-                        lap_times_chart.append(times_entry)
+                    valid_laptimes = race_session.laps[race_session.laps['LapTime'].notna()]
+                    fastest_idx_by_driver = (
+                        valid_laptimes['LapTime'].groupby(valid_laptimes['Driver'], sort=False).idxmin()
+                        if not valid_laptimes.empty else None
+                    )
 
-                if lap_chart:
-                    available_tabs.append("Lap Chart")
-                if gap_chart:
-                    available_tabs.append("Race Progression")
-                if lap_times_chart:
-                    available_tabs.append("Lap Times")
+                    for _, drv_row in race_session.results.iterrows():
+                        abbr = str(drv_row.get('Abbreviation', ''))
+                        full_name = str(drv_row.get('FullName', ''))
+                        team_name = str(drv_row.get('TeamName', ''))
+                        dr_num = int(drv_row.get('DriverNumber', 0)) if pd.notna(drv_row.get('DriverNumber')) else 0
+                        pos = int(drv_row.get('Position', 99)) if pd.notna(drv_row.get('Position')) else 99
+
+                        # A driver absent from the laps entirely is skipped,
+                        # matching the old `if dr_laps.empty: continue`.
+                        if best_sectors_by_driver is not None and abbr not in best_sectors_by_driver.index \
+                                and (speed_max_by_driver is None or abbr not in speed_max_by_driver.index):
+                            continue
+
+                        # Speed trap
+                        max_speed = 0.0
+                        if speed_max_by_driver is not None and abbr in speed_present_by_driver.index:
+                            if bool(speed_present_by_driver.loc[abbr]):
+                                max_speed = float(speed_max_by_driver.loc[abbr])
+
+                        speed_traps.append({
+                            "driver": abbr,
+                            "full_name": full_name,
+                            "team_name": team_name,
+                            "driver_number": dr_num,
+                            "speed": round(max_speed, 1),
+                            "position": pos
+                        })
+
+                        # Best sectors
+                        if best_sectors_by_driver is not None and abbr in best_sectors_by_driver.index:
+                            best_row = best_sectors_by_driver.loc[abbr]
+                            best_s1, best_s2, best_s3 = best_row[sector_cols[0]], best_row[sector_cols[1]], best_row[sector_cols[2]]
+                        else:
+                            best_s1 = best_s2 = best_s3 = None
+
+                        actual_lap_time = None
+                        if fastest_idx_by_driver is not None and abbr in fastest_idx_by_driver.index:
+                            lt = race_session.laps.loc[fastest_idx_by_driver.loc[abbr], 'LapTime']
+                            actual_lap_time = lt if pd.notna(lt) else None
+
+                        ideal_lap_seconds = 0
+                        if best_s1 is not None and best_s2 is not None and best_s3 is not None:
+                            ideal_lap_seconds = (best_s1 + best_s2 + best_s3).total_seconds()
+
+                        potential_gain = 0.0
+                        if actual_lap_time is not None and ideal_lap_seconds > 0:
+                            actual_seconds = actual_lap_time.total_seconds()
+                            potential_gain = round(actual_seconds - ideal_lap_seconds, 3)
+
+                        sector_matrix.append({
+                            "driver": abbr,
+                            "full_name": full_name,
+                            "team_name": team_name,
+                            "driver_number": dr_num,
+                            "position": pos,
+                            "s1": fmt_sec(best_s1),
+                            "s1_purple": (best_s1 == overall_best_s1) if (best_s1 is not None and overall_best_s1 is not None) else False,
+                            "s2": fmt_sec(best_s2),
+                            "s2_purple": (best_s2 == overall_best_s2) if (best_s2 is not None and overall_best_s2 is not None) else False,
+                            "s3": fmt_sec(best_s3),
+                            "s3_purple": (best_s3 == overall_best_s3) if (best_s3 is not None and overall_best_s3 is not None) else False,
+                            "ideal_lap": format_lap_time(timedelta(seconds=ideal_lap_seconds)) if ideal_lap_seconds > 0 else "-",
+                            "actual_lap": format_lap_time(actual_lap_time) if actual_lap_time is not None else "-",
+                            "potential_gain": potential_gain,
+                            "top_speed": round(max_speed, 1)
+                        })
+
+                    speed_traps.sort(key=lambda x: x["speed"], reverse=True)
+                    for idx, item in enumerate(speed_traps):
+                        item["rank"] = idx + 1
+
+                    sector_matrix.sort(key=lambda x: x["position"])
+
+                    if speed_traps or sector_matrix:
+                        available_tabs.append("Speed & Sectors")
             except Exception as e:
-                logging.error(f"Gagal memproses chart: {e}")
+                logging.error(f"Error calculating speed traps & sectors: {e}")
+
+            weather_info = []
+            weather_rows = safe_getattr(race_session, 'weather_data')
+            if weather_rows is not None and not getattr(weather_rows, 'empty', True):
+                for _, row in weather_rows.iterrows():
+                    time_delta = row.get('Time')
+                    minutes = 0
+                    if pd.notna(time_delta):
+                        minutes = time_delta.total_seconds() / 60.0
+                
+                    weather_info.append({
+                        "time_offset": round(minutes, 1),
+                        "air_temp": float(row.get('AirTemp', 0)),
+                        "track_temp": float(row.get('TrackTemp', 0)),
+                        "humidity": float(row.get('Humidity', 0)),
+                        "rainfall": bool(row.get('Rainfall', False))
+                    })
+    
+            # --- EXTRACT LAP-BY-LAP POSITION CHART, GAP CHART, & LAP TIMES CHART ---
+            lap_chart = []
+            gap_chart = []
+            lap_times_chart = []
+            if has_rows(race_session, 'laps'):
+                try:
+                    race_session.laps = safe_getattr(race_session, 'laps')
+                    lap_df = race_session.laps[['LapNumber', 'Driver', 'Position', 'Time', 'LapTime']].dropna(subset=['LapNumber', 'Driver', 'Position'])
+                    # Pre-group by LapNumber ONCE. The previous code re-filtered
+                    # the entire DataFrame for every lap of the race
+                    # (lap_df[lap_df['LapNumber'] == n]), i.e. O(laps x rows).
+                    grouped_by_lap = {int(k): grp for k, grp in lap_df.groupby('LapNumber', sort=False)}
+                    lap_numbers = sorted(grouped_by_lap.keys())
+
+                    for lap_num in lap_numbers:
+                        lap_rows = grouped_by_lap[lap_num]
+                        lap_entry = {"lap": int(lap_num)}
+                        gap_entry = {"lap": int(lap_num)}
+                        times_entry = {"lap": int(lap_num)}
+
+                        # Resolve the leader once instead of masking per row.
+                        leader_time = None
+                        positions = lap_rows['Position'].to_numpy()
+                        leader_mask = positions == 1
+                        if leader_mask.any():
+                            leader_time = lap_rows.loc[leader_mask, 'Time'].iloc[0]
+
+                        # itertuples is markedly cheaper than iterrows here.
+                        for row in lap_rows.itertuples(index=False):
+                            pos_val = int(row.Position)
+                            drv = str(row.Driver)
+                            if pos_val > 0:
+                                lap_entry[drv] = pos_val
+
+                            row_time = row.Time
+                            if leader_time is not None and pd.notna(row_time) and pd.notna(leader_time):
+                                gap = (row_time - leader_time).total_seconds()
+                                if gap >= 0 and gap < 180: # Ignore absurd gaps
+                                    gap_entry[drv] = round(gap, 3)
+
+                            # Extract individual lap times
+                            if pd.notna(row.LapTime):
+                                lap_time_sec = row.LapTime.total_seconds()
+                                if lap_time_sec > 0 and lap_time_sec < 300: # Filter out absurd lap times
+                                    times_entry[drv] = round(lap_time_sec, 3)
+
+                        lap_chart.append(lap_entry)
+                        if len(gap_entry) > 1:
+                            gap_chart.append(gap_entry)
+                        if len(times_entry) > 1:
+                            lap_times_chart.append(times_entry)
+
+                    if lap_chart:
+                        available_tabs.append("Lap Chart")
+                    if gap_chart:
+                        available_tabs.append("Race Progression")
+                    if lap_times_chart:
+                        available_tabs.append("Lap Times")
+                except Exception as e:
+                    logging.error(f"Gagal memproses chart: {e}")
     
     final_data = {
         "race_info": { "name": event['EventName'], "location": event['Location'], "country": str(event.get('Country', '')) },

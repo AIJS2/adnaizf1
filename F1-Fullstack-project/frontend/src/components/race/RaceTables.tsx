@@ -10,6 +10,7 @@ import type {
   RaceTableProps,
   SectorMatrixEntry,
   SpeedSectorsTableProps,
+  SessionResultRow,
   TyreStint,
   TyreStrategyEntry,
   TyreStrategyTableProps,
@@ -65,6 +66,73 @@ const TableBody: React.FC<{ data?: unknown[]; children: React.ReactNode }> = ({ 
     );
   }
   return <tbody>{children}</tbody>;
+};
+
+/**
+ * Shown in the Time/Gap/Interval/Points/Laps cells when the classification has
+ * not been published upstream yet. F1's own archive keeps these fields empty
+ * while stewards are still reviewing post-race incidents, and the backend
+ * serialises that as 0 / "" — which used to render as a confident "0" beside a
+ * driver who actually won the race.
+ *
+ * `reason` is currently always the same string; it stays a prop so a caller
+ * can pass "DNF" for a row OpenF1 explicitly marked as retired.
+ */
+const PendingResultsBadge: React.FC<{ reason?: string }> = ({
+  reason = 'Awaiting Official Results',
+}) => (
+  <span
+    className="inline-block rounded-full border border-neutral-700 bg-neutral-800/60
+               px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500"
+    title={reason}
+  >
+    {reason}
+  </span>
+);
+
+/**
+ * A session classification is "pending" when the upstream provider has not
+ * filled in the numbers yet: laps AND points both land as 0 (the backend's
+ * NaN guard) while the Time/Gap/Interval strings come back empty. Position
+ * alone is reliable, so the ordering stays and only the empty numbers are
+ * masked.
+ */
+const isPendingClassification = (row: SessionResultRow): boolean => {
+  // toNumber coerces null/undefined/garbage to 0, so "missing" and "zero"
+  // are indistinguishable here — which is fine, because a real classification
+  // never has a 0-lap finisher at the front of a sprint.
+  const laps = toNumber(row.laps);
+  const points = toNumber(row.points);
+  const noLaps = laps <= 0;
+  const noPoints = points <= 0;
+  const noTime = !row.time;
+  const noGap = !row.gap_to_leader;
+  const noInterval = !row.interval;
+  return noLaps && noPoints && noTime && noGap && noInterval;
+};
+
+/** The five numeric cells, each masked while the classification is pending. */
+const PendingAwareCells: React.FC<{ row: SessionResultRow }> = ({ row }) => {
+  if (!isPendingClassification(row)) {
+    return (
+      <>
+        <td className="p-3 text-right font-mono text-xs">{row.time || row.status}</td>
+        <td className="p-3 text-right font-mono text-xs">{row.gap_to_leader}</td>
+        <td className="p-3 text-right font-mono text-xs">{row.interval}</td>
+        <td className="p-3 text-right font-bold">{row.points}</td>
+        <td className="p-3 text-right">{row.laps}</td>
+      </>
+    );
+  }
+  return (
+    <>
+      <td className="p-3 text-right"><PendingResultsBadge /></td>
+      <td className="p-3 text-right"><PendingResultsBadge /></td>
+      <td className="p-3 text-right"><PendingResultsBadge /></td>
+      <td className="p-3 text-right"><PendingResultsBadge /></td>
+      <td className="p-3 text-right"><PendingResultsBadge /></td>
+    </>
+  );
 };
 
 // =======================================================================
@@ -171,11 +239,7 @@ const SprintResultTable: React.FC<RaceTableProps> = ({ data }) => (
             <td className="p-3 text-neutral-300 whitespace-nowrap hidden md:table-cell">
               <TeamCell teamName={d.team_name} />
             </td>
-            <td className="p-3 text-right font-mono text-xs">{d.time || d.status}</td>
-            <td className="p-3 text-right font-mono text-xs">{d.gap_to_leader}</td>
-            <td className="p-3 text-right font-mono text-xs">{d.interval}</td>
-            <td className="p-3 text-right font-bold">{d.points}</td>
-            <td className="p-3 text-right">{d.laps}</td>
+            <PendingAwareCells row={d} />
           </tr>
         ))}
       </TableBody>
@@ -210,11 +274,7 @@ const RaceResultTable: React.FC<RaceTableProps> = ({ data }) => (
             <td className="p-3 text-neutral-300 whitespace-nowrap hidden md:table-cell">
               <TeamCell teamName={d.team_name} />
             </td>
-            <td className="p-3 text-right font-mono text-xs">{d.time || d.status}</td>
-            <td className="p-3 text-right font-mono text-xs">{d.gap_to_leader}</td>
-            <td className="p-3 text-right font-mono text-xs">{d.interval}</td>
-            <td className="p-3 text-right font-bold">{d.points}</td>
-            <td className="p-3 text-right">{d.laps}</td>
+            <PendingAwareCells row={d} />
           </tr>
         ))}
       </TableBody>

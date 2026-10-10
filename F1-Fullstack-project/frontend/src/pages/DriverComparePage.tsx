@@ -1,8 +1,7 @@
 // src/DriverComparePage - Ultimate Driver vs Driver H2H Comparator
 // Major UI/UX overhaul with contextual icons & polished design
 
-import { Race, DriverProfile, TeamProfile } from '../types/f1';
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDriverProfile } from '../services/api';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -10,13 +9,13 @@ import { API_URL } from '../config';
 import { teamColors, teamLogos } from '../data/teamData';
 import {
   Swords, Trophy, Medal, Target, ArrowLeftRight, TrendingUp,
-  Flag, AlertTriangle, Loader2, ChevronRight, CheckCircle2,
+  Flag, AlertTriangle, Loader2, CheckCircle2,
   Download, Hash, Gauge, Crown, CircleDot, Crosshair,
   BarChart3, GitCompareArrows, Shield, Star, Flame, Minus,
-  User, Users, MapPin, ChevronDown, Scale, Award, Sparkles
+  User, Users, MapPin, Scale, Award, Sparkles
 } from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
 import html2canvas from 'html2canvas';

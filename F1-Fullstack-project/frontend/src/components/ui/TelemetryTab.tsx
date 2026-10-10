@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../../config';
 import { 
-  Activity, RefreshCw, AlertTriangle, Zap, GitCommitVertical, 
-  Gauge, TrendingUp, Radio, Compass, Flag, Award, ChevronLeft, ChevronRight, Crosshair
+  Activity, RefreshCw, AlertTriangle, Zap, 
+  Radio, Flag, ChevronLeft, ChevronRight, Crosshair
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { teamColors, teamLogos } from '../../data/teamData';
@@ -13,6 +13,13 @@ import SpeedChart from '../dashboard/SpeedChart';
 import ThrottleChart from '../dashboard/ThrottleChart';
 import TimeDeltaChart from '../dashboard/TimeDeltaChart';
 import { TelemetryResponse } from '../../types/f1';
+
+/** One entry of the `/api/telemetry-drivers/{year}/{round}` response. */
+interface TelemetryDriverOption {
+  abbreviation: string;
+  full_name?: string;
+  team_name?: string;
+}
 
 const adjustColor = (col: string, amt: number): string => {
   if (!col) return '#ffffff';
@@ -117,7 +124,7 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
 
 const TelemetryTab = ({ year, round }: { year: string | number; round: string | number }) => {
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
-  const [availableDrivers, setAvailableDrivers] = useState<Record<string, unknown>[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<TelemetryDriverOption[]>([]);
   const [lap, setLap] = useState<string>('');
   
   const [loading, setLoading] = useState<boolean>(false);
@@ -147,7 +154,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       });
   }, [year, round]);
 
-  const toggleDriver = (drv) => {
+  const toggleDriver = (drv: string) => {
     if (selectedDrivers.includes(drv)) {
       setSelectedDrivers(selectedDrivers.filter(d => d !== drv));
     } else {
@@ -173,11 +180,11 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       const url = `${API_URL}/api/telemetry/${year}/${round}?drivers=${selectedDrivers.join(',')}${lapQuery}`;
       const res = await fetch(url);
       
-      let data;
+      let data: TelemetryResponse | undefined;
       let rawText = '';
       try {
         rawText = await res.text();
-        data = JSON.parse(rawText);
+        data = JSON.parse(rawText) as TelemetryResponse;
       } catch {
         // Fallback handled below
       }
@@ -189,10 +196,10 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       }
       if (data?.error) throw new Error(data.error);
       
-      setTelemetryData(data);
-      if (data.unavailable_drivers?.length) {
-        const warningParts = data.unavailable_drivers.map((drv) => {
-          const reason = data.unavailable_reasons?.[drv] || 'No data available';
+      setTelemetryData(data ?? null);
+      if (data?.unavailable_drivers?.length) {
+        const warningParts = data.unavailable_drivers.map((drv: string) => {
+          const reason = data?.unavailable_reasons?.[drv] || 'No data available';
           return `${drv}: ${reason}`;
         });
         setWarning(warningParts.join(' | '));
@@ -201,7 +208,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       if (fetchId !== fetchIdRef.current) return;
       console.error("API Error:", err);
       setTelemetryData(null);
-      setError(err.message === "Failed to fetch" ? "Network Error: Failed to connect to backend (check CORS or if backend is running)." : err.message);
+      setError(err instanceof Error && err.message === "Failed to fetch" ? "Network Error: Failed to connect to backend (check CORS or if backend is running)." : err instanceof Error ? err.message : String(err));
     } finally {
       if (fetchId === fetchIdRef.current) {
         setLoading(false);
@@ -209,7 +216,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
     }
   };
 
-  const [activeDistance, setActiveDistance] = useState(null);
+  const [activeDistance, setActiveDistance] = useState<number | null>(null);
 
   // Removed auto-fetch useEffect to prevent heavy requests on every click
 
@@ -258,7 +265,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
             {availableDrivers.map(d => {
               const isSelected = selectedDrivers.includes(d.abbreviation);
               const isDisabled = !isSelected && selectedDrivers.length >= 10;
-              const color = teamColors[d.team_name] || '#888888';
+              const color = teamColors[d.team_name ?? ''] || '#888888';
               return (
                 <button
                   key={d.abbreviation}

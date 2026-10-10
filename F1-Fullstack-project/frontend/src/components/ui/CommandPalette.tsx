@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import  { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, X, User, Users, Flag, Trophy, Activity, 
-  LayoutDashboard, MapPin, ArrowRight, CornerDownLeft, Sparkles 
+  LayoutDashboard, MapPin, CornerDownLeft, Sparkles 
 } from 'lucide-react';
 import { teamColors, teamLogos } from '../../data/teamData';
 import { API_URL } from '../../config';

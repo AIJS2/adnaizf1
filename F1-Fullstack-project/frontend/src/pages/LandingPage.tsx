@@ -1,11 +1,11 @@
-import { Race, DriverProfile, TeamProfile } from '../types/f1';
+import { Race } from '../types/f1';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CountdownTimer from '../components/ui/CountdownTimer';
 import { API_URL } from '../config';
 import { 
-  ArrowRight, Activity, Users, Calculator, Layers, 
-  ChevronRight, Gauge, Trophy, Flag, Share2, BookOpen 
+  ArrowRight, Activity, Users, Calculator, 
+  Trophy, Flag, BookOpen 
 } from 'lucide-react';
 
 function LandingPage() {

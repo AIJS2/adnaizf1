@@ -1,12 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Clock, Flag, AlertTriangle, Target, Zap, Activity, Navigation, Thermometer, Droplets, CloudRain, Gauge, Timer } from 'lucide-react';
+import { Trophy, Gauge, Timer } from 'lucide-react';
 import { teamColors, teamLogos } from '../../data/teamData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer} from 'recharts';
+import type {
+  GridTableProps,
+  RaceTableProps,
+  SectorMatrixEntry,
+  SpeedSectorsTableProps,
+  TyreStint,
+  TyreStrategyEntry,
+  TyreStrategyTableProps,
+  WeatherChartProps,
+  WeatherSample,
+} from '../../types/f1';
 
 // =======================================================================
 
-const PracticeResultTable = ({ data }) => (
+const PracticeResultTable: React.FC<RaceTableProps> = ({ data }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead className="text-left text-neutral-400 text-xs uppercase">
@@ -20,7 +31,7 @@ const PracticeResultTable = ({ data }) => (
         </tr>
       </thead>
       <tbody>
-        {data.map(d => (
+        {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
@@ -44,7 +55,7 @@ const PracticeResultTable = ({ data }) => (
   </div>
 );
 
-const QualifyingResultTable = ({ data }) => (
+const QualifyingResultTable: React.FC<RaceTableProps> = ({ data }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead className="text-left text-neutral-400 text-xs uppercase">
@@ -61,7 +72,7 @@ const QualifyingResultTable = ({ data }) => (
         </tr>
       </thead>
       <tbody>
-        {data.map(d => (
+        {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
@@ -91,7 +102,7 @@ const QualifyingResultTable = ({ data }) => (
 // SprintQualifying pakai layout yang sama dengan Qualifying
 const SprintQualifyingResultTable = QualifyingResultTable;
 
-const SprintResultTable = ({ data }) => (
+const SprintResultTable: React.FC<RaceTableProps> = ({ data }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead className="text-left text-neutral-400 text-xs uppercase">
@@ -108,7 +119,7 @@ const SprintResultTable = ({ data }) => (
         </tr>
       </thead>
       <tbody>
-        {data.map(d => (
+        {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
@@ -135,7 +146,7 @@ const SprintResultTable = ({ data }) => (
   </div>
 );
 
-const RaceResultTable = ({ data }) => (
+const RaceResultTable: React.FC<RaceTableProps> = ({ data }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead className="text-left text-neutral-400 text-xs uppercase">
@@ -152,7 +163,7 @@ const RaceResultTable = ({ data }) => (
         </tr>
       </thead>
       <tbody>
-        {data.map(d => (
+        {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
@@ -179,7 +190,7 @@ const RaceResultTable = ({ data }) => (
   </div>
 );
 
-const GridTable = ({ data, posKey = 'grid_position' }) => (
+const GridTable: React.FC<GridTableProps> = ({ data, posKey = 'grid_position' }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead className="text-left text-neutral-400 text-xs uppercase">
@@ -192,9 +203,11 @@ const GridTable = ({ data, posKey = 'grid_position' }) => (
         </tr>
       </thead>
       <tbody>
-        {data.map(d => (
-          <tr key={d[posKey]} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
-            <td className="p-3 font-bold text-center text-base">{d[posKey]}</td>
+        {data?.map(d => {
+          const pos = d[posKey] ?? d.position;
+          return (
+          <tr key={String(pos)} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
+            <td className="p-3 font-bold text-center text-base">{String(pos ?? '-')}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <Link to={`/driver/${d.full_name.toLowerCase().replace(/\s+/g, '_')}`} className="hover:text-red-400 transition-colors">
@@ -209,14 +222,15 @@ const GridTable = ({ data, posKey = 'grid_position' }) => (
             </td>
             <td className="p-3 text-right font-mono text-xs">{d.time}</td>
           </tr>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   </div>
 );
 
-const TyreStrategyTable = ({ tyreData }) => {
-  const getCompoundColor = (compound) => {
+const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
+  const getCompoundColor = (compound?: string) => {
     switch(compound?.toUpperCase()) {
       case 'SOFT': return '#FF3333';
       case 'MEDIUM': return '#EAEA00';
@@ -227,7 +241,7 @@ const TyreStrategyTable = ({ tyreData }) => {
     }
   };
 
-  const getCompoundTextColor = (compound) => {
+  const getCompoundTextColor = (compound?: string) => {
     if (compound?.toUpperCase() === 'HARD' || compound?.toUpperCase() === 'MEDIUM') return '#000000';
     return '#FFFFFF';
   };
@@ -265,24 +279,26 @@ const TyreStrategyTable = ({ tyreData }) => {
       </div>
 
       <div className="space-y-3">
-        {Array.isArray(tyreData) ? tyreData.map((data) => (
+        {Array.isArray(tyreData) ? tyreData.map((data: TyreStrategyEntry) => (
           <div key={data.driver} className="flex items-center gap-4 group">
             <div className="w-16 font-bold text-lg text-neutral-400 group-hover:text-white transition-colors flex items-center justify-between">
               <span className="text-xs opacity-50 font-mono">P{data.position}</span>
               <span>{data.driver}</span>
             </div>
             <div className="flex-1 flex gap-1 h-9 rounded-lg overflow-hidden bg-neutral-900/80 shadow-inner border border-neutral-800/80 p-1 backdrop-blur-sm relative">
-              {data.stints && data.stints.map((stint, idx) => (
+              {data.stints?.map((stint: TyreStint, idx) => {
+                const stintLaps = Number(stint.laps) || 0;
+                return (
                 <div 
                   key={idx} 
                   className="h-full flex items-center justify-center rounded shadow-sm transition-all duration-300 hover:scale-[1.02] hover:brightness-110 hover:z-10 cursor-crosshair relative group/stint border border-black/10 overflow-hidden"
                   style={{ 
-                    flexGrow: stint.laps > 0 ? stint.laps : 1, 
+                    flexGrow: stintLaps > 0 ? stintLaps : 1, 
                     backgroundColor: getCompoundColor(stint.compound),
                     color: getCompoundTextColor(stint.compound)
                   }}
                 >
-                  {stint.laps > 0 ? (
+                  {stintLaps > 0 ? (
                     <div className="flex items-center gap-1.5 px-1 truncate">
                       <span 
                         className="w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-black"
@@ -295,7 +311,7 @@ const TyreStrategyTable = ({ tyreData }) => {
                         {stint.compound?.charAt(0).toUpperCase()}
                       </span>
                       <span className="font-bold text-xs">
-                        {stint.laps}
+                        {stintLaps}
                       </span>
                     </div>
                   ) : ''}
@@ -303,7 +319,8 @@ const TyreStrategyTable = ({ tyreData }) => {
                     Stint {stint.stint} • {stint.compound} • Laps {stint.start_lap}-{stint.end_lap}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )) : (
@@ -314,7 +331,7 @@ const TyreStrategyTable = ({ tyreData }) => {
   );
 };
 
-const SpeedSectorsTable = ({ speedTraps, sectorMatrix }) => {
+const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, sectorMatrix }) => {
   // Find the absolute maximum speed to calculate bar widths
   const maxSpeed = speedTraps && speedTraps.length > 0 
     ? Math.max(...speedTraps.map(s => s.speed)) 
@@ -373,7 +390,7 @@ const SpeedSectorsTable = ({ speedTraps, sectorMatrix }) => {
             </div>
             <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-xl overflow-hidden p-4 space-y-4">
               {['s1', 's2', 's3'].map((sector, idx) => {
-                const best = sectorMatrix?.find(d => d[`${sector}_purple`]);
+                const best = sectorMatrix?.find(d => d[`${sector}_purple`] === true);
                 return (
                   <div key={sector} className={`flex justify-between items-center ${idx !== 2 ? 'pb-3 border-b border-neutral-800/50' : ''}`}>
                     <div className="flex flex-col">
@@ -385,7 +402,7 @@ const SpeedSectorsTable = ({ speedTraps, sectorMatrix }) => {
                         </div>
                       ) : <span className="text-sm text-neutral-500">-</span>}
                     </div>
-                    {best && <span className="font-mono text-sm font-black text-purple-400 bg-purple-900/20 px-2 py-1 rounded border border-purple-500/30 shadow-[0_0_8px_rgba(168,85,247,0.15)]">{best[sector]}</span>}
+                    {best && <span className="font-mono text-sm font-black text-purple-400 bg-purple-900/20 px-2 py-1 rounded border border-purple-500/30 shadow-[0_0_8px_rgba(168,85,247,0.15)]">{String(best[sector] ?? '-')}</span>}
                   </div>
                 );
               })}
@@ -413,7 +430,7 @@ const SpeedSectorsTable = ({ speedTraps, sectorMatrix }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800/50">
-                {sectorMatrix && [...sectorMatrix].sort((a, b) => a.position - b.position).map(d => (
+                {sectorMatrix && [...sectorMatrix].sort((a, b) => Number(a.position) - Number(b.position)).map((d: SectorMatrixEntry) => (
                   <tr key={d.driver} className="hover:bg-neutral-800/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-2 font-bold text-white">
@@ -463,7 +480,7 @@ const SpeedSectorsTable = ({ speedTraps, sectorMatrix }) => {
 };
 
 
-const WeatherChart = ({ weatherData }) => {
+const WeatherChart: React.FC<WeatherChartProps> = ({ weatherData }) => {
   if (!weatherData || weatherData.length === 0) {
     return <div className="p-6 text-neutral-500 italic">No weather data available</div>;
   }
@@ -471,7 +488,7 @@ const WeatherChart = ({ weatherData }) => {
   const maxTrackTemp = Math.max(...weatherData.map(d => d.track_temp));
   const maxAirTemp = Math.max(...weatherData.map(d => d.air_temp));
   const hasRain = weatherData.some(d => d.rainfall);
-  const avgHumidity = Math.round(weatherData.reduce((acc, curr) => acc + curr.humidity, 0) / weatherData.length);
+  const avgHumidity = Math.round(weatherData.reduce((acc: number, curr: WeatherSample) => acc + curr.humidity, 0) / weatherData.length);
 
   return (
     <div className="p-6">

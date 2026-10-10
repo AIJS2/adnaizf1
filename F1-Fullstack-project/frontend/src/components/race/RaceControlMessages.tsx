@@ -1,15 +1,14 @@
-import React from 'react';
-import { Trophy, Clock, Flag, AlertTriangle, Target, Zap, Activity, Navigation, Thermometer, Droplets, CloudRain } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { Flag, AlertTriangle, Activity} from 'lucide-react';
+import type { RaceControlFeed } from '../../types/f1';
 
-const RaceControlMessagesComponent = ({ messages, status }) => {
+const RaceControlMessagesComponent: React.FC<RaceControlFeed> = ({ messages, status }) => {
   if (!messages || messages.length === 0) {
     return <div className="p-6 text-neutral-500 italic">No race control messages available.</div>;
   }
 
   const isLive = status === 'Ongoing';
 
-  const getFlagColor = (flag) => {
+  const getFlagColor = (flag?: string) => {
     const f = flag?.toUpperCase() || '';
     if (f.includes('RED')) return 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] text-white';
     if (f.includes('YELLOW')) return 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.6)] text-black';
@@ -21,7 +20,7 @@ const RaceControlMessagesComponent = ({ messages, status }) => {
     return 'bg-neutral-700 text-white';
   };
 
-  const getCategoryIcon = (cat) => {
+  const getCategoryIcon = (cat?: string) => {
     const c = cat?.toUpperCase() || '';
     if (c.includes('FLAG')) return <Flag size={14} />;
     if (c.includes('CAR')) return <Activity size={14} />;

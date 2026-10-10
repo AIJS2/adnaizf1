@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
-import { Trophy, Award, Zap, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag } from 'lucide-react';
+import { Trophy, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 const DriverProfilePage = () => {

@@ -1,18 +1,14 @@
 // src/DashboardPage - Next-Gen F1 Telemetry & Championship Dashboard
 
-import { Race, DriverProfile, TeamProfile } from '../types/f1';
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDashboardData } from '../services/api';
 
 import ErrorState from '../components/layout/ErrorState';
 import { Link } from 'react-router-dom';
 import { 
-  Trophy, Calendar, Clock, ChevronRight, AlertTriangle, RefreshCw, 
-  ArrowUp, Flag, Gauge, Zap, TrendingUp, Users, Activity, Award, MapPin, Calculator, Swords, Crown, Target, Shield, Flame,
+  Calendar, ChevronRight, Flag, Gauge, Zap, Activity, MapPin, Calculator, Swords, Crown, Target, Shield, Flame,
   FlaskConical, FlagTriangleRight
 } from 'lucide-react';
-import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
 import { getTrackMap } from '../data/trackData';
 import HeroCountdown from '../components/ui/HeroCountdown';

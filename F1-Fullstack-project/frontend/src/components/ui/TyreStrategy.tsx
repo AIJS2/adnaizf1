@@ -1,4 +1,3 @@
-import React from 'react';
 import { Disc } from 'lucide-react';
 import { LiveTimingLine } from '../../types/f1';
 

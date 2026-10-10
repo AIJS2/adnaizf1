@@ -1,5 +1,6 @@
 # main.py
 
+import logging
 import os
 import sys
 from config.observability import setup_observability
@@ -12,8 +13,9 @@ setup_observability()
 if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
@@ -78,6 +80,40 @@ async def health() -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Global exception handling
+#
+# Every endpoint answers with a JSON envelope rather than a raw 500. The
+# frontend already knows how to render `{ error }` and empty payloads; a bare
+# 500 leaves it with nothing to show, and an unhandled traceback in the
+# response body leaks internals. Starlette's ServerErrorMiddleware is
+# registered first so it stays the outermost handler.
+# ---------------------------------------------------------------------------
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    logging.error(
+        f"Unhandled exception on {request.method} {request.url.path}: {exc}",
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"error": "An unexpected server error occurred. Please try again."},
+    )
+
+
+from starlette.exceptions import HTTPException as StarletteHTTPException  # noqa: E402
+
+async def _http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Keep 404s machine-readable for the frontend's not-found states."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail},
+    )
+
+
+app.add_exception_handler(Exception, _unhandled_exception_handler)
+app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
+
+
 from routers.dashboard import router as dashboard_router
 from routers.races import router as races_router
 from routers.race_details import router as race_details_router
@@ -86,6 +122,7 @@ from routers.championship import router as championship_router
 from routers.profiles import router as profiles_router
 from routers.system import router as system_router
 from routers.livetiming import router as livetiming_router
+from routers.team_radio import router as team_radio_router
 
 app.include_router(dashboard_router)
 app.include_router(races_router)
@@ -95,3 +132,4 @@ app.include_router(championship_router)
 app.include_router(profiles_router)
 app.include_router(system_router)
 app.include_router(livetiming_router)
+app.include_router(team_radio_router)

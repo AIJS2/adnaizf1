@@ -15,6 +15,7 @@ import HeroCountdown from '../components/ui/HeroCountdown';
 import TeamCard, { TeamStanding } from '../components/dashboard/TeamCard';
 import DriverStandingsList from '../components/dashboard/DriverStandingsList';
 import RaceAnalyticsCard from '../components/dashboard/RaceAnalyticsCard';
+import { safeMax, toNumber } from '../utils/data';
 
 
 
@@ -77,7 +78,7 @@ function DashboardPage() {
   const trackMapImg = getTrackMap(upcomingRace || { name: dashboardData?.next_race_event?.name });
 
   const teamStandings = dashboardData?.team_standings ?? [];
-  const maxTeamPoints = teamStandings.length > 0 ? Math.max(...teamStandings.map(t => Number(t.points))) : 1;
+  const maxTeamPoints = safeMax(teamStandings.map(t => toNumber(t.points)), 1);
 
   // Points arrive as NumericString from the API, so coerce once at the boundary.
   const p1Points = Number(p1Driver?.points) || 0;

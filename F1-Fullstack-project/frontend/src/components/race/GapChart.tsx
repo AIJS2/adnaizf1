@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { teamColors } from '../../data/teamData';
 import { RaceResultEntry, RaceSeriesPoint } from '../../types/f1';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { LineChart as LineChartIcon } from 'lucide-react';
+import EmptyState, { EMPTY_TABLE_MESSAGES } from '../ui/EmptyState';
+import { hasItems } from '../../utils/data';
 
 interface DriverMeta {
   name: string;
@@ -36,6 +39,21 @@ const GapChartComponent: React.FC<GapChartProps> = ({ gapChart, results }) => {
 
   const [selectedDrivers, setSelectedDrivers] = useState(activeKeys);
   const [zoomFront, setZoomFront] = useState(false);
+
+  // An empty gap payload means the session has not produced lap-by-lap data.
+  // Show the empty state instead of an empty chart frame with live controls.
+  if (!hasItems(gapChart) || activeKeys.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={LineChartIcon}
+          title={EMPTY_TABLE_MESSAGES.charts.title}
+          description="Gap-to-leader data is generated once lap times have been recorded for this session."
+          className="min-h-[400px] rounded-2xl border border-neutral-800 bg-neutral-900/30"
+        />
+      </div>
+    );
+  }
 
   const toggleDriver = (drv: string) => {
     if (selectedDrivers.includes(drv)) {

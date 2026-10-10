@@ -9,23 +9,32 @@ from config.limiter import limiter
 
 router = APIRouter()
 
-def get_dashboard_cache_filename(year: int):
-    return f"dashboard_cache_{year}.json"
+MAX_TELEMETRY_DRIVERS = 10
 
-# =======================================================================
-# --- Endpoint /api/telemetry/{year}/{round_number} (Head-to-Head) ---
-# =======================================================================
+
 @router.get("/api/telemetry/{year}/{round_number}")
 @limiter.limit("100/minute")
 async def get_telemetry_compare(request: Request, year: int, round_number: int, drivers: str = "VER,NOR", lap: int = None):
-    driver_list = [d.strip().upper() for d in drivers.split(',')]
-    driver_list = driver_list[:10] # Max 10 drivers
-    
-    if len(driver_list) < 1:
-        return {"error": "Pilih minimal 1 pembalap."}
+    driver_list = [d.strip().upper() for d in drivers.split(",") if d.strip()]
+    driver_list = driver_list[:MAX_TELEMETRY_DRIVERS]
 
-    CACHE_FILE = os.path.join("cache", f"telemetry_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json")
-    cached_data = get_advanced_cache(CACHE_FILE, hours=24) # Telemetry cached longer
+    if not driver_list:
+        # No driver code was supplied. An empty payload with the reason is more
+        # useful to the caller than an error envelope, because the request was
+        # well-formed — it just selected nobody.
+        return {
+            "drivers": [],
+            "driver_info": {},
+            "telemetry": [],
+            "unavailable_drivers": [],
+            "unavailable_reasons": {},
+            "message": "No drivers were selected for comparison.",
+        }
+
+    CACHE_FILE = os.path.join(
+        "cache", f"telemetry_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json"
+    )
+    cached_data = get_advanced_cache(CACHE_FILE, hours=24)  # Telemetry cached longer
     if cached_data:
         print(f"o. Menyajikan data dari REDIS/CACHE (Telemetry).")
         return cached_data
@@ -40,11 +49,18 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
         )
         set_advanced_cache(CACHE_FILE, result)
         return result
-    except ValueError as ve:
-        return {"error": str(ve)}
     except Exception as e:
         logging.error(f"Error memproses telemetry: {e}", exc_info=True)
-        return {"error": "Terjadi kesalahan internal saat memproses data."}
+        return {
+            "drivers": [],
+            "driver_info": {},
+            "telemetry": [],
+            "unavailable_drivers": driver_list,
+            "unavailable_reasons": {
+                d: "Telemetry could not be processed for this session." for d in driver_list
+            },
+        }
+
 
 @router.get("/api/telemetry-drivers/{year}/{round_number}")
 @limiter.limit("200/minute")
@@ -58,4 +74,3 @@ async def get_telemetry_drivers(request: Request, year: int, round_number: int):
     except Exception as e:
         logging.error(f"Error getting telemetry drivers: {e}", exc_info=True)
         return []
-

@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { Radar as RadarIcon } from 'lucide-react';
 import { teamColors } from '../data/teamData';
 import type { NumericString } from '../types/f1';
+import EmptyState from './ui/EmptyState';
+import { toNumber } from '../utils/data';
 
 interface RadarTeammate {
   name: string;
@@ -42,16 +45,18 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2 
     if (!profile1 || !profile2) return [];
 
     const calculateAttributes = (profile: RadarDriverProfile): Record<string, number> => {
-      // Coerce the NumericString payload fields once, up front.
-      const points = Number(profile.points) || 0;
-      const poles = Number(profile.poles) || 0;
-      const wins = Number(profile.wins) || 0;
-      const podiums = Number(profile.podiums) || 0;
-      const dnfs = Number(profile.dnfs) || 0;
-      const teammatePoints = Number(profile.teammate?.points) || 0;
+      // Coerce the NumericString payload fields once, up front. toNumber
+      // treats "" / null / non-numeric as 0 rather than NaN, so a driver with
+      // no stat data plots the floor instead of producing a NaN vertex.
+      const points = toNumber(profile.points);
+      const poles = toNumber(profile.poles);
+      const wins = toNumber(profile.wins);
+      const podiums = toNumber(profile.podiums);
+      const dnfs = toNumber(profile.dnfs);
+      const teammatePoints = toNumber(profile.teammate?.points);
 
       // 1. Pace: based on poles and avg_finish
-      const avgF = Number(profile.avg_finish) || 10;
+      const avgF = profile.avg_finish == null ? 10 : toNumber(profile.avg_finish, 10);
       const pace = 60 + (poles * 3.5) + ((20 - avgF) * 1.8);
       
       // 2. Racecraft: based on wins and podiums
@@ -97,7 +102,18 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2 
     }));
   }, [profile1, profile2]);
 
-  if (!profile1 || !profile2) return null;
+  if (!profile1 || !profile2) {
+    return (
+      <div className="bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6">
+        <EmptyState
+          icon={RadarIcon}
+          title="No driver comparison available"
+          description="Select two drivers with season data to compare their attributes."
+          className="min-h-[300px]"
+        />
+      </div>
+    );
+  }
 
   const color1 = teamColors[profile1.team] || '#EF4444';
   const color2 = teamColors[profile2.team] || '#3B82F6';

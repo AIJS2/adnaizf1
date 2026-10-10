@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { teamLogos, teamColors } from '../data/teamData';
 import { Trophy, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
@@ -17,26 +17,12 @@ const DriverProfilePage = () => {
   const { id } = useParams();
   const currentYear = new Date().getFullYear();
 
-  const [profile, setProfile] = useState<DriverProfilePayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchProfile = async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setProfile(await fetchDriverProfile(currentYear, id));
-    } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : String(err)));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProfile();
-  }, [id, currentYear]);
+  // Cached + retried by react-query; `enabled` avoids firing for a missing id.
+  const { data: profile, isLoading: loading, error } = useQuery<DriverProfilePayload | null>({
+    queryKey: ['driverProfile', currentYear, id],
+    queryFn: () => fetchDriverProfile(currentYear, id as string),
+    enabled: !!id,
+  });
 
   const teamColor = profile ? (teamColors[profile.team] || '#EF4444') : '#EF4444';
   const teamLogo = profile ? teamLogos[profile.team] : null;
@@ -68,7 +54,7 @@ const DriverProfilePage = () => {
         <main className="container mx-auto px-6 pt-28 pb-16 text-center">
           <AlertTriangle className="text-red-500 mx-auto mb-4" size={48} />
           <h2 className="text-3xl font-black mb-2">Driver Not Found</h2>
-          <p className="text-neutral-400 mb-6">{error || "Could not load data for this driver."}</p>
+          <p className="text-neutral-400 mb-6">{error?.message || "Could not load data for this driver."}</p>
           <Link to="/stats" state={{ tab: 'drivers' }} className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold text-sm transition-colors">
             <ArrowLeft size={16} /> Back to Standings
           </Link>

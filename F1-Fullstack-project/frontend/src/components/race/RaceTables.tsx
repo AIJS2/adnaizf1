@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Gauge, Timer } from 'lucide-react';
+import { Trophy, Gauge, Timer, Table2 } from 'lucide-react';
 import { teamColors, teamLogos } from '../../data/teamData';
+import EmptyState, { EMPTY_TABLE_MESSAGES } from '../ui/EmptyState';
+import { driverSlug, hasItems, safeMax, teamSlug, toNumber } from '../../utils/data';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer} from 'recharts';
 import type {
   GridTableProps,
@@ -14,6 +16,56 @@ import type {
   WeatherChartProps,
   WeatherSample,
 } from '../../types/f1';
+
+
+/**
+ * A driver cell that links only when a name exists. A missing `full_name`
+ * used to build "/driver/undefined" and navigate to a broken page.
+ */
+const DriverCell: React.FC<{ fullName?: string; className?: string }> = ({ fullName, className = '' }) => {
+  const slug = driverSlug(fullName);
+  const label = fullName || 'Unknown driver';
+  if (!slug) return <span className={className}>{label}</span>;
+  return (
+    <Link to={`/driver/${slug}`} className={`hover:text-red-400 transition-colors ${className}`}>
+      {label}
+    </Link>
+  );
+};
+
+/** Same guard for team links. */
+const TeamCell: React.FC<{ teamName?: string }> = ({ teamName }) => {
+  const slug = teamSlug(teamName);
+  const label = teamName || 'Unknown team';
+  if (!slug) return <span>{label}</span>;
+  return (
+    <Link to={`/team/${slug}`} className="flex items-center gap-2 hover:text-white transition-colors">
+      {teamLogos[label] && <img src={teamLogos[label]} alt={label} className="h-4 w-auto" />}
+      <span>{label}</span>
+    </Link>
+  );
+};
+
+/** Rows, or the shared empty state when the payload has no rows. */
+const TableBody: React.FC<{ data?: unknown[]; children: React.ReactNode }> = ({ data, children }) => {
+  if (!hasItems(data)) {
+    return (
+      <tbody>
+        <tr>
+          <td colSpan={20}>
+            <EmptyState
+              icon={Table2}
+              title={EMPTY_TABLE_MESSAGES.raceResults.title}
+              description={EMPTY_TABLE_MESSAGES.raceResults.description}
+              compact
+            />
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+  return <tbody>{children}</tbody>;
+};
 
 // =======================================================================
 
@@ -30,27 +82,22 @@ const PracticeResultTable: React.FC<RaceTableProps> = ({ data }) => (
           <th className="p-3 font-semibold text-right">Laps</th>
         </tr>
       </thead>
-      <tbody>
+      <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
-              <Link to={`/driver/${d.full_name.toLowerCase().replace(/\s+/g, '_')}`} className="hover:text-red-400 transition-colors">
-                {d.full_name}
-              </Link>
+              <DriverCell fullName={d.full_name} />
             </td>
             <td className="p-3 text-neutral-300 whitespace-nowrap hidden md:table-cell">
-              <Link to={`/team/${d.team_name.toLowerCase().replace(/\s+/g, '_')}`} className="flex items-center gap-2 hover:text-white transition-colors">
-                {teamLogos[d.team_name] && <img src={teamLogos[d.team_name]} alt={d.team_name} className="h-4 w-auto" />}
-                <span>{d.team_name}</span>
-              </Link>
+              <TeamCell teamName={d.team_name} />
             </td>
             <td className="p-3 text-right font-mono text-xs font-bold text-white">{d.time}</td>
             <td className="p-3 text-right">{d.laps}</td>
           </tr>
         ))}
-      </tbody>
+      </TableBody>
     </table>
   </div>
 );
@@ -71,21 +118,16 @@ const QualifyingResultTable: React.FC<RaceTableProps> = ({ data }) => (
           <th className="p-3 font-semibold text-right">Laps</th>
         </tr>
       </thead>
-      <tbody>
+      <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
-              <Link to={`/driver/${d.full_name.toLowerCase().replace(/\s+/g, '_')}`} className="hover:text-red-400 transition-colors">
-                {d.full_name}
-              </Link>
+              <DriverCell fullName={d.full_name} />
             </td>
             <td className="p-3 text-neutral-300 whitespace-nowrap hidden md:table-cell">
-              <Link to={`/team/${d.team_name.toLowerCase().replace(/\s+/g, '_')}`} className="flex items-center gap-2 hover:text-white transition-colors">
-                {teamLogos[d.team_name] && <img src={teamLogos[d.team_name]} alt={d.team_name} className="h-4 w-auto" />}
-                <span>{d.team_name}</span>
-              </Link>
+              <TeamCell teamName={d.team_name} />
             </td>
             <td className="p-3 text-right font-mono text-xs font-bold text-white">{d.time}</td>
             <td className="p-3 text-right font-mono text-xs text-neutral-300">{d.q1}</td>
@@ -94,7 +136,7 @@ const QualifyingResultTable: React.FC<RaceTableProps> = ({ data }) => (
             <td className="p-3 text-right">{d.laps}</td>
           </tr>
         ))}
-      </tbody>
+      </TableBody>
     </table>
   </div>
 );
@@ -118,21 +160,16 @@ const SprintResultTable: React.FC<RaceTableProps> = ({ data }) => (
           <th className="p-3 font-semibold text-right">Laps</th>
         </tr>
       </thead>
-      <tbody>
+      <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
-              <Link to={`/driver/${d.full_name.toLowerCase().replace(/\s+/g, '_')}`} className="hover:text-red-400 transition-colors">
-                {d.full_name}
-              </Link>
+              <DriverCell fullName={d.full_name} />
             </td>
             <td className="p-3 text-neutral-300 whitespace-nowrap hidden md:table-cell">
-              <Link to={`/team/${d.team_name.toLowerCase().replace(/\s+/g, '_')}`} className="flex items-center gap-2 hover:text-white transition-colors">
-                {teamLogos[d.team_name] && <img src={teamLogos[d.team_name]} alt={d.team_name} className="h-4 w-auto" />}
-                <span>{d.team_name}</span>
-              </Link>
+              <TeamCell teamName={d.team_name} />
             </td>
             <td className="p-3 text-right font-mono text-xs">{d.time || d.status}</td>
             <td className="p-3 text-right font-mono text-xs">{d.gap_to_leader}</td>
@@ -141,7 +178,7 @@ const SprintResultTable: React.FC<RaceTableProps> = ({ data }) => (
             <td className="p-3 text-right">{d.laps}</td>
           </tr>
         ))}
-      </tbody>
+      </TableBody>
     </table>
   </div>
 );
@@ -162,21 +199,16 @@ const RaceResultTable: React.FC<RaceTableProps> = ({ data }) => (
           <th className="p-3 font-semibold text-right">Laps</th>
         </tr>
       </thead>
-      <tbody>
+      <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{d.position}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
-              <Link to={`/driver/${d.full_name.toLowerCase().replace(/\s+/g, '_')}`} className="hover:text-red-400 transition-colors">
-                {d.full_name}
-              </Link>
+              <DriverCell fullName={d.full_name} />
             </td>
             <td className="p-3 text-neutral-300 whitespace-nowrap hidden md:table-cell">
-              <Link to={`/team/${d.team_name.toLowerCase().replace(/\s+/g, '_')}`} className="flex items-center gap-2 hover:text-white transition-colors">
-                {teamLogos[d.team_name] && <img src={teamLogos[d.team_name]} alt={d.team_name} className="h-4 w-auto" />}
-                <span>{d.team_name}</span>
-              </Link>
+              <TeamCell teamName={d.team_name} />
             </td>
             <td className="p-3 text-right font-mono text-xs">{d.time || d.status}</td>
             <td className="p-3 text-right font-mono text-xs">{d.gap_to_leader}</td>
@@ -185,7 +217,7 @@ const RaceResultTable: React.FC<RaceTableProps> = ({ data }) => (
             <td className="p-3 text-right">{d.laps}</td>
           </tr>
         ))}
-      </tbody>
+      </TableBody>
     </table>
   </div>
 );
@@ -202,7 +234,7 @@ const GridTable: React.FC<GridTableProps> = ({ data, posKey = 'grid_position' })
           <th className="p-3 font-semibold text-right">Time</th>
         </tr>
       </thead>
-      <tbody>
+      <TableBody data={data}>
         {data?.map(d => {
           const pos = d[posKey] ?? d.position;
           return (
@@ -210,21 +242,16 @@ const GridTable: React.FC<GridTableProps> = ({ data, posKey = 'grid_position' })
             <td className="p-3 font-bold text-center text-base">{String(pos ?? '-')}</td>
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
-              <Link to={`/driver/${d.full_name.toLowerCase().replace(/\s+/g, '_')}`} className="hover:text-red-400 transition-colors">
-                {d.full_name}
-              </Link>
+              <DriverCell fullName={d.full_name} />
             </td>
             <td className="p-3 text-neutral-300 whitespace-nowrap hidden md:table-cell">
-              <Link to={`/team/${d.team_name.toLowerCase().replace(/\s+/g, '_')}`} className="flex items-center gap-2 hover:text-white transition-colors">
-                {teamLogos[d.team_name] && <img src={teamLogos[d.team_name]} alt={d.team_name} className="h-4 w-auto" />}
-                <span>{d.team_name}</span>
-              </Link>
+              <TeamCell teamName={d.team_name} />
             </td>
             <td className="p-3 text-right font-mono text-xs">{d.time}</td>
           </tr>
           );
         })}
-      </tbody>
+      </TableBody>
     </table>
   </div>
 );
@@ -333,9 +360,7 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
 
 const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, sectorMatrix }) => {
   // Find the absolute maximum speed to calculate bar widths
-  const maxSpeed = speedTraps && speedTraps.length > 0 
-    ? Math.max(...speedTraps.map(s => s.speed)) 
-    : 100;
+  const maxSpeed = safeMax((speedTraps ?? []).map(s => toNumber(s.speed)), 100);
 
   return (
     <div className="p-6">
@@ -485,10 +510,10 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weatherData }) => {
     return <div className="p-6 text-neutral-500 italic">No weather data available</div>;
   }
 
-  const maxTrackTemp = Math.max(...weatherData.map(d => d.track_temp));
-  const maxAirTemp = Math.max(...weatherData.map(d => d.air_temp));
+  const maxTrackTemp = safeMax(weatherData.map(d => toNumber(d.track_temp)));
+  const maxAirTemp = safeMax(weatherData.map(d => toNumber(d.air_temp)));
   const hasRain = weatherData.some(d => d.rainfall);
-  const avgHumidity = Math.round(weatherData.reduce((acc: number, curr: WeatherSample) => acc + curr.humidity, 0) / weatherData.length);
+  const avgHumidity = Math.round(weatherData.reduce((acc: number, curr: WeatherSample) => acc + toNumber(curr.humidity), 0) / weatherData.length);
 
   return (
     <div className="p-6">

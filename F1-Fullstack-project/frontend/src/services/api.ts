@@ -16,6 +16,8 @@ import type {
   RaceSummary,
   SessionResultEntry,
   TelemetryFlatPoint,
+  TeamProgressionEntry,
+  TeamProfile,
 } from '../types/f1';
 
 /** `/api/driver/{year}/{driver_id}` response body. */
@@ -61,6 +63,7 @@ export interface RaceDetailsPayload {
 /** `/api/championship/{year}` response body. */
 export interface ChampionshipPayload {
   drivers?: DriverProfile[];
+  teams?: TeamProfile[];
   session_results?: SessionResultEntry[];
   [key: string]: unknown;
 }
@@ -75,7 +78,7 @@ export interface TeamProfilePayload {
   podiums?: NumericString;
   points_last_race?: NumericString;
   drivers?: DriverProfile[];
-  progression?: DriverProgressionEntry[];
+  progression?: TeamProgressionEntry[];
   [key: string]: unknown;
 }
 

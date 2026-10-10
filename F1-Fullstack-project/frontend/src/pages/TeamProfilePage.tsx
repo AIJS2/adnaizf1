@@ -1,41 +1,27 @@
-import { DriverProfile, TeamProfile, TeamProgressionEntry } from '../types/f1';
-import { useState, useEffect } from 'react';
+import { DriverProfile, TeamProgressionEntry } from '../types/f1';
 import { useParams, Link } from 'react-router-dom';
-import { API_URL } from '../config';
+import { useQuery } from '@tanstack/react-query';
 import { teamLogos, teamColors } from '../data/teamData';
 import { Trophy, Award, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag, ChevronRight, PieChart } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { fetchTeamProfile } from '../services/api';
+import type { TeamProfilePayload } from '../services/api';
 
 const TeamProfilePage = () => {
   const { id } = useParams();
   const currentYear = new Date().getFullYear();
 
-  const [profile, setProfile] = useState<TeamProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Cached + retried by react-query; `enabled` avoids firing for a missing id.
+  const { data, isLoading: loading, error } = useQuery<TeamProfilePayload>({
+    queryKey: ['teamProfile', currentYear, id],
+    queryFn: () => fetchTeamProfile(currentYear, id as string),
+    enabled: !!id,
+  });
 
-  const fetchProfile = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/api/team/${currentYear}/${id}`);
-      if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setProfile(data);
-    } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : String(err)));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const profile = data ?? null;
 
-  useEffect(() => {
-    fetchProfile();
-  }, [id, currentYear]);
-
-  const teamColor = profile ? (teamColors[profile.name] || '#EF4444') : '#EF4444';
-  const teamLogo = profile ? teamLogos[profile.name] : null;
+  const teamColor = profile?.name ? (teamColors[profile.name] || '#EF4444') : '#EF4444';
+  const teamLogo = profile?.name ? teamLogos[profile.name] : null;
 
   if (loading) {
     return (
@@ -64,7 +50,7 @@ const TeamProfilePage = () => {
         <main className="container mx-auto px-6 pt-28 pb-16 text-center">
           <AlertTriangle className="text-red-500 mx-auto mb-4" size={48} />
           <h2 className="text-3xl font-black mb-2">Team Not Found</h2>
-          <p className="text-neutral-400 mb-6">{error || "Could not load data for this team."}</p>
+          <p className="text-neutral-400 mb-6">{error?.message || "Could not load data for this team."}</p>
           <Link to="/stats" state={{ tab: 'constructors' }} className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold text-sm transition-colors">
             <ArrowLeft size={16} /> Back to Standings
           </Link>
@@ -97,7 +83,7 @@ const TeamProfilePage = () => {
           
           {/* Watermark Team Initial */}
           <div className="absolute right-4 bottom-[-10%] text-[10rem] md:text-[18rem] font-black text-white/[0.02] leading-none select-none pointer-events-none italic transform -skew-x-12 whitespace-nowrap">
-            {profile.name.substring(0, 3).toUpperCase()}
+            {profile.name?.substring(0, 3).toUpperCase()}
           </div>
           
           {/* Techy background pattern */}

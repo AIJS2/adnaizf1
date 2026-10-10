@@ -1,5 +1,5 @@
-import { DriverProfile, SessionResultEntry, TeamProfile } from '../types/f1';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Search, Trophy, Crown, User, AlertTriangle, Loader2,
@@ -7,9 +7,24 @@ import {
   Factory, Shield, TrendingUp, TrendingDown, Sparkles,
   type LucideIcon
 } from 'lucide-react';
-import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
+import { fetchChampionship } from '../services/api';
+import type { ChampionshipPayload } from '../services/api';
+import { SessionResultEntry } from '../types/f1';
 import ChampionshipWorm from '../components/ChampionshipWorm';
+import { safeMax, toNumber } from '../utils/data';
+
+type ChampionshipView = {
+  drivers: NonNullable<ChampionshipPayload['drivers']>;
+  teams: NonNullable<ChampionshipPayload['teams']>;
+  session_results: SessionResultEntry[];
+};
+
+const EMPTY_CHAMPIONSHIP: ChampionshipView = {
+  drivers: [],
+  teams: [],
+  session_results: [],
+};
 
 interface EntryProps {
   id?: string;
@@ -284,48 +299,39 @@ const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }
 const StatsPage = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'drivers');
-  const [data, setData] = useState<{ drivers: DriverProfile[]; teams: TeamProfile[]; session_results: SessionResultEntry[] }>({ drivers: [], teams: [], session_results: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const currentYear = new Date().getFullYear();
 
-  const fetchStats = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_URL}/api/championship/${currentYear}`);
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
-      setData({
-        drivers: result.drivers || [],
-        teams: result.teams || [],
-        session_results: result.session_results || []
-      });
-    } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : String(err)));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Single source of truth for the championship payload, with the app-wide
+  // caching/retry defaults from QueryClient instead of a bespoke fetch effect.
+  const { data, isLoading: loading, error, refetch } = useQuery<ChampionshipView>({
+    queryKey: ['championship', currentYear],
+    queryFn: async () => {
+      const result = await fetchChampionship(currentYear);
+      return {
+        drivers: result.drivers ?? [],
+        teams: result.teams ?? [],
+        session_results: result.session_results ?? [],
+      };
+    },
+  });
 
-  useEffect(() => {
-    fetchStats();
-  }, [currentYear]);
+  const { drivers, teams, session_results: sessionResults } = data ?? EMPTY_CHAMPIONSHIP;
 
-  const maxDriverPoints = data.drivers.length > 0 ? Math.max(...data.drivers.map(d => d.points || 0), 1) : 1;
-  const maxTeamPoints = data.teams.length > 0 ? Math.max(...data.teams.map(t => t.points || 0), 1) : 1;
+  // safeMax guards against Math.max(...[]) === -Infinity, which would produce
+  // a negative bar width when the season has no standings yet.
+  const maxDriverPoints = safeMax(drivers.map(d => toNumber(d.points)), 1);
+  const maxTeamPoints = safeMax(teams.map(t => toNumber(t.points)), 1);
 
-  const filteredDrivers = useMemo(() => data.drivers.filter(d =>
+  const filteredDrivers = useMemo(() => drivers.filter(d =>
     (d.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (d.team || '').toLowerCase().includes(searchTerm.toLowerCase())
-  ), [data.drivers, searchTerm]);
+  ), [drivers, searchTerm]);
 
-  const filteredTeams = useMemo(() => data.teams.filter(t =>
+  const filteredTeams = useMemo(() => teams.filter(t =>
     (t.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-  ), [data.teams, searchTerm]);
+  ), [teams, searchTerm]);
 
   // Split into podium (top 3) and rest
   const podiumDrivers = !searchTerm ? filteredDrivers.slice(0, 3) : [];
@@ -333,12 +339,12 @@ const StatsPage = () => {
   const podiumTeams = !searchTerm ? filteredTeams.slice(0, 3) : [];
   const restTeams = !searchTerm ? filteredTeams.slice(3) : filteredTeams;
 
-  const leaderDriverPoints = data.drivers[0]?.points || 0;
-  const leaderTeamPoints = data.teams[0]?.points || 0;
+  const leaderDriverPoints = toNumber(drivers[0]?.points);
+  const leaderTeamPoints = toNumber(teams[0]?.points);
 
   // Season summary stats
-  const totalRaceWins = useMemo(() => data.drivers.reduce((sum, d) => sum + (d.wins || 0), 0), [data.drivers]);
-  const totalPodiums = useMemo(() => data.drivers.reduce((sum, d) => sum + (d.podiums || 0), 0), [data.drivers]);
+  const totalRaceWins = useMemo(() => drivers.reduce((sum, d) => sum + toNumber(d.wins), 0), [drivers]);
+  const totalPodiums = useMemo(() => drivers.reduce((sum, d) => sum + toNumber(d.podiums), 0), [drivers]);
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
@@ -411,7 +417,7 @@ const StatsPage = () => {
               <div>
                 <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">Leader</span>
                 <span className="font-black text-white text-sm block leading-tight">
-                  {activeTab === 'drivers' ? (data.drivers[0]?.name || '-') : (data.teams[0]?.name || '-')}
+                  {activeTab === 'drivers' ? (drivers[0]?.name || '-') : (teams[0]?.name || '-')}
                 </span>
               </div>
             </div>
@@ -463,8 +469,8 @@ const StatsPage = () => {
           <div className="bg-red-950/40 backdrop-blur border border-red-500/50 rounded-2xl p-8 text-center mb-8 max-w-lg mx-auto shadow-[0_0_30px_rgba(239,68,68,0.2)]">
             <AlertTriangle className="text-red-500 mx-auto mb-4" size={40} />
             <h3 className="font-black text-red-400 text-xl uppercase tracking-wider">Failed to load statistics</h3>
-            <p className="text-neutral-300 text-base mt-2 mb-6">{error}</p>
-            <button onClick={fetchStats}
+            <p className="text-neutral-300 text-base mt-2 mb-6">{error?.message}</p>
+            <button onClick={() => { void refetch(); }}
               className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-sm inline-flex items-center gap-2 transition-all shadow-lg hover:shadow-red-500/50 hover:-translate-y-0.5">
               <Loader2 size={16} /> Retry Connection
             </button>
@@ -558,7 +564,7 @@ const StatsPage = () => {
             {/* ==================== PROGRESSION WORM ==================== */}
             {activeTab === 'progression' && (
               <div className="space-y-4">
-                <ChampionshipWorm sessionResults={data.session_results} drivers={data.drivers} teams={data.teams} />
+                <ChampionshipWorm sessionResults={sessionResults} drivers={drivers} teams={teams} />
               </div>
             )}
           </div>

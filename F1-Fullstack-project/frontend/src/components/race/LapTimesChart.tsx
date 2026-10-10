@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { teamColors } from '../../data/teamData';
 import { RaceResultEntry, RaceSeriesPoint } from '../../types/f1';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { LineChart as LineChartIcon } from 'lucide-react';
+import EmptyState, { EMPTY_TABLE_MESSAGES } from '../ui/EmptyState';
+import { formatLapTime, hasItems, toNumber } from '../../utils/data';
 
 interface DriverMeta {
   name: string;
@@ -50,30 +53,37 @@ const LapTimesChartComponent: React.FC<LapTimesChartProps> = ({ lapTimesChart, r
   const selectTop5 = () => setSelectedDrivers(activeKeys.slice(0, 5));
   const selectAll = () => setSelectedDrivers(activeKeys);
 
-  const formatLapTime = (seconds: number | string) => {
-    const value = Number(seconds ?? 0);
-    if (!value) return '';
-    const m = Math.floor(value / 60);
-    const s = Math.floor(value % 60);
-    const ms = Math.floor((value % 1) * 1000);
-    return `${m}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
-  };
 
-  // Calculate domain manually to avoid Recharts domain function crash
+  // Calculate domain manually to avoid Recharts domain function crash.
+  // safeMax/safeMin never return Infinity, which would silently break the
+  // axis when the payload is empty or every value is non-numeric.
   let yDomain: [number | string, number | string] = ['dataMin', 'dataMax'];
-  if (filterOutliers && lapTimesChart && lapTimesChart.length > 0) {
-    let minTime = Infinity;
+  if (filterOutliers && hasItems(lapTimesChart)) {
+    const values: number[] = [];
     lapTimesChart.forEach((row: RaceSeriesPoint) => {
       selectedDrivers.forEach(drv => {
-        const value = row[drv];
-        if (value !== null && value !== undefined && Number(value) < minTime) {
-          minTime = Number(value);
-        }
+        const v = toNumber(row[drv], NaN);
+        if (Number.isFinite(v)) values.push(v);
       });
     });
-    if (minTime < Infinity) {
+    const minTime = values.length ? Math.min(...values) : NaN;
+    if (Number.isFinite(minTime)) {
       yDomain = [minTime, minTime * 1.15];
     }
+  }
+
+  // No lap times recorded yet -> empty state instead of an empty chart frame.
+  if (!hasItems(lapTimesChart) || activeKeys.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={LineChartIcon}
+          title={EMPTY_TABLE_MESSAGES.charts.title}
+          description="Lap-time analysis needs completed laps, which become available once the session has run."
+          className="min-h-[400px] rounded-2xl border border-neutral-800 bg-neutral-900/30"
+        />
+      </div>
+    );
   }
 
   return (
@@ -137,7 +147,7 @@ const LapTimesChartComponent: React.FC<LapTimesChartProps> = ({ lapTimesChart, r
 
       <div className="h-[460px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={lapTimesChart} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+          <LineChart data={lapTimesChart ?? []} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
             <XAxis 
               dataKey="lap" 

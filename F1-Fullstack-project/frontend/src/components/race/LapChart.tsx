@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { teamColors } from '../../data/teamData';
 import { RaceResultEntry, RaceSeriesPoint } from '../../types/f1';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { LineChart as LineChartIcon } from 'lucide-react';
+import EmptyState, { EMPTY_TABLE_MESSAGES } from '../ui/EmptyState';
+import { hasItems } from '../../utils/data';
 
 interface DriverMeta {
   name: string;
@@ -35,6 +38,20 @@ const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
   }
 
   const [selectedDrivers, setSelectedDrivers] = useState(activeKeys);
+
+  // No lap-by-lap positions yet -> empty state rather than a blank chart.
+  if (!hasItems(lapChart) || activeKeys.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={LineChartIcon}
+          title={EMPTY_TABLE_MESSAGES.charts.title}
+          description="Position data is recorded lap by lap and becomes available once the race has run."
+          className="min-h-[400px] rounded-2xl border border-neutral-800 bg-neutral-900/30"
+        />
+      </div>
+    );
+  }
 
   const toggleDriver = (drv: string) => {
     if (selectedDrivers.includes(drv)) {

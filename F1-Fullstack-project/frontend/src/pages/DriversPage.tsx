@@ -7,6 +7,7 @@ import ErrorState from '../components/layout/ErrorState';
 import { Search, ArrowUp, Trophy } from 'lucide-react';
 import { API_URL } from '../config';
 import { teamLogos, teamColors } from '../data/teamData';
+import { safeMax, toNumber } from '../utils/data';
 
 // --- ERROR STATE ---
 
@@ -47,7 +48,7 @@ function DriversPage() {
     (driver.team ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const leaderPoints = drivers.length > 0 ? Math.max(...drivers.map(d => d.points ?? 0)) : 0;
+  const leaderPoints = safeMax(drivers.map(d => toNumber(d.points)), 0);
 
   if (loading) {
     return (

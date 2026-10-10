@@ -1,14 +1,14 @@
 import { DriverProfile, TeamProfile } from '../types/f1';
-import { useState, useEffect, useMemo } from 'react';
-import { API_URL } from '../config';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { teamColors, teamLogos } from '../data/teamData';
 import { Calculator, Trophy, ArrowUp, ArrowDown, Minus, RefreshCw, Zap, Flag, FlaskConical, Activity, Crosshair, Users, Timer } from 'lucide-react';
+import { fetchChampionship } from '../services/api';
+import type { ChampionshipPayload } from '../services/api';
 
 const SimulatorPage = () => {
   const [originalDrivers, setOriginalDrivers] = useState<DriverProfile[]>([]);
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Simulation inputs
   const [p1, setP1] = useState('');
@@ -28,31 +28,29 @@ const SimulatorPage = () => {
   const driverKey = (d: DriverProfile): string =>
     d.id ?? d.driverId ?? d.name?.toLowerCase().replace(/\s+/g, '_') ?? '';
 
-  const fetchStandings = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_URL}/api/championship/${currentYear}`);
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      
-      if (data.drivers) {
-        const sorted = [...data.drivers].sort((a: DriverProfile, b: DriverProfile) => (b.points || 0) - (a.points || 0));
-        sorted.forEach((d: DriverProfile, i: number) => d.position = i + 1);
-        setOriginalDrivers(sorted);
-        setDrivers(JSON.parse(JSON.stringify(sorted)));
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Standings come from react-query (cached + retried); the simulator keeps a
+  // LOCAL mutable copy that the what-if maths mutates, seeded from the query.
+  const { data, isLoading: loading, error, refetch } = useQuery<ChampionshipPayload>({
+    queryKey: ['championship', currentYear],
+    queryFn: () => fetchChampionship(currentYear),
+  });
 
+  const standings: DriverProfile[] = useMemo(() => {
+    const rows = data?.drivers ?? [];
+    const sorted = [...rows].sort((a, b) => (b.points || 0) - (a.points || 0));
+    sorted.forEach((d, i) => { d.position = i + 1; });
+    return sorted;
+  }, [data]);
+
+  // Seed the working copy once real standings arrive (and only when the user
+  // has not started simulating, so a background refetch cannot wipe inputs).
+  const seededRef = useRef(false);
   useEffect(() => {
-    fetchStandings();
-  }, [currentYear]);
+    if (standings.length === 0 || seededRef.current) return;
+    seededRef.current = true;
+    setOriginalDrivers(standings);
+    setDrivers(JSON.parse(JSON.stringify(standings)));
+  }, [standings]);
 
   const simulate = () => {
     const simulated: DriverProfile[] = JSON.parse(JSON.stringify(originalDrivers));
@@ -123,8 +121,8 @@ const SimulatorPage = () => {
         <div className="text-center">
           <div className="text-red-500 mb-4 flex justify-center"><Activity size={48} /></div>
           <h2 className="text-3xl font-black mb-2">Failed to load Championship</h2>
-          <p className="text-neutral-400 mb-6">{error}</p>
-          <button onClick={fetchStandings} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold transition-colors">
+          <p className="text-neutral-400 mb-6">{error?.message}</p>
+          <button onClick={() => { void refetch(); }} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold transition-colors">
             Try Again
           </button>
         </div>

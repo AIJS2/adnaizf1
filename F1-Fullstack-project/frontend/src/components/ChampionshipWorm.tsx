@@ -5,6 +5,7 @@ import {
 import { teamColors } from '../data/teamData';
 import { DriverProfile, SessionResultEntry, TeamProfile } from '../types/f1';
 import { TrendingUp, Users, Factory } from 'lucide-react';
+import { safeMax, toNumber } from '../utils/data';
 
 interface ChampionshipWormProps {
   sessionResults?: SessionResultEntry[];
@@ -40,7 +41,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
         top10.forEach(driver => {
           const pointsUpToRound = sessionResults
             .filter(r => r.FullName === driver && r.RoundNumber <= round)
-            .reduce((sum, r) => sum + (Number(r.Points) || 0), 0);
+            .reduce((sum, r) => sum + toNumber(r.Points), 0);
           point[driver] = pointsUpToRound;
         });
         return point;
@@ -55,7 +56,9 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
         };
       });
 
-      const maxPts = top10.length > 0 ? Math.max(...top10.map(d => Number(data[data.length - 1]?.[d]) || 0)) : 100;
+      // safeMax never yields -Infinity (Math.max(...[]) does), which would
+      // corrupt the Y domain when the season has no points yet.
+      const maxPts = safeMax(top10.map(d => toNumber(data[data.length - 1]?.[d])), 100);
       return { chartData: data, lines, maxPoints: maxPts };
     } else {
       // Constructors
@@ -67,7 +70,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
           // Team points are accumulated from all drivers in that team
           const pointsUpToRound = sessionResults
             .filter(r => r.TeamName === team && r.RoundNumber <= round)
-            .reduce((sum, r) => sum + (Number(r.Points) || 0), 0);
+            .reduce((sum, r) => sum + toNumber(r.Points), 0);
           point[team] = pointsUpToRound;
         });
         return point;
@@ -79,7 +82,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
         color: teamColors[team] || '#ffffff'
       }));
 
-      const maxPts = allTeams.length > 0 ? Math.max(...allTeams.map(t => Number(data[data.length - 1]?.[t]) || 0)) : 100;
+      const maxPts = safeMax(allTeams.map(t => toNumber(data[data.length - 1]?.[t])), 100);
       return { chartData: data, lines, maxPoints: maxPts };
     }
   }, [sessionResults, drivers, teams, viewMode]);

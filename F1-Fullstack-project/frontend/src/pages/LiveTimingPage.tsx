@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Zap } from 'lucide-react';
 import { API_URL } from '../config';
 import TyreStrategy from '../components/ui/TyreStrategy';
+import EmptyState from '../components/ui/EmptyState';
 import { LiveTimingData } from '../types/f1';
 
 const teamColors: Record<string, string> = {
@@ -149,6 +150,8 @@ const LiveTimingPage: React.FC = () => {
     return posA - posB;
   });
 
+  const hasNoSessionData = sortedLines.length === 0;
+
   return (
     <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600 w-full overflow-hidden" style={{ overflowAnchor: 'none' }}>
       <main className="w-full max-w-[1920px] mx-auto px-2 md:px-4 lg:px-8 pt-24 pb-10">
@@ -158,7 +161,7 @@ const LiveTimingPage: React.FC = () => {
           <div>
             <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]'}`}>
               <Activity size={12} className={connectionStatus === 'connected' ? 'animate-pulse' : ''} /> 
-              {connectionStatus === 'connecting' ? 'AWAITING CONNECTION...' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'SIMULATED TELEMETRY (DEMO)'}
+              {connectionStatus === 'connecting' ? 'AWAITING CONNECTION...' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'NO LIVE SESSION'}
             </div>
             <h1 className="text-4xl font-black tracking-tighter uppercase flex items-center gap-2">
               Pit Wall <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Telemetry</span>
@@ -180,6 +183,18 @@ const LiveTimingPage: React.FC = () => {
             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
             
             <div className="overflow-x-auto flex-1">
+              {hasNoSessionData ? (
+                <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+                  <Flag size={40} className="text-neutral-700 mb-4" />
+                  <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">
+                    No Live Session Data
+                  </p>
+                  <p className="text-xs text-neutral-600 mt-2 max-w-md leading-relaxed">
+                    Timing appears here only while an F1 session is running. This feed
+                    reports real data only and never simulates telemetry.
+                  </p>
+                </div>
+              ) : (
               <table className="w-full text-[13px] tracking-tight">
                 <thead className="bg-[#0f0f0f] text-neutral-500 font-black text-left border-b border-[#222] shadow-sm">
                   <tr>
@@ -196,7 +211,20 @@ const LiveTimingPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#151515]">
-                  {sortedLines.length > 0 ? sortedLines.map((row) => (
+                  {connectionStatus === 'connecting' ? Array.from({length: 20}).map((_, i) => (
+                    <tr key={`skel-${i}`} className="animate-pulse h-[36px]">
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-4 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-[#222] rounded w-16"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-[#222] rounded w-10"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-12 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-14 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
+                      <td className="p-2"><div className="h-3 bg-[#222] rounded w-4 mx-auto"></div></td>
+                    </tr>
+                  )) : sortedLines.length > 0 ? sortedLines.map((row) => (
                     <tr key={row.driver} className="hover:bg-[#111] transition-colors group relative">
                       <td className="p-2.5 text-center font-black text-neutral-500 border-r border-[#151515]">{row.position}</td>
                       
@@ -230,23 +258,25 @@ const LiveTimingPage: React.FC = () => {
                       <td className="p-2.5 text-center text-neutral-600 font-mono font-bold">{row.pits}</td>
                     </tr>
                   )) : (
-                    Array.from({length: 20}).map((_, i) => (
-                      <tr key={i} className="animate-pulse h-[36px]">
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-4 mx-auto"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-[#222] rounded w-16"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-[#222] rounded w-10"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-12 ml-auto"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 ml-auto"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-14 ml-auto"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
-                        <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
-                        <td className="p-2"><div className="h-3 bg-[#222] rounded w-4 mx-auto"></div></td>
-                      </tr>
-                    ))
+                    <tr>
+                      <td colSpan={10} className="p-0">
+                        <EmptyState
+                          icon={Radio}
+                          title={data.isLiveSession ? 'Waiting for timing data' : 'No live session right now'}
+                          description={
+                            data.isLiveSession
+                              ? 'The session is live but no timing rows have arrived yet. This updates automatically.'
+                              : 'Live timing is only available while a Formula 1 session is in progress. The feed will populate automatically when a session starts.'
+                          }
+                          compact
+                          className="border-y-0"
+                        />
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
+              )}
             </div>
           </div>
 

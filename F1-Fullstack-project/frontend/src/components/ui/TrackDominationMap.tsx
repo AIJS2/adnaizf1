@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass } from 'lucide-react';
+import EmptyState, { EMPTY_TABLE_MESSAGES } from './EmptyState';
 import { TelemetryDataPoint, TeamDriverInfo } from '../../types/f1';
 import { teamColors } from '../../data/teamData';
 
@@ -25,11 +26,27 @@ const adjustColor = (col: string, amt: number): string => {
 };
 
 const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, drivers, driver_info, activeDistance }) => {
-  if (!telemetry || !telemetry[0] || telemetry[0].x === undefined) return null;
-
   const xs = telemetry.map(d => d.x).filter((x): x is number => x !== undefined && !isNaN(x));
   const ys = telemetry.map(d => d.y).filter((y): y is number => y !== undefined && !isNaN(y));
-  if (xs.length === 0) return null;
+
+  // No positional telemetry: render an explicit empty state rather than
+  // returning null, which made the whole section disappear with no
+  // explanation and left a layout hole on the page.
+  if (!telemetry || telemetry.length === 0 || xs.length === 0 || ys.length === 0) {
+    return (
+      <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl mb-8">
+        <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
+          <Compass size={20} className="text-red-500" /> Track Domination Map
+        </h3>
+        <EmptyState
+          icon={Compass}
+          title={EMPTY_TABLE_MESSAGES.telemetry.title}
+          description="The track map is drawn from X/Y telemetry, which is published after a session finishes."
+          className="min-h-[300px] rounded-2xl border border-neutral-800 bg-neutral-950"
+        />
+      </div>
+    );
+  }
 
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);

@@ -17,8 +17,26 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         teammate = next((d for d in drivers if d["team"] == driver["team"] and d["name"] != driver["name"]), None)
 
         session_results = champ_data.get("session_results", [])
+
+        # Index every session row by (FullName, RoundNumber, SessionType) ONCE.
+        # The previous implementation called next(...)/sum(...) scans inside the
+        # per-round loop, making this O(races x results) on a cold cache.
+        # championship_service emits exactly one row per driver/round/session,
+        # so this key is unique and last-write-wins matches next()'s first-match.
+        by_key = {(r["FullName"], r["RoundNumber"], r["SessionType"]): r
+                  for r in session_results}
+
+        # Sprint points per round, pre-summed for this driver only.
+        sprint_pts_by_round = {}
+        for s in session_results:
+            if s["SessionType"] == "Sprint" and s["FullName"] == driver["name"]:
+                rnd = s["RoundNumber"]
+                sprint_pts_by_round[rnd] = sprint_pts_by_round.get(rnd, 0.0) + float(s.get("Points", 0))
+
         driver_races = [r for r in session_results if r["FullName"] == driver["name"] and r["SessionType"] == "R"]
         driver_races = sorted(driver_races, key=lambda x: x["RoundNumber"])
+
+        teammate_name = teammate["name"] if teammate else ""
 
         progression = []
         cum_points = 0.0
@@ -29,8 +47,8 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         for r in driver_races:
             rnd = r["RoundNumber"]
             pts = float(r.get("Points", 0))
-            # Tambahkan poin sprint jika ada di ronde ini
-            sprint_pts = sum(float(s.get("Points", 0)) for s in session_results if s["FullName"] == driver["name"] and s["SessionType"] == "Sprint" and s["RoundNumber"] == rnd)
+            # Tambahkan poin sprint jika ada di ronde ini (O(1) lookup)
+            sprint_pts = sprint_pts_by_round.get(rnd, 0.0)
             total_round_pts = pts + sprint_pts
             cum_points += total_round_pts
 
@@ -48,7 +66,7 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             elif pos < 90:
                 positions_classified.append(pos)
 
-            tm_r = next((x for x in session_results if x["FullName"] == (teammate["name"] if teammate else "") and x["RoundNumber"] == rnd and x["SessionType"] == "R"), None)
+            tm_r = by_key.get((teammate_name, rnd, "R"))  # O(1) lookup
             
             grid_val = r.get("GridPosition", 0)
             try:
@@ -81,7 +99,7 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             # Race H2H
             for r in driver_races:
                 rnd = r["RoundNumber"]
-                tm_r = next((x for x in session_results if x["FullName"] == teammate["name"] and x["RoundNumber"] == rnd and x["SessionType"] == "R"), None)
+                tm_r = by_key.get((teammate_name, rnd, "R"))  # O(1) lookup
                 if tm_r:
                     if int(r["Position"]) < int(tm_r["Position"]):
                         race_ahead += 1
@@ -92,7 +110,7 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             driver_qualis = [q for q in session_results if q["FullName"] == driver["name"] and q["SessionType"] == "Q"]
             for q in driver_qualis:
                 rnd = q["RoundNumber"]
-                tm_q = next((x for x in session_results if x["FullName"] == teammate["name"] and x["RoundNumber"] == rnd and x["SessionType"] == "Q"), None)
+                tm_q = by_key.get((teammate_name, rnd, "Q"))  # O(1) lookup
                 if tm_q:
                     if int(q["Position"]) < int(tm_q["Position"]):
                         quali_ahead += 1

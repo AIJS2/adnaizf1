@@ -7,8 +7,17 @@ from typing import Any, Optional, List
 import fastf1
 import redis
 
+# Resolve the FastF1 on-disk cache relative to the package, not the process CWD.
+# A bare "cache" only works when uvicorn is launched from Backend/; under the
+# Docker image (WORKDIR /app) or `python -m`, it lands somewhere unwritable.
+_CACHE_DIR = os.environ.get(
+    "F1_CACHE_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache"),
+)
+os.makedirs(_CACHE_DIR, exist_ok=True)
+
 # Enable FastF1 default file cache for its own requests (required by fastf1)
-fastf1.Cache.enable_cache("cache")
+fastf1.Cache.enable_cache(_CACHE_DIR)
 
 CACHE_DURATION_HOURS = 6
 

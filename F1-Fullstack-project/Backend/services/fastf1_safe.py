@@ -24,7 +24,7 @@ import logging
 from typing import Any, Optional
 
 import fastf1
-from fastf1.exceptions import DataNotLoadedError
+from fastf1.core import DataNotLoadedError
 
 logger = logging.getLogger(__name__)
 

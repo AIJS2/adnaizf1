@@ -3,7 +3,7 @@ import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Zap } from 'lucide
 import { API_URL } from '../config';
 import TyreStrategy from '../components/ui/TyreStrategy';
 import EmptyState from '../components/ui/EmptyState';
-import { LiveTimingData } from '../types/f1';
+import { LiveTimingData, LiveTimingLine } from '../types/f1';
 
 const teamColors: Record<string, string> = {
   "Red Bull Racing": "#3671C6",
@@ -18,6 +18,57 @@ const teamColors: Record<string, string> = {
   "Audi": "#F40000",
   "Cadillac": "#D4AF37"
 };
+
+// ============================================================================
+// DEV-ONLY MOCK PAYLOAD — never runs unless ?mock=1 is in the URL.
+// Lets you eyeball the full live-timing layout (timing table, track map, tyre
+// strategy, weather, speed trap, race control) when no session is running.
+// The real WebSocket path below is untouched when the flag is absent.
+// ============================================================================
+const MOCK_LINES: LiveTimingLine[] = [
+  { position: 1,  driver: 'VER', team: 'Red Bull Racing', tyre: 'M', tyre_age: 12, gap: 'LEADER', interval: '-',     lastLap: '1:32.481', lap_color: 'purple', sector1: '28.104', s1_color: 'green',  sector2: '41.882', s2_color: 'purple', sector3: '22.495', s3_color: 'green',  pits: 1, progress: 0.18, status: 'TRACK' },
+  { position: 2,  driver: 'NOR', team: 'McLaren',        tyre: 'M', tyre_age: 12, gap: '+2.341', interval: '+2.341', lastLap: '1:32.702', lap_color: 'green',  sector1: '28.220', s1_color: 'purple', sector2: '41.955', s2_color: 'green',  sector3: '22.527', s3_color: '',        pits: 1, progress: 0.15, status: 'TRACK' },
+  { position: 3,  driver: 'LEC', team: 'Ferrari',        tyre: 'H', tyre_age: 8,  gap: '+5.108', interval: '+2.767', lastLap: '1:33.015', lap_color: 'yellow', sector1: '28.401', s1_color: '',       sector2: '42.118', s2_color: 'yellow', sector3: '22.496', s3_color: 'purple', pits: 0, progress: 0.13, status: 'TRACK' },
+  { position: 4,  driver: 'PIA', team: 'McLaren',        tyre: 'H', tyre_age: 9,  gap: '+7.922', interval: '+2.814', lastLap: '1:33.204', lap_color: '',       sector1: '28.507', s1_color: 'yellow', sector2: '42.204', s2_color: '',       sector3: '22.493', s3_color: 'green',  pits: 0, progress: 0.10, status: 'TRACK' },
+  { position: 5,  driver: 'HAM', team: 'Ferrari',        tyre: 'M', tyre_age: 14, gap: '+11.640', interval: '+3.718', lastLap: '1:33.441', lap_color: 'green', sector1: '28.633', s1_color: 'green', sector2: '42.310', s2_color: '',        sector3: '22.498', s3_color: '',       pits: 1, progress: 0.08, status: 'TRACK' },
+  { position: 6,  driver: 'RUS', team: 'Mercedes',       tyre: 'H', tyre_age: 7,  gap: '+14.205', interval: '+2.565', lastLap: '1:33.612', lap_color: '',       sector1: '28.745', s1_color: '',       sector2: '42.455', s2_color: 'green', sector3: '22.412', s3_color: 'purple', pits: 0, progress: 0.05, status: 'TRACK' },
+  { position: 7,  driver: 'ANT', team: 'Mercedes',       tyre: 'M', tyre_age: 16, gap: '+18.883', interval: '+4.678', lastLap: '1:33.890', lap_color: 'yellow', sector1: '28.912', s1_color: '',       sector2: '42.601', s2_color: '',       sector3: '22.377', s3_color: '',       pits: 1, progress: 0.03, status: 'TRACK' },
+  { position: 8,  driver: 'ALO', team: 'Aston Martin',   tyre: 'H', tyre_age: 6,  gap: '+21.450', interval: '+2.567', lastLap: '1:34.021', lap_color: '',       sector1: '29.102', s1_color: 'yellow', sector2: '42.703', s2_color: '',       sector3: '22.216', s3_color: 'purple', pits: 0, progress: 0.01, status: 'TRACK' },
+  { position: 9,  driver: 'GAS', team: 'Alpine',         tyre: 'M', tyre_age: 18, gap: '+25.997', interval: '+4.547', lastLap: '1:34.288', lap_color: 'green', sector1: '29.288', s1_color: '',       sector2: '42.889', s2_color: 'yellow', sector3: '22.111', s3_color: '',       pits: 1, progress: 0.99, status: 'TRACK' },
+  { position: 10, driver: 'TSU', team: 'Racing Bulls',   tyre: 'H', tyre_age: 5,  gap: '+29.412', interval: '+3.415', lastLap: '1:34.512', lap_color: '',       sector1: '29.455', s1_color: '',       sector2: '43.012', s2_color: '',       sector3: '22.045', s3_color: 'green',  pits: 0, progress: 0.96, status: 'TRACK' },
+  { position: 11, driver: 'SAI', team: 'Williams',       tyre: 'M', tyre_age: 20, gap: '+33.880', interval: '+4.468', lastLap: '1:34.755', lap_color: 'yellow', sector1: '29.601', s1_color: 'yellow', sector2: '43.201', s2_color: '',       sector3: '21.953', s3_color: '',       pits: 1, progress: 0.93, status: 'TRACK' },
+  { position: 12, driver: 'HUL', team: 'Audi',           tyre: 'H', tyre_age: 4,  gap: '+37.221', interval: '+3.341', lastLap: '1:34.982', lap_color: '',       sector1: '29.744', s1_color: '',       sector2: '43.377', s2_color: 'green', sector3: '21.861', s3_color: 'purple', pits: 0, progress: 0.90, status: 'TRACK' },
+  { position: 13, driver: 'BEA', team: 'Haas F1 Team',   tyre: 'M', tyre_age: 22, gap: '+41.665', interval: '+4.444', lastLap: '1:35.208', lap_color: 'green', sector1: '29.902', s1_color: 'green', sector2: '43.560', s2_color: '',        sector3: '21.746', s3_color: '',       pits: 1, progress: 0.87, status: 'PIT' },
+  { position: 14, driver: 'OCO', team: 'Haas F1 Team',   tyre: 'H', tyre_age: 3,  gap: '+45.110', interval: '+3.445', lastLap: '1:35.443', lap_color: '',       sector1: '30.055', s1_color: '',       sector2: '43.744', s2_color: '',       sector3: '21.644', s3_color: 'yellow', pits: 0, progress: 0.84, status: 'TRACK' },
+  { position: 15, driver: 'STR', team: 'Aston Martin',   tyre: 'M', tyre_age: 24, gap: '+48.552', interval: '+3.442', lastLap: '1:35.671', lap_color: 'yellow', sector1: '30.210', s1_color: '',       sector2: '43.920', s2_color: 'yellow', sector3: '21.541', s3_color: '',       pits: 1, progress: 0.81, status: 'TRACK' },
+  { position: 16, driver: 'ALB', team: 'Williams',       tyre: 'H', tyre_age: 2,  gap: '+52.003', interval: '+3.451', lastLap: '1:35.905', lap_color: '',       sector1: '30.366', s1_color: 'yellow', sector2: '44.105', s2_color: '',       sector3: '21.434', s3_color: 'green',  pits: 0, progress: 0.78, status: 'TRACK' },
+  { position: 17, driver: 'LAW', team: 'Racing Bulls',   tyre: 'M', tyre_age: 26, gap: '+55.441', interval: '+3.438', lastLap: '1:36.140', lap_color: 'green', sector1: '30.520', s1_color: '',       sector2: '44.288', s2_color: '',       sector3: '21.332', s3_color: '',       pits: 1, progress: 0.75, status: 'TRACK' },
+  { position: 18, driver: 'BOR', team: 'Audi',           tyre: 'H', tyre_age: 1,  gap: '+58.902', interval: '+3.461', lastLap: '1:36.372', lap_color: '',       sector1: '30.677', s1_color: '',       sector2: '44.470', s2_color: 'green', sector3: '21.225', s3_color: 'purple', pits: 0, progress: 0.72, status: 'TRACK' },
+  { position: 19, driver: 'COL', team: 'Alpine',         tyre: 'M', tyre_age: 28, gap: '+62.350', interval: '+3.448', lastLap: '1:36.608', lap_color: 'yellow', sector1: '30.833', s1_color: 'yellow', sector2: '44.655', s2_color: '',       sector3: '21.120', s3_color: '',       pits: 1, progress: 0.69, status: 'TRACK' },
+  { position: 20, driver: 'BOT', team: 'Cadillac',       tyre: 'H', tyre_age: 0,  gap: '+65.799', interval: '+3.449', lastLap: '1:36.840', lap_color: '',       sector1: '30.990', s1_color: '',       sector2: '44.838', s2_color: '',       sector3: '21.012', s3_color: 'green',  pits: 0, progress: 0.66, status: 'TRACK' },
+];
+
+const MOCK_DATA: LiveTimingData = {
+  lines: MOCK_LINES,
+  trackStatus: 'GREEN',
+  weather: { air: '28°C', track: '41°C', humidity: '62%', rain: '0%' },
+  messages: [
+    { time: '14:32:08', type: 'flag', msg: 'GREEN FLAG - TRACK CLEAR' },
+    { time: '14:30:41', type: 'pit',  msg: 'CAR 14 (OCO) PIT STOP - 2.4s' },
+    { time: '14:28:15', type: 'flag', msg: 'DRS ENABLED' },
+    { time: '14:25:02', type: 'pit',  msg: 'CAR 01 (VER) PIT STOP - 2.3s' },
+    { time: '14:22:19', type: '',     msg: 'LAP 12 FASTEST: CAR 01 (VER) 1:32.481' },
+    { time: '14:20:33', type: 'pit',  msg: 'CAR 44 (HAM) PIT STOP - 2.6s' },
+    { time: '14:18:07', type: 'flag', msg: 'YELLOW FLAG SECTOR 2 - DEBRIS' },
+  ],
+  isLiveSession: true,
+};
+
+/** Dev override: /live-timing?mock=1 renders the mock payload for layout testing. */
+function isMockRequested(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('mock') === '1';
+}
 
 interface TyreIconProps {
   compound: 'S' | 'M' | 'H' | 'I' | 'W' | '' | string;
@@ -61,16 +112,23 @@ const SectorTime: React.FC<{ time: string, color: string }> = ({ time, color }) 
 };
 
 const LiveTimingPage: React.FC = () => {
-  const [data, setData] = useState<LiveTimingData>({
-    lines: [],
-    trackStatus: 'GREEN',
-    weather: { air: '--', track: '--', humidity: '--', rain: '--' },
-    messages: [],
-    isLiveSession: false
-  });
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'lost'>('connecting');
+  const mockMode = isMockRequested();
+  const [data, setData] = useState<LiveTimingData>(
+    mockMode
+      ? MOCK_DATA
+      : {
+          lines: [],
+          trackStatus: 'GREEN',
+          weather: { air: '--', track: '--', humidity: '--', rain: '--' },
+          messages: [],
+          isLiveSession: false
+        }
+  );
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'lost'>(mockMode ? 'connected' : 'connecting');
 
   useEffect(() => {
+    // Dev override: never open the WebSocket when rendering the mock payload.
+    if (mockMode) return;
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
@@ -159,9 +217,9 @@ const LiveTimingPage: React.FC = () => {
         {/* Header Bar */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
           <div>
-            <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]'}`}>
-              <Activity size={12} className={connectionStatus === 'connected' ? 'animate-pulse' : ''} /> 
-              {connectionStatus === 'connecting' ? 'AWAITING CONNECTION...' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'NO LIVE SESSION'}
+            <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${mockMode ? 'bg-purple-600/10 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]'}`}>
+              <Activity size={12} className={connectionStatus === 'connected' || mockMode ? 'animate-pulse' : ''} /> 
+              {mockMode ? 'MOCK DATA — DEV PREVIEW' : connectionStatus === 'connecting' ? 'AWAITING CONNECTION...' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'NO LIVE SESSION'}
             </div>
             <h1 className="text-4xl font-black tracking-tighter uppercase flex items-center gap-2">
               Pit Wall <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Telemetry</span>

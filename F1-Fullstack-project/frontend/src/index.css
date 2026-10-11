@@ -9,6 +9,39 @@ body {
   background-color: #0a0a0a; 
 }
 
+/* ===== HIDE NATIVE SCROLLBARS (app-like chrome-free look) ===== */
+/* Scroll still works (wheel/trackpad/touch/keys) — only the scrollbar track
+   and thumb are hidden. Set on html, body and every scroll container so nested
+   panels (race-control log, timing table) also drop their bars. */
+
+/* WebKit / Blink (Chrome, Edge, Brave, Safari) */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  background: transparent;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+/* Firefox */
+html {
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+
+/* Standards-mode (Firefox newer, Edge) */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 /* ... (kode animasimu tidak berubah) ... */
 @keyframes gradient-slow {
   0% { background-position: 0% 50%; }
@@ -22,36 +55,7 @@ body {
 
 
 /* ===== STYLE SCROLLBAR SEPERTI GOOGLE AI STUDIO ===== */
-
-/* Untuk browser berbasis Webkit (Chrome, Brave, Edge) */
-::-webkit-scrollbar {
-  width: 6px; /* Dibuat sangat tipis */
-}
-
-/* Bagian Track (Rel scrollbar) dibuat transparan */
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Bagian Thumb (Yang digeser) */
-::-webkit-scrollbar-thumb {
-  /* Warna abu-abu terang seperti di gambar */
-  background-color: #9ca3af; 
-  /* Trik untuk membuat ujungnya selalu membulat sempurna (bentuk pil) */
-  border-radius: 9999px;
-}
-
-/* Saat Thumb di-hover oleh mouse, dibuat lebih terang */
-::-webkit-scrollbar-thumb:hover {
-  background-color: #d1d5db; /* Warna abu-abu yang lebih terang lagi */
-}
-
-/* Untuk Firefox */
-html {
-  scrollbar-width: thin;
-  /* Format: [warna thumb] [warna track] */
-  scrollbar-color: #9ca3af transparent; 
-}
+/* (Superseded by the global hidden-scrollbar rules at the top of this file.) */
 
 @keyframes fadeInUp {
   from {

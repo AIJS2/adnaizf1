@@ -2,7 +2,7 @@ import { fetchDashboardData } from '../services/api';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CountdownTimer from '../components/ui/CountdownTimer';
-import { resolveNextRaceFromSources, type ResolvedNextRace } from '../utils/nextRace';
+import { resolveNextRaceFromSources, countdownTarget, type ResolvedNextRace } from '../utils/nextRace';
 import {
   ArrowRight, Activity, Users, Calculator,
   Trophy, Flag, BookOpen
@@ -124,24 +124,29 @@ function LandingPage() {
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[10px] font-bold tracking-[0.3em] text-red-500 uppercase">
-                {nextRace.isOngoing ? 'Live Now' : 'Next Race'}: {(nextRace.name || '').split(' - ')[0]}
+              <div className={`w-2 h-2 rounded-full animate-pulse ${nextRace.phase === 'live' ? 'bg-green-500' : nextRace.phase === 'race_day' ? 'bg-amber-400' : 'bg-red-500'}`} />
+              <span className={`text-[10px] font-bold tracking-[0.3em] uppercase ${nextRace.phase === 'live' ? 'text-green-400' : nextRace.phase === 'race_day' ? 'text-amber-400' : 'text-red-500'}`}>
+                {nextRace.phase === 'live'
+                  ? 'Live Now'
+                  : nextRace.phase === 'race_day'
+                    ? 'Race Day'
+                    : 'Next Race'}: {(nextRace.name || '').split(' - ')[0]}
               </span>
             </div>
-            {nextRace.isOngoing ? (
+            {nextRace.phase === 'live' ? (
               <span className="text-xl font-bold text-green-400 animate-pulse font-mono uppercase tracking-wider">
                 ● RACE IS LIVE!
               </span>
+            ) : nextRace.phase === 'race_day' ? (
+              <>
+                <span className="inline-flex items-center gap-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black px-3 py-1 rounded-lg text-[11px] uppercase tracking-widest">
+                  ● TODAY — RACE STARTS SOON
+                </span>
+                <CountdownTimer targetDate={countdownTarget(nextRace.date) ?? new Date()} />
+              </>
             ) : (
               <CountdownTimer
-                targetDate={
-                  nextRace.date
-                    ? /^\d{4}-\d{2}-\d{2}T/.test(nextRace.date)
-                      ? nextRace.date // already a full ISO timestamp
-                      : `${nextRace.date}T13:00:00Z`
-                    : "2026-11-22T06:00:00Z"
-                }
+                targetDate={countdownTarget(nextRace.date) ?? new Date()}
               />
             )}
           </div>

@@ -164,7 +164,8 @@ describe('DashboardPage next-race name/countdown sync', () => {
   const now = new Date();
   const TODAY = now.toISOString().slice(0, 10);
   const NEXT_WEEKEND = new Date(now.getTime() + 14 * 864e5).toISOString().slice(0, 10);
-  const TODAY_T20 = `${TODAY}T20:00:00Z`;
+  // Start time already in the past today -> the race is genuinely live.
+  const TODAY_T20 = `${TODAY}T00:00:00Z`;
 
   const RACE_DAY = {
     year: 2025,
@@ -206,6 +207,30 @@ describe('DashboardPage next-race name/countdown sync', () => {
     const daysTile = Array.from(document.querySelectorAll('div'))
       .find((d) => d.textContent === '00DAYS');
     expect(daysTile).toBeUndefined();
+  });
+
+  it('shows a RACE DAY badge + countdown (never LIVE) when race day is before start time', async () => {
+    // Singapore is on the calendar today but its start time (23:59Z, far in
+    // the future) has not arrived yet. The hero must NOT read LIVE.
+    const beforeStart = {
+      ...RACE_DAY,
+      next_race_event: { name: 'Singapore Grand Prix - Race', date: `${TODAY}T23:59:00Z` },
+    };
+    globalThis.fetch = mockFetchOnce(beforeStart);
+
+    renderDashboard();
+
+    await waitFor(() => {
+      const heroH1 = Array.from(document.querySelectorAll('h1'))
+        .some((h) => h.textContent === 'Singapore Grand Prix');
+      expect(heroH1).toBe(true);
+    });
+
+    // The key assertion: LIVE wording must be absent before the start time.
+    expect(screen.queryByText(/SESSION IS LIVE ON TRACK/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Live On Track/i)).not.toBeInTheDocument();
+    // A RACE DAY badge is shown instead, alongside the countdown.
+    expect(screen.getByText(/Race Day — Today/i)).toBeInTheDocument();
   });
 
   it('counts down to the US GP once Singapore has finished', async () => {

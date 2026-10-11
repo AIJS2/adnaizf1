@@ -16,7 +16,7 @@ import TeamCard, { TeamStanding } from '../components/dashboard/TeamCard';
 import DriverStandingsList from '../components/dashboard/DriverStandingsList';
 import RaceAnalyticsCard from '../components/dashboard/RaceAnalyticsCard';
 import { safeMax, toNumber } from '../utils/data';
-import { resolveNextRaceFromSources } from '../utils/nextRace';
+import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
 
 
 
@@ -102,12 +102,8 @@ function DashboardPage() {
   const heroRaceName = nextEvent
     ? (nextEvent.name || '').split(' - ')[0] || 'Grand Prix'
     : 'Grand Prix';
-  const targetCountdownDate = nextEvent?.date
-    ? /^\d{4}-\d{2}-\d{2}T/.test(nextEvent.date)
-      ? nextEvent.date
-      : `${nextEvent.date}T12:00:00Z`
-    : null;
-  const heroIsLive = nextEvent?.isOngoing ?? false;
+  const targetCountdownDate = countdownTarget(nextEvent?.date);
+  const heroPhase = nextEvent?.phase ?? 'future';
   const trackMapImg = getTrackMap(
     upcomingRace ?? (dashboardData?.next_race_event?.name ? { name: dashboardData.next_race_event.name } : null)
   );
@@ -203,6 +199,16 @@ function DashboardPage() {
                   <Zap size={12} className="fill-red-500" />
                   Next Grand Prix Hub &bull; {nextEvent?.round ? `Round ${nextEvent.round}` : 'Upcoming'}
                 </span>
+                {heroPhase === 'race_day' && (
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Race Day — Today
+                  </span>
+                )}
+                {heroPhase === 'live' && (
+                  <span className="bg-green-500/20 text-green-400 border border-green-500/50 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" /> Live On Track
+                  </span>
+                )}
                 {nextEvent?.location && (
                   <span className="text-neutral-400 text-xs font-semibold flex items-center gap-1">
                     <MapPin size={12} /> {nextEvent.location}
@@ -225,7 +231,7 @@ function DashboardPage() {
               {/* Countdown Timer */}
               {targetCountdownDate && (
                 <div className="mb-6">
-                  <HeroCountdown targetDate={targetCountdownDate} isLive={heroIsLive} />
+                  <HeroCountdown targetDate={targetCountdownDate} phase={heroPhase} />
                 </div>
               )}
 

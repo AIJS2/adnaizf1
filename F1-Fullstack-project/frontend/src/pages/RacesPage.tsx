@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { getTrackMap } from '../data/trackData';
 import { teamColors } from '../data/teamData';
-import { resolveNextRace } from '../utils/nextRace';
+import { resolveNextRace, countdownTarget } from '../utils/nextRace';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -24,10 +24,12 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 
 // --- MINI COUNTDOWN ---
-// Shows a compact d/h/m timer for a future race. When the target is today and
-// the caller marks it ongoing, it renders a "LIVE" badge instead of a
-// meaningless 0h 0m — the race is already on track, not about to start.
-const MiniCountdown = ({ targetDate, isLive = false }: { targetDate: Date; isLive?: boolean }) => {
+// Shows a compact d/h/m timer for a future race. Three lifecycle states:
+//  - 'future'   -> plain countdown.
+//  - 'race_day' -> today but before start: countdown + a "TODAY" badge
+//                  (never LIVE — the race has not started).
+//  - 'live'     -> race underway: a LIVE badge instead of a meaningless 0h 0m.
+const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; phase?: 'future' | 'race_day' | 'live' }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0 });
 
   useEffect(() => {
@@ -46,14 +48,35 @@ const MiniCountdown = ({ targetDate, isLive = false }: { targetDate: Date; isLiv
     return () => clearInterval(interval);
   }, [targetDate]);
 
-  // Race day, already underway: a countdown to midnight is meaningless.
-  if (isLive) {
+  // Race underway: a countdown to the start is meaningless — show LIVE.
+  if (phase === 'live') {
     return (
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
         <span className="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
           LIVE NOW
         </span>
+      </div>
+    );
+  }
+
+  // Race day, start time still ahead: keep the timer and mark it as today.
+  if (phase === 'race_day') {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest w-fit">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> TODAY
+        </span>
+        <div className="flex items-center gap-1.5">
+          <Timer size={12} className="text-amber-400" />
+          <div className="flex gap-1 text-[10px] font-mono font-bold tracking-wider">
+            {timeLeft.days > 0 && (
+              <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">{timeLeft.days}d</span>
+            )}
+            <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded">{timeLeft.hours}h</span>
+            <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded">{timeLeft.mins}m</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -143,27 +166,32 @@ const MonthDivider = ({ month, year, raceCount }: { month: string; year: number;
 );
 
 // --- RACE CARD ---
-const RaceCard = ({ race, isNextRace, nextRaceIsLive = false, index }: { race: Race; isNextRace: boolean; nextRaceIsLive?: boolean; index: number }) => {
-  const raceDate = new Date(
-    race.date && /^\d{4}-\d{2}-\d{2}T/.test(race.date)
-      ? race.date
-      : `${race.date}T12:00:00Z`
-  );
+const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race: Race; isNextRace: boolean; nextRacePhase?: 'future' | 'race_day' | 'live'; index: number }) => {
+  const raceDate = new Date(countdownTarget(race.date) ?? race.date + 'T00:00:00');
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
   const flagCode = race.country ? countryCodeMapping[race.country.trim()] : undefined;
   const winnerTeamColor = race.winner_team ? (teamColors[race.winner_team] || '#666') : '#333';
 
+  // The next-race card reflects the resolved lifecycle phase, so on race day
+  // before the start it reads TODAY (not LIVE). Only when the caller resolves
+  // phase 'live' does the badge turn to LIVE.
+  const effectiveStatus =
+    isNextRace && nextRacePhase === 'race_day' ? 'Race Day'
+    : isNextRace && nextRacePhase === 'live' ? 'Ongoing'
+    : race.status;
+
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Finished': return { classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', label: 'COMPLETED', dot: 'bg-emerald-400' };
+      case 'Race Day':  return { classes: 'bg-amber-500/20 text-amber-300 border-amber-500/50', label: 'TODAY', dot: 'bg-amber-400 animate-pulse' };
       case 'Ongoing':  return { classes: 'bg-red-500/20 text-red-400 border-red-500/50', label: 'LIVE', dot: 'bg-red-500 animate-pulse' };
       case 'Upcoming': return { classes: 'bg-neutral-800/60 text-neutral-500 border-neutral-700', label: 'UPCOMING', dot: 'bg-neutral-500' };
       default:         return { classes: 'bg-neutral-800/60 text-neutral-500 border-neutral-700', label: status, dot: 'bg-neutral-500' };
     }
   };
 
-  const statusConfig = getStatusConfig(race.status);
+  const statusConfig = getStatusConfig(effectiveStatus);
 
   return (
     <Link to={`/race/${CURRENT_YEAR}/${race.round}`} className="block h-full group" data-race-round={race.round}>
@@ -279,11 +307,15 @@ const RaceCard = ({ race, isNextRace, nextRaceIsLive = false, index }: { race: R
             ) : isNextRace ? (
               <div className="mt-1">
                 <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">
-                  {race.status === 'Ongoing' ? 'Race In Progress' : 'Race Starts In'}
+                  {nextRacePhase === 'race_day'
+                    ? 'Race Day — Starts Soon'
+                    : nextRacePhase === 'live'
+                      ? 'Race In Progress'
+                      : 'Race Starts In'}
                 </div>
                 <MiniCountdown
                   targetDate={raceDate}
-                  isLive={race.status === 'Ongoing' && nextRaceIsLive}
+                  phase={nextRacePhase}
                 />
               </div>
             ) : (
@@ -471,7 +503,9 @@ const RacesPage = () => {
                     <Zap size={24} className="text-red-500 animate-pulse" />
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold text-red-400 uppercase tracking-[0.2em] mb-1">Next Up · Round {nextRace.round}</div>
+                    <div className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1 ${nextRace.phase === 'live' ? 'text-red-400' : nextRace.phase === 'race_day' ? 'text-amber-400' : 'text-red-400'}`}>
+                      {nextRace.phase === 'live' ? 'Live Now' : nextRace.phase === 'race_day' ? 'Race Day · Today' : 'Next Up'} · Round {nextRace.round}
+                    </div>
                     <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight">{nextRace.name}</h2>
                     <div className="flex items-center gap-3 mt-1.5 text-neutral-400 text-sm">
                       <div className="flex items-center gap-1.5">
@@ -488,8 +522,8 @@ const RacesPage = () => {
                 
                 <div className="flex items-center gap-4">
                   <MiniCountdown
-                    targetDate={new Date(nextRace.date + 'T00:00:00')}
-                    isLive={nextRace.isOngoing}
+                    targetDate={new Date(countdownTarget(nextRace.date) ?? nextRace.date + 'T00:00:00')}
+                    phase={nextRace.phase}
                   />
                   <Link to={`/race/${CURRENT_YEAR}/${nextRace.round}`}
                     className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-xl border border-red-500 transition-all hover:-translate-y-0.5 shadow-[0_0_15px_rgba(220,38,38,0.4)] whitespace-nowrap">
@@ -513,7 +547,7 @@ const RacesPage = () => {
                       key={race.round}
                       race={race}
                       isNextRace={nextRace?.round === race.round}
-                      nextRaceIsLive={nextRace?.isOngoing ?? false}
+                      nextRacePhase={nextRace?.phase ?? 'future'}
                       index={idx}
                     />
                   ))}

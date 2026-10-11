@@ -4,7 +4,7 @@
 // next weekend on race day" class of bug, across all three payload shapes the
 // app feeds it (Race, RaceSummary, NextRaceEvent).
 import { describe, expect, it } from 'vitest';
-import { resolveNextRace, resolveNextRaceFromSources, dayKey } from './nextRace';
+import { resolveNextRace, resolveNextRaceFromSources, dayKey, countdownTarget } from './nextRace';
 
 /** Fixed "now" = race day for Singapore (2026-10-11), midday local. */
 const RACE_DAY = new Date(2026, 9, 11, 12, 0, 0);
@@ -20,6 +20,23 @@ const CALENDAR = [
 describe('dayKey', () => {
   it('ignores the time-of-day component', () => {
     expect(dayKey(new Date(2026, 9, 11, 0, 0, 0))).toBe(dayKey(new Date(2026, 9, 11, 23, 59, 59)));
+  });
+});
+
+describe('countdownTarget', () => {
+  it('appends the known race start (12:00 UTC) to a date-only string', () => {
+    expect(countdownTarget('2026-10-11')).toBe('2026-10-11T12:00:00Z');
+  });
+
+  it('passes a full ISO timestamp through unchanged', () => {
+    expect(countdownTarget('2026-10-11T12:00:00+00:00')).toBe('2026-10-11T12:00:00+00:00');
+    expect(countdownTarget('2026-10-11T20:00:00Z')).toBe('2026-10-11T20:00:00Z');
+  });
+
+  it('returns null for empty or missing dates', () => {
+    expect(countdownTarget('')).toBeNull();
+    expect(countdownTarget(null)).toBeNull();
+    expect(countdownTarget(undefined)).toBeNull();
   });
 });
 
@@ -76,6 +93,60 @@ describe('resolveNextRace', () => {
     const r = resolveNextRace([race], now);
     expect(r?.round).toBe(17);
     expect(r?.isOngoing).toBe(false); // Should not be ongoing yet
+  });
+
+  // ── 3-state lifecycle ────────────────────────────────────────────────
+  it('resolves phase "race_day" on race day BEFORE the start time', () => {
+    const race = { round: 17, name: 'Singapore Grand Prix', date: '2026-10-11T12:00:00Z', status: 'Ongoing' };
+    const before = new Date('2026-10-11T10:00:00Z'); // 2h before start
+    const r = resolveNextRace([race], before);
+    expect(r?.phase).toBe('race_day');
+    expect(r?.isOngoing).toBe(false);
+  });
+
+  it('resolves phase "live" on race day AFTER the start time', () => {
+    const race = { round: 17, name: 'Singapore Grand Prix', date: '2026-10-11T12:00:00Z', status: 'Ongoing' };
+    const after = new Date('2026-10-11T13:00:00Z'); // 1h after start
+    const r = resolveNextRace([race], after);
+    expect(r?.phase).toBe('live');
+    expect(r?.isOngoing).toBe(true);
+  });
+
+  it('resolves phase "future" for a race on a later day', () => {
+    const r = resolveNextRace(CALENDAR, new Date(2026, 9, 9, 12, 0, 0));
+    expect(r?.round).toBe(17);
+    expect(r?.phase).toBe('future');
+    expect(r?.isOngoing).toBe(false);
+  });
+
+  it('never shows live for a stale Ongoing status on a past day', () => {
+    // Status still says Ongoing but the race day is behind us (backend lag).
+    // Past-dated candidates are filtered out; with nothing else to show the
+    // selector returns null rather than falsely reading LIVE.
+    const stale = [{ round: 17, name: 'Singapore Grand Prix', date: '2026-10-11', status: 'Ongoing' }];
+    const r = resolveNextRace(stale, new Date(2026, 9, 13, 12, 0, 0));
+    expect(r).toBeNull();
+  });
+
+  it('never shows live when a stale Ongoing past race coexists with a future one', () => {
+    // The stale past-dated Ongoing race must not win; the future race does,
+    // and it must not be marked LIVE even if the day is behind the status.
+    const mixed = [
+      { round: 17, name: 'Singapore Grand Prix', date: '2026-10-11', status: 'Ongoing' },
+      { round: 18, name: 'US GP', date: '2026-10-25', status: 'Upcoming' },
+    ];
+    const r = resolveNextRace(mixed, new Date(2026, 9, 13, 12, 0, 0));
+    expect(r?.round).toBe(18);
+    expect(r?.isOngoing).toBe(false);
+    expect(r?.phase).toBe('future');
+  });
+
+  it('does not show live for a date-only string when the day is not today', () => {
+    // Date-only "next weekend" must never be LIVE even if the default 12:00Z
+    // start time has already passed for that day.
+    const dateOnly = [{ round: 18, name: 'US GP', date: '2026-10-25', status: 'Ongoing' }];
+    const r = resolveNextRace(dateOnly, new Date('2026-10-26T20:00:00Z'));
+    expect(r?.isOngoing).not.toBe(true);
   });
 
   it('returns null for an empty or all-finished list', () => {

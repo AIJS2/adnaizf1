@@ -61,14 +61,15 @@ describe('LandingPage next-race badge', () => {
     expect(screen.getAllByText(/^\d{2}$/).length).toBeGreaterThanOrEqual(4);
   });
 
-  it('shows the LIVE badge when a race is ongoing today', async () => {
+  it('shows the LIVE badge when a race is ongoing today AND its start time has passed', async () => {
     globalThis.fetch = mockFetchOnce({
       year: now.getFullYear(),
       race_analytics: [
         { round: 17, name: 'Singapore Grand Prix', date: TODAY, status: 'Ongoing' },
         { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, status: 'Upcoming' },
       ],
-      next_race_event: { name: 'Singapore Grand Prix - Race', date: `${TODAY}T20:00:00Z` },
+      // Start time already in the past -> genuinely live.
+      next_race_event: { name: 'Singapore Grand Prix - Race', date: `${TODAY}T00:00:00Z` },
     });
 
     renderLanding();
@@ -77,5 +78,30 @@ describe('LandingPage next-race badge', () => {
       expect(screen.getByText(/Live Now: Singapore Grand Prix/)).toBeInTheDocument();
     });
     expect(screen.getByText(/RACE IS LIVE/i)).toBeInTheDocument();
+  });
+
+  it('shows a RACE DAY badge + countdown (never LIVE) when race day is before start time', async () => {
+    globalThis.fetch = mockFetchOnce({
+      year: now.getFullYear(),
+      race_analytics: [
+        { round: 17, name: 'Singapore Grand Prix', date: TODAY, status: 'Ongoing' },
+        { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, status: 'Upcoming' },
+      ],
+      // Start time far in the future today (e.g. 19:00 local = ~12:00Z) ->
+      // still waiting, must NOT read LIVE.
+      next_race_event: { name: 'Singapore Grand Prix - Race', date: `${TODAY}T23:59:00Z` },
+    });
+
+    renderLanding();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Race Day: Singapore Grand Prix/)).toBeInTheDocument();
+    });
+    // The whole point: no LIVE wording before the start time.
+    expect(screen.queryByText(/RACE IS LIVE/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Live Now/i)).not.toBeInTheDocument();
+    // A TODAY badge + the countdown tiles are shown instead.
+    expect(screen.getByText(/RACE STARTS SOON/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^\d{2}$/).length).toBeGreaterThanOrEqual(4);
   });
 });

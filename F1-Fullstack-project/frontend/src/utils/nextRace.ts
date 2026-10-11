@@ -11,7 +11,13 @@
 
 /** A `YYYY-M-D` key that ignores the time-of-day component. */
 export function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  // Zero-pad month and day so the key sorts correctly as a string: without
+  // padding, "2026-9-11" < "2026-9-9" (day 11 mis-sorts before day 9), which
+  // breaks the >= today filter for same-month races across the single/double
+  // digit boundary.
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 /** Today's calendar-day key. */
@@ -60,8 +66,32 @@ export interface NextRaceCandidate {
 }
 
 export interface ResolvedNextRace extends NextRaceCandidate {
-  /** True when the winning event is happening today (status "Ongoing"). */
+  /**
+   * The resolved lifecycle phase of the winning event:
+   *  - 'future'   — a race on a later day (plain countdown).
+   *  - 'race_day' — today's race, but its start time has NOT yet arrived
+   *                 (show countdown + a "RACE DAY"/"TODAY" badge, never LIVE).
+   *  - 'live'     — today's race and its start time HAS passed (show LIVE).
+   */
+  phase: RacePhase;
+  /** Kept for backward compatibility: true only in the 'live' phase. */
   isOngoing: boolean;
+  /** The parsed start timestamp of the winning event, when one exists. */
+  startTime: Date | null;
+}
+
+export type RacePhase = 'future' | 'race_day' | 'live';
+
+/**
+ * Build the ISO timestamp the countdown components should target. Full ISO
+ * strings are used as-is; date-only strings get the known race start
+ * (12:00 UTC = 19:00 WIB, the standard F1 race start for the Asian rounds in
+ * this season) appended so the timer points at the real start time instead of
+ * local midnight.
+ */
+export function countdownTarget(date?: string | null): string | null {
+  if (!date) return null;
+  return /^\d{4}-\d{2}-\d{2}T/.test(date) ? date : `${date}T12:00:00Z`;
 }
 
 const isFinished = (r: NextRaceCandidate): boolean =>
@@ -98,7 +128,7 @@ export function resolveNextRace(
     // Nothing dated today-or-later: fall back to any Upcoming race so the
     // surface still renders rather than going blank.
     const fallback = races.find((r) => r.status === 'Upcoming' || r.status === 'upcoming');
-    return fallback ? { ...fallback, isOngoing: false } : null;
+    return fallback ? { ...fallback, phase: 'future', isOngoing: false, startTime: toTimestamp(fallback) } : null;
   }
 
   candidates.sort((a, b) => {
@@ -108,7 +138,18 @@ export function resolveNextRace(
       const ka = dayKey(da);
       const kb = dayKey(db);
       if (ka !== kb) return da.getTime() - db.getTime();
-      // Same calendar day: an ongoing race outranks an upcoming one.
+      // Same calendar day. A full timestamp (e.g. next_race_event) is strictly
+      // more informative than a date-only string (race_analytics), because
+      // only it lets us resolve race_day vs live. It therefore wins the
+      // tie-break BEFORE the ongoing-status check — next_race_event often
+      // carries no status field at all, so the status check would otherwise
+      // demote it behind a date-only "Ongoing" entry and force a 12:00Z
+      // default start, mislabeling a race that has already begun.
+      const hasTimeA = Boolean(a.date && a.date.length > 10);
+      const hasTimeB = Boolean(b.date && b.date.length > 10);
+      if (hasTimeA !== hasTimeB) return hasTimeA ? -1 : 1;
+      // Same day AND same time precision: an ongoing race outranks an
+      // upcoming one.
       if (isOngoing(a) !== isOngoing(b)) return isOngoing(a) ? -1 : 1;
     }
     // Tie-break on round so the banner never flips between same-day events.
@@ -120,18 +161,36 @@ export function resolveNextRace(
 
   const winner = candidates[0];
   const winnerDayCalendar = toDay(winner);
-  const winnerDayTimestamp = toTimestamp(winner);
-  // `isOngoing` is only trustworthy when the backend's status field agrees AND
-  // the event's day really is today. A stale status on a past date (or a
-  // session-level next_race_event with no status) must not read as live.
+  const winnerStartTime = toTimestamp(winner);
+
+  // ── 3-state lifecycle ──────────────────────────────────────────────────
+  // The status field alone cannot distinguish "today, waiting for lights"
+  // from "today, race underway". Both carry status 'Ongoing', but only the
+  // second should read LIVE. We therefore compare the parsed start
+  // timestamp against `now`, treating the timestamp as authoritative when the
+  // event is happening today:
+  //   now < start, day is today   -> 'race_day'  (countdown + RACE DAY badge)
+  //   now >= start, day is today  -> 'live'      (LIVE badge, no countdown)
+  //   day is later                -> 'future'    (plain countdown)
+  //
+  // Two ways an event counts as "happening today":
+  //   1. it carries an Ongoing status, OR
+  //   2. it has no status at all (the backend's next_race_event pointer), in
+  //      which case the calendar day + start timestamp alone decide.
+  // A Finished race never reaches here (it is filtered out above), and a
+  // date-only string with no usable time degrades to 'future'.
+  let phase: RacePhase = 'future';
+  const happeningToday =
+    winnerDayCalendar !== null && dayKey(winnerDayCalendar) === tk;
+  if (happeningToday && winnerStartTime !== null && (isOngoing(winner) || winner.status === undefined || winner.status === null)) {
+    phase = now.getTime() >= winnerStartTime.getTime() ? 'live' : 'race_day';
+  }
+
   return {
     ...winner,
-    isOngoing:
-      winnerDayCalendar !== null &&
-      winnerDayTimestamp !== null &&
-      now.getTime() >= winnerDayTimestamp.getTime() &&
-      dayKey(winnerDayCalendar) === tk &&
-      isOngoing(winner),
+    phase,
+    isOngoing: phase === 'live',
+    startTime: winnerStartTime,
   };
 }
 

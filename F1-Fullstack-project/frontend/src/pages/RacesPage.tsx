@@ -144,7 +144,11 @@ const MonthDivider = ({ month, year, raceCount }: { month: string; year: number;
 
 // --- RACE CARD ---
 const RaceCard = ({ race, isNextRace, nextRaceIsLive = false, index }: { race: Race; isNextRace: boolean; nextRaceIsLive?: boolean; index: number }) => {
-  const raceDate = new Date(race.date + 'T00:00:00');
+  const raceDate = new Date(
+    race.date && /^\d{4}-\d{2}-\d{2}T/.test(race.date)
+      ? race.date
+      : `${race.date}T12:00:00Z`
+  );
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
   const flagCode = race.country ? countryCodeMapping[race.country.trim()] : undefined;

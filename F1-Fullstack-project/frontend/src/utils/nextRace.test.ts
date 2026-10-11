@@ -25,7 +25,7 @@ describe('dayKey', () => {
 
 describe('resolveNextRace', () => {
   it('picks today\'s Ongoing race over next weekend\'s Upcoming race', () => {
-    const r = resolveNextRace(CALENDAR, RACE_DAY);
+    const r = resolveNextRace(CALENDAR, new Date('2026-10-11T15:00:00Z'));
     expect(r?.round).toBe(17);
     expect(r?.isOngoing).toBe(true);
   });
@@ -54,7 +54,7 @@ describe('resolveNextRace', () => {
   });
 
   it('accepts the backend ISO timestamp shape (next_race_event)', () => {
-    const iso = [{ name: 'Singapore Grand Prix - Race', date: `${TODAY}T20:00:00Z`, round: 17, status: 'Ongoing' }];
+    const iso = [{ name: 'Singapore Grand Prix - Race', date: `${TODAY}T00:00:00Z`, round: 17, status: 'Ongoing' }];
     const r = resolveNextRace(iso, RACE_DAY);
     expect(r?.name).toBe('Singapore Grand Prix - Race');
     expect(r?.isOngoing).toBe(true);
@@ -66,6 +66,16 @@ describe('resolveNextRace', () => {
       { round: 18, name: 'US GP', date: NEXT_WEEKEND, status: 'upcoming' },
     ];
     expect(resolveNextRace(lower, RACE_DAY)?.round).toBe(17);
+  });
+
+  it('does not treat race as ongoing when current time is before start time on race day', () => {
+    const raceDayStartUTC = '2026-10-11T12:00:00Z'; // 19:00 WIB
+    const race = { round: 17, name: 'Singapore Grand Prix', date: raceDayStartUTC, status: 'Ongoing' };
+    // Current time: 10:19 AM WIB = 03:19 UTC
+    const now = new Date('2026-10-11T03:19:00Z');
+    const r = resolveNextRace([race], now);
+    expect(r?.round).toBe(17);
+    expect(r?.isOngoing).toBe(false); // Should not be ongoing yet
   });
 
   it('returns null for an empty or all-finished list', () => {
@@ -86,7 +96,7 @@ describe('resolveNextRaceFromSources', () => {
   });
 
   it('falls back to race_analytics when next_race_event is null', () => {
-    const r = resolveNextRaceFromSources(CALENDAR, null, RACE_DAY);
+    const r = resolveNextRaceFromSources(CALENDAR, null, new Date('2026-10-11T15:00:00Z'));
     expect(r?.round).toBe(17);
     expect(r?.isOngoing).toBe(true);
   });

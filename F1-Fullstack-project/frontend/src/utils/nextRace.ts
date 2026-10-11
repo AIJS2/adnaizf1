@@ -20,6 +20,33 @@ export function todayKey(now: Date = new Date()): string {
 }
 
 /**
+ * Return the date part only (time set to 00:00:00) for calendar-day comparisons.
+ * Accepts both "YYYY-MM-DD" and "YYYY-MM-DDTHH:MM:SSZ" strings.
+ */
+function toDay(r: NextRaceCandidate): Date | null {
+  if (!r.date) return null;
+  const dateStr = r.date;
+  const d = /^\d{4}-\d{2}-\d{2}/.test(dateStr)
+    ? new Date(`${dateStr.slice(0, 10)}T00:00:00`)
+    : new Date(dateStr);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Return the exact timestamp from the date string, preserving time if available.
+ * If the string lacks time, assumes 00:00:00 (midnight).
+ */
+function toTimestamp(r: NextRaceCandidate): Date | null {
+  if (!r.date) return null;
+  const dateStr = r.date;
+  // If it's a full ISO timestamp (contains T or Z or is longer than 10 chars),
+  // parse directly; otherwise treat as date-only with known race start (12:00 UTC).
+  const hasTime = dateStr.length > 10 || /[TZ]/.test(dateStr);
+  const d = hasTime ? new Date(dateStr) : new Date(`${dateStr}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
  * The minimal shape every "next race" surface needs. `Race` (calendar),
  * `RaceSummary` (dashboard analytics) and `NextRaceEvent` (backend session)
  * all structurally satisfy it, so one selector serves all three callers.
@@ -58,20 +85,6 @@ export function resolveNextRace(
   if (!Array.isArray(races) || races.length === 0) return null;
 
   const tk = todayKey(now);
-  const toDay = (r: NextRaceCandidate): Date | null => {
-    if (!r.date) return null;
-    // Two date shapes reach this helper:
-    //   - "YYYY-MM-DD"            (race_analytics / calendar — date only)
-    //   - "YYYY-MM-DDTHH:MM:SSZ"  (next_race_event — full ISO, UTC)
-    // Both must land on the same calendar-day key, so the ISO form is reduced
-    // to its date portion first. Parsing "2026-10-11T20:00:00Z" as a raw Date
-    // yields Oct 12 in UTC+7 and silently shifts the day.
-    const dateStr = r.date;
-    const d = /^\d{4}-\d{2}-\d{2}/.test(dateStr)
-      ? new Date(`${dateStr.slice(0, 10)}T00:00:00`)
-      : new Date(dateStr);
-    return Number.isNaN(d.getTime()) ? null : d;
-  };
 
   const candidates = races.filter((r) => {
     if (isFinished(r)) return false;
@@ -106,13 +119,19 @@ export function resolveNextRace(
   });
 
   const winner = candidates[0];
-  const winnerDay = toDay(winner);
+  const winnerDayCalendar = toDay(winner);
+  const winnerDayTimestamp = toTimestamp(winner);
   // `isOngoing` is only trustworthy when the backend's status field agrees AND
   // the event's day really is today. A stale status on a past date (or a
   // session-level next_race_event with no status) must not read as live.
   return {
     ...winner,
-    isOngoing: winnerDay !== null && dayKey(winnerDay) === tk && isOngoing(winner),
+    isOngoing:
+      winnerDayCalendar !== null &&
+      winnerDayTimestamp !== null &&
+      now.getTime() >= winnerDayTimestamp.getTime() &&
+      dayKey(winnerDayCalendar) === tk &&
+      isOngoing(winner),
   };
 }
 

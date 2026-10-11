@@ -102,7 +102,11 @@ function DashboardPage() {
   const heroRaceName = nextEvent
     ? (nextEvent.name || '').split(' - ')[0] || 'Grand Prix'
     : 'Grand Prix';
-  const targetCountdownDate = nextEvent?.date || null;
+  const targetCountdownDate = nextEvent?.date
+    ? /^\d{4}-\d{2}-\d{2}T/.test(nextEvent.date)
+      ? nextEvent.date
+      : `${nextEvent.date}T12:00:00Z`
+    : null;
   const heroIsLive = nextEvent?.isOngoing ?? false;
   const trackMapImg = getTrackMap(
     upcomingRace ?? (dashboardData?.next_race_event?.name ? { name: dashboardData.next_race_event.name } : null)

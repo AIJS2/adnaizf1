@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 
 interface HeroCountdownProps {
   targetDate: string | Date;
+  /** When true the event is live now, so show a LIVE badge instead of a timer. */
+  isLive?: boolean;
 }
 
 interface TimeLeft {
@@ -13,7 +15,7 @@ interface TimeLeft {
 }
 
 // --- DIGITAL HERO COUNTDOWN COMPONENT ---
-const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate }) => {
+const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, isLive = false }) => {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: false });
 
   useEffect(() => {
@@ -36,7 +38,9 @@ const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate }) => {
     return () => clearInterval(interval);
   }, [targetDate]);
 
-  if (timeLeft.isLive) {
+  // A race that is live now, or one whose start time has already passed, both
+  // render the live badge rather than a countdown of zeros.
+  if (timeLeft.isLive || isLive) {
     return (
       <div className="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/40 text-green-400 font-black px-4 py-2 rounded-xl text-sm animate-pulse font-mono uppercase tracking-wider">
         <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>

@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { getTrackMap } from '../data/trackData';
 import { teamColors } from '../data/teamData';
+import { resolveNextRace } from '../utils/nextRace';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -23,7 +24,10 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 
 // --- MINI COUNTDOWN ---
-const MiniCountdown = ({ targetDate }: { targetDate: Date }) => {
+// Shows a compact d/h/m timer for a future race. When the target is today and
+// the caller marks it ongoing, it renders a "LIVE" badge instead of a
+// meaningless 0h 0m — the race is already on track, not about to start.
+const MiniCountdown = ({ targetDate, isLive = false }: { targetDate: Date; isLive?: boolean }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0 });
 
   useEffect(() => {
@@ -41,6 +45,18 @@ const MiniCountdown = ({ targetDate }: { targetDate: Date }) => {
     const interval = setInterval(() => setTimeLeft(calcTime()), 60000);
     return () => clearInterval(interval);
   }, [targetDate]);
+
+  // Race day, already underway: a countdown to midnight is meaningless.
+  if (isLive) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+        <span className="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
+          LIVE NOW
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1.5">
@@ -127,7 +143,7 @@ const MonthDivider = ({ month, year, raceCount }: { month: string; year: number;
 );
 
 // --- RACE CARD ---
-const RaceCard = ({ race, isNextRace, index }: { race: Race; isNextRace: boolean; index: number }) => {
+const RaceCard = ({ race, isNextRace, nextRaceIsLive = false, index }: { race: Race; isNextRace: boolean; nextRaceIsLive?: boolean; index: number }) => {
   const raceDate = new Date(race.date + 'T00:00:00');
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
@@ -258,8 +274,13 @@ const RaceCard = ({ race, isNextRace, index }: { race: Race; isNextRace: boolean
               )
             ) : isNextRace ? (
               <div className="mt-1">
-                <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">Race Starts In</div>
-                <MiniCountdown targetDate={raceDate} />
+                <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">
+                  {race.status === 'Ongoing' ? 'Race In Progress' : 'Race Starts In'}
+                </div>
+                <MiniCountdown
+                  targetDate={raceDate}
+                  isLive={race.status === 'Ongoing' && nextRaceIsLive}
+                />
               </div>
             ) : (
               <div className="text-neutral-600 text-xs font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
@@ -318,14 +339,18 @@ const RacesPage = () => {
     }
   });
 
-  // Find next upcoming race
-  const nextRace = useMemo(() => {
-    const now = new Date();
-    return races.find((r: Race) => {
-      const d = new Date(r.date + 'T00:00:00');
-      return d >= now && r.status !== 'Finished';
-    }) || races.find((r: Race) => r.status === 'Upcoming') || null;
-  }, [races]);
+  // Find next upcoming race — single source of truth for the "Next Up" hero
+  // banner, the NEXT RACE badge, the countdown, and the scroll target.
+  //
+  // Bug (pre-fix): the old logic compared `r.date + 'T00:00:00'` (local
+  // midnight) against `now`. On race day that is already in the past by
+  // midday, so today's "Ongoing" race was skipped and the hero jumped to next
+  // weekend — showing "UNITED STATES GRAND PRIX" while the Singapore GP was
+  // actually on track.
+  //
+  // Fix: shared day-level selector. A race happening today wins over one next
+  // weekend, and the same object supplies the name, the badge and the timer.
+  const nextRace = useMemo(() => resolveNextRace(races), [races]);
 
   const nextRaceTrackImg = getTrackMap(nextRace);
 
@@ -458,7 +483,10 @@ const RacesPage = () => {
                 </div>
                 
                 <div className="flex items-center gap-4">
-                  <MiniCountdown targetDate={new Date(nextRace.date + 'T00:00:00')} />
+                  <MiniCountdown
+                    targetDate={new Date(nextRace.date + 'T00:00:00')}
+                    isLive={nextRace.isOngoing}
+                  />
                   <Link to={`/race/${CURRENT_YEAR}/${nextRace.round}`}
                     className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-xl border border-red-500 transition-all hover:-translate-y-0.5 shadow-[0_0_15px_rgba(220,38,38,0.4)] whitespace-nowrap">
                     View Details →
@@ -481,6 +509,7 @@ const RacesPage = () => {
                       key={race.round}
                       race={race}
                       isNextRace={nextRace?.round === race.round}
+                      nextRaceIsLive={nextRace?.isOngoing ?? false}
                       index={idx}
                     />
                   ))}

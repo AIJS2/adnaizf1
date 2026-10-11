@@ -16,6 +16,7 @@ import TeamCard, { TeamStanding } from '../components/dashboard/TeamCard';
 import DriverStandingsList from '../components/dashboard/DriverStandingsList';
 import RaceAnalyticsCard from '../components/dashboard/RaceAnalyticsCard';
 import { safeMax, toNumber } from '../utils/data';
+import { resolveNextRaceFromSources } from '../utils/nextRace';
 
 
 
@@ -81,7 +82,28 @@ function DashboardPage() {
   const p1Team = dashboardData?.team_standings?.[0];
   const p2Team = dashboardData?.team_standings?.[1];
 
-  const targetCountdownDate = dashboardData?.next_race_event?.date || (upcomingRace ? `${upcomingRace.date}T13:00:00Z` : null);
+  // The "next race" hero section needs a SINGLE source of truth. Previously
+  // the event name came from the first `Upcoming` entry in race_analytics,
+  // while the countdown target came from next_race_event.date — two fields
+  // that can legitimately disagree (e.g. on race day, next_race_event points
+  // to today's ongoing race while race_analytics already lists the next
+  // weekend). That desync made the name and timer disagree. Both now resolve
+  // through one shared day-level selector, so a race happening today wins and
+  // the name and timer always describe the same event.
+  const nextEvent = resolveNextRaceFromSources(
+    dashboardData?.race_analytics,
+    dashboardData?.next_race_event,
+  );
+
+  // next_race_event.name carries a " - Session" suffix ("Singapore Grand Prix - Race");
+  // the hero heading shows the race name only, while the session detail is
+  // rendered separately below. Stripping it here keeps the hero consistent
+  // regardless of which source won.
+  const heroRaceName = nextEvent
+    ? (nextEvent.name || '').split(' - ')[0] || 'Grand Prix'
+    : 'Grand Prix';
+  const targetCountdownDate = nextEvent?.date || null;
+  const heroIsLive = nextEvent?.isOngoing ?? false;
   const trackMapImg = getTrackMap(
     upcomingRace ?? (dashboardData?.next_race_event?.name ? { name: dashboardData.next_race_event.name } : null)
   );
@@ -175,17 +197,17 @@ function DashboardPage() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="bg-red-600/20 text-red-500 border border-red-500/30 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5">
                   <Zap size={12} className="fill-red-500" />
-                  Next Grand Prix Hub &bull; {upcomingRace ? `Round ${upcomingRace.round}` : 'Upcoming'}
+                  Next Grand Prix Hub &bull; {nextEvent?.round ? `Round ${nextEvent.round}` : 'Upcoming'}
                 </span>
-                {upcomingRace?.location && (
+                {nextEvent?.location && (
                   <span className="text-neutral-400 text-xs font-semibold flex items-center gap-1">
-                    <MapPin size={12} /> {upcomingRace.location}
+                    <MapPin size={12} /> {nextEvent.location}
                   </span>
                 )}
               </div>
 
               <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white uppercase italic">
-                {upcomingRace?.name || dashboardData?.next_race_event?.name || 'Grand Prix'}
+                {heroRaceName}
               </h1>
 
               <p className="text-neutral-400 text-sm sm:text-base mt-2 mb-6">
@@ -199,14 +221,14 @@ function DashboardPage() {
               {/* Countdown Timer */}
               {targetCountdownDate && (
                 <div className="mb-6">
-                  <HeroCountdown targetDate={targetCountdownDate} />
+                  <HeroCountdown targetDate={targetCountdownDate} isLive={heroIsLive} />
                 </div>
               )}
 
               {/* Quick CTAs */}
               <div className="flex flex-wrap items-center gap-3">
                 <Link 
-                  to={upcomingRace ? `/race/${dashboardData?.year}/${upcomingRace.round}` : `/races`}
+                  to={nextEvent?.round ? `/race/${dashboardData?.year}/${nextEvent.round}` : `/races`}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-600/20 hover:-translate-y-0.5"
                 >
                   <Flag size={16} /> View Race Details

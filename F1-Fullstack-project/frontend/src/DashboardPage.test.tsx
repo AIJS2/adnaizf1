@@ -136,3 +136,107 @@ describe('DashboardPage with the backend error envelope', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression: the "Next Grand Prix" hero section must show ONE event, with the
+// name and the countdown target derived from the same event.
+//
+// Bug: on race day the backend's `next_race_event` pointed at the race
+// happening today, while `race_analytics` already listed the next weekend as
+// "Upcoming". The page rendered the next weekend's NAME but counted down to
+// today's race — e.g. "UNITED STATES GRAND PRIX" with a 10-hour timer for the
+// Singapore GP.
+// ---------------------------------------------------------------------------
+describe('DashboardPage next-race name/countdown sync', () => {
+  const original = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = original;
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Anchored to "now" so the test is not date-sensitive.
+   * The Singapore GP is ongoing today, so the backend's `next_race_event`
+   * resolves to today's Singapore race, while `race_analytics` already marks
+   * the US GP (next weekend) as "Upcoming".
+   */
+  const now = new Date();
+  const TODAY = now.toISOString().slice(0, 10);
+  const NEXT_WEEKEND = new Date(now.getTime() + 14 * 864e5).toISOString().slice(0, 10);
+  const TODAY_T20 = `${TODAY}T20:00:00Z`;
+
+  const RACE_DAY = {
+    year: 2025,
+    total_races: 24,
+    last_race_name: 'Japanese Grand Prix',
+    driver_standings: [{ name: 'Lando Norris', team: 'McLaren', points: '300' }],
+    team_standings: [{ name: 'McLaren', points: '500' }],
+    race_analytics: [
+      { round: 17, name: 'Singapore Grand Prix', date: TODAY, location: 'Singapore', status: 'Ongoing', winner: null },
+      { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, location: 'Austin', status: 'Upcoming', winner: null },
+    ],
+    // Backend _find_next_session: first session starting after now -> today's race.
+    next_race_event: { name: 'Singapore Grand Prix - Race', date: TODAY_T20 },
+  };
+
+  it('shows the same event in the heading and the countdown target', async () => {
+    globalThis.fetch = mockFetchOnce(RACE_DAY);
+
+    renderDashboard();
+
+    // The hero heading must name the SAME event the timer is counting to.
+    // Before the fix this rendered the US GP name (next weekend) while
+    // counting down to today's Singapore race.
+    await waitFor(() => {
+      const heroH1 = Array.from(document.querySelectorAll('h1'))
+        .some((h) => h.textContent === 'Singapore Grand Prix');
+      expect(heroH1).toBe(true);
+    });
+
+    // The next weekend's race must NOT be the hero heading on race day.
+    const heroIsUS = Array.from(document.querySelectorAll('h1'))
+      .some((h) => h.textContent === 'United States Grand Prix');
+    expect(heroIsUS).toBe(false);
+
+    // The countdown must show the LIVE badge (today's race is on track), not a
+    // day count. A "00DAYS" tile would mean the timer had desynced to next
+    // weekend while the name still said Singapore.
+    expect(screen.queryByText(/SESSION IS LIVE ON TRACK/i)).toBeInTheDocument();
+    const daysTile = Array.from(document.querySelectorAll('div'))
+      .find((d) => d.textContent === '00DAYS');
+    expect(daysTile).toBeUndefined();
+  });
+
+  it('counts down to the US GP once Singapore has finished', async () => {
+    const afterSingapore = {
+      ...RACE_DAY,
+      race_analytics: [
+        { round: 17, name: 'Singapore Grand Prix', date: TODAY, location: 'Singapore', status: 'Finished', winner: 'Lando Norris' },
+        { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, location: 'Austin', status: 'Upcoming', winner: null },
+      ],
+      next_race_event: { name: 'United States Grand Prix - Practice 1', date: `${NEXT_WEEKEND}T17:30:00Z` },
+    };
+    globalThis.fetch = mockFetchOnce(afterSingapore);
+
+    renderDashboard();
+
+    await waitFor(() => {
+      // The race name appears in several places (hero, calendar, "Next:"),
+      // so assert on the hero heading specifically via its h1 element.
+      const heroH1 = Array.from(document.querySelectorAll('h1'))
+        .some((h) => h.textContent === 'United States Grand Prix');
+      expect(heroH1).toBe(true);
+    });
+
+    // Singapore's race is over, so it must not be the hero heading any more.
+    const heroIsSingapore = Array.from(document.querySelectorAll('h1'))
+      .some((h) => h.textContent === 'Singapore Grand Prix');
+    expect(heroIsSingapore).toBe(false);
+
+    // The timer is now two weeks out, so the days tile must NOT read 00.
+    const daysTile = Array.from(document.querySelectorAll('div'))
+      .find((d) => d.textContent === '00DAYS');
+    expect(daysTile).toBeUndefined();
+  });
+});

@@ -14,12 +14,6 @@
         errDiv.innerHTML = '<h2>Global Error Caught</h2>' + e.message + '<br/><br/>' + (e.error && e.error.stack ? e.error.stack : '');
         document.body.appendChild(errDiv);
       });
-      window.addEventListener('unhandledrejection', function(e) {
-        var errDiv = document.createElement('div');
-        errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:darkred;color:white;z-index:99999;padding:20px;font-family:monospace;white-space:pre-wrap;';
-        errDiv.innerHTML = '<h2>Unhandled Promise Rejection</h2>' + e.reason;
-        document.body.appendChild(errDiv);
-      });
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

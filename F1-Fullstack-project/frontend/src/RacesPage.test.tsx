@@ -123,5 +123,12 @@ describe('RacesPage "Next Up" hero banner', () => {
     });
     // Miami also appears in the calendar card below the banner.
     expect(screen.getAllByText('Miami Grand Prix').length).toBeGreaterThan(0);
+
+    // A race that has not started yet must still show a live countdown, not a
+    // LIVE badge and not nothing at all.
+    expect(screen.queryByText(/LIVE NOW/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/^\d+d$/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^\d+h$/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^\d+m$/).length).toBeGreaterThan(0);
   });
 });

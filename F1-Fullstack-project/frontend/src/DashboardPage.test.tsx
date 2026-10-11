@@ -234,6 +234,14 @@ describe('DashboardPage next-race name/countdown sync', () => {
       .some((h) => h.textContent === 'Singapore Grand Prix');
     expect(heroIsSingapore).toBe(false);
 
+    // A race that has not started yet must still show the day/hour/min/sec
+    // countdown — the LIVE badge is only for races happening right now.
+    expect(screen.queryByText(/SESSION IS LIVE ON TRACK/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText('DAYS').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('HRS').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('MIN').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('SEC').length).toBeGreaterThan(0);
+
     // The timer is now two weeks out, so the days tile must NOT read 00.
     const daysTile = Array.from(document.querySelectorAll('div'))
       .find((d) => d.textContent === '00DAYS');

@@ -44,18 +44,33 @@ _state = LiveTimingState()
 _connected_clients: set[WebSocket] = set()
 _signalr_thread: threading.Thread | None = None
 _signalr_running = False
+_signalr_connection: Any = None
 _broadcast_task: asyncio.Task | None = None
+_init_lock = asyncio.Lock()
 
-# ======================================================================
-#  Schedule check  – is there a live session right now?
-# ======================================================================
+# Schedule cache: (year, timestamp, schedule_dataframe)
+_schedule_cache: tuple[int, float, pd.DataFrame] | None = None
+_SCHEDULE_CACHE_TTL = 3600.0  # 1 hour
+
+
+def _get_cached_schedule(year: int) -> pd.DataFrame:
+    global _schedule_cache
+    now = time.monotonic()
+    if _schedule_cache is not None:
+        c_year, c_time, c_df = _schedule_cache
+        if c_year == year and (now - c_time) < _SCHEDULE_CACHE_TTL:
+            return c_df
+    df = fastf1.get_event_schedule(year, include_testing=False)
+    _schedule_cache = (year, now, df)
+    return df
+
 
 def _check_live_session() -> bool:
     """Return True when an F1 session is currently in progress."""
     try:
         now_utc = pd.to_datetime("now", utc=True)
         year = now_utc.year
-        schedule = fastf1.get_event_schedule(year, include_testing=False)
+        schedule = _get_cached_schedule(year)
 
         for _, event in schedule.iterrows():
             for i in range(1, 6):
@@ -88,89 +103,114 @@ _TOPICS = [
 
 def _start_signalr() -> None:
     """
-    Blocking function that connects to the F1 SignalR server.
-    Intended to be run inside ``threading.Thread``.
+    Worker function running in a dedicated daemon thread.
+    Maintains a persistent connection to F1 SignalR with auto-reconnect backoff
+    as long as `_signalr_running` is True.
     """
-    global _signalr_running
+    global _signalr_running, _signalr_connection
 
-    headers: dict[str, str] = {}
-    try:
-        r = requests.options(_NEGOTIATE_URL, headers=headers, timeout=10)
-        if "AWSALBCORS" in r.cookies:
-            headers["Cookie"] = f"AWSALBCORS={r.cookies['AWSALBCORS']}"
-    except Exception as e:
-        logger.warning(f"SignalR negotiate failed: {e}")
-
-    try:
-        from fastf1.internals.f1auth import get_auth_token
-        token_factory = get_auth_token
-    except ImportError:
-        token_factory = None
-
-    options = {
-        "verify_ssl": True,
-        "access_token_factory": token_factory,
-        "headers": headers,
-    }
-
-    connection = (
-        HubConnectionBuilder()
-        .with_url(_CONNECTION_URL, options=options)
-        .configure_logging(logging.WARNING)
-        .build()
-    )
-
-    is_connected = False
-
-    def on_open():
-        nonlocal is_connected
-        is_connected = True
-        logger.info("✅ Connected to F1 Live Timing SignalR")
-        connection.send("Subscribe", [_TOPICS])
-
-    def on_close():
-        nonlocal is_connected
-        is_connected = False
-        logger.info("❌ Disconnected from F1 Live Timing")
-
-    def on_message(msg: list | CompletionMessage) -> None:
-        """Called from the signalrcore receive-thread."""
-        if isinstance(msg, CompletionMessage) and msg.result:
-            for topic, payload in msg.result.items():
-                _state.update(topic, payload)
-        elif isinstance(msg, list) and len(msg) >= 2:
-            topic = msg[0] if isinstance(msg[0], str) else ""
-            payload = msg[1] if len(msg) > 1 else {}
-            _state.update(topic, payload)
-
-    connection.on_open(on_open)
-    connection.on_close(on_close)
-    connection.on("feed", on_message)
-
-    try:
-        connection.start()
-        _signalr_running = True
-
-        # Block until the main app shuts down or connection drops
-        while _signalr_running and is_connected:
-            time.sleep(1)
-    except Exception as e:
-        logger.error(f"SignalR thread error: {e}")
-    finally:
-        _signalr_running = False
+    backoff = 2.0
+    while _signalr_running:
+        headers: dict[str, str] = {}
         try:
-            connection.stop()
-        except Exception:
-            pass
+            r = requests.options(_NEGOTIATE_URL, headers=headers, timeout=10)
+            if "AWSALBCORS" in r.cookies:
+                headers["Cookie"] = f"AWSALBCORS={r.cookies['AWSALBCORS']}"
+        except Exception as e:
+            logger.warning(f"SignalR negotiate failed: {e}")
+
+        try:
+            from fastf1.internals.f1auth import get_auth_token
+            token_factory = get_auth_token
+        except ImportError:
+            token_factory = None
+
+        options = {
+            "verify_ssl": True,
+            "access_token_factory": token_factory,
+            "headers": headers,
+        }
+
+        connection = (
+            HubConnectionBuilder()
+            .with_url(_CONNECTION_URL, options=options)
+            .configure_logging(logging.WARNING)
+            .build()
+        )
+        _signalr_connection = connection
+
+        is_connected = False
+
+        def on_open():
+            nonlocal is_connected, backoff
+            is_connected = True
+            backoff = 2.0  # reset backoff on successful connect
+            logger.info("✅ Connected to F1 Live Timing SignalR")
+            try:
+                connection.send("Subscribe", [_TOPICS])
+            except Exception as e:
+                logger.warning(f"Error subscribing to topics: {e}")
+
+        def on_close():
+            nonlocal is_connected
+            is_connected = False
+            logger.info("❌ Disconnected from F1 Live Timing")
+
+        def on_message(msg: list | CompletionMessage) -> None:
+            """Called from the signalrcore receive-thread."""
+            if isinstance(msg, CompletionMessage) and msg.result:
+                for topic, payload in msg.result.items():
+                    _state.update(topic, payload)
+            elif isinstance(msg, list) and len(msg) >= 2:
+                topic = msg[0] if isinstance(msg[0], str) else ""
+                payload = msg[1] if len(msg) > 1 else {}
+                _state.update(topic, payload)
+
+        connection.on_open(on_open)
+        connection.on_close(on_close)
+        connection.on("feed", on_message)
+
+        try:
+            connection.start()
+            # Wait while connected and signalr remains requested
+            while _signalr_running and is_connected:
+                time.sleep(1)
+        except Exception as e:
+            logger.error(f"SignalR connection error: {e}")
+        finally:
+            try:
+                connection.stop()
+            except Exception:
+                pass
+            _signalr_connection = None
+
+        if _signalr_running:
+            logger.info(f"SignalR reconnecting in {backoff:.1f}s...")
+            time.sleep(backoff)
+            backoff = min(backoff * 1.5, 30.0)
 
 
 def _ensure_signalr() -> None:
     """Start the SignalR thread if it isn't running yet."""
-    global _signalr_thread
+    global _signalr_thread, _signalr_running
+    _signalr_running = True
     if _signalr_thread is not None and _signalr_thread.is_alive():
         return
     _signalr_thread = threading.Thread(target=_start_signalr, daemon=True)
     _signalr_thread.start()
+
+
+def _stop_signalr() -> None:
+    """Stop the SignalR worker and tear down active connection when all clients leave."""
+    global _signalr_running, _signalr_connection
+    _signalr_running = False
+    if _signalr_connection is not None:
+        try:
+            _signalr_connection.stop()
+        except Exception:
+            pass
+        _signalr_connection = None
+    logger.info("SignalR worker stopped (no active clients)")
 
 
 # ======================================================================
@@ -252,13 +292,19 @@ async def _broadcast_loop(initial_is_live: bool) -> None:
             payload = _empty_snapshot()
 
         msg_bytes = json.dumps(payload)
-        disconnected: set[WebSocket] = set()
-        for ws in list(_connected_clients):
-            try:
-                await ws.send_text(msg_bytes)
-            except Exception:
-                disconnected.add(ws)
-        _connected_clients.difference_update(disconnected)
+        clients = list(_connected_clients)
+        if clients:
+            results = await asyncio.gather(
+                *[ws.send_text(msg_bytes) for ws in clients],
+                return_exceptions=True
+            )
+            disconnected = {ws for ws, res in zip(clients, results) if isinstance(res, Exception)}
+            if disconnected:
+                _connected_clients.difference_update(disconnected)
+
+        if not _connected_clients:
+            _stop_signalr()
+            break
 
         await asyncio.sleep(2.0)
 
@@ -274,32 +320,37 @@ async def websocket_livetiming(websocket: WebSocket) -> None:
     await websocket.accept()
     _connected_clients.add(websocket)
 
-    # On first client, decide mode and start broadcast loop
-    if _broadcast_task is None or _broadcast_task.done():
-        is_live = await asyncio.to_thread(_check_live_session)
+    # On first client, decide mode and start broadcast loop under lock
+    async with _init_lock:
+        if _broadcast_task is None or _broadcast_task.done():
+            is_live = await asyncio.to_thread(_check_live_session)
 
-        if is_live:
-            _state.is_live = True
-            await asyncio.to_thread(_ensure_signalr)
-            # Give SignalR up to 8 seconds to receive initial driver data
-            for _ in range(16):
-                await asyncio.sleep(0.5)
-                if _state.timing_data:
-                    break
+            if is_live:
+                _state.is_live = True
+                await asyncio.to_thread(_ensure_signalr)
+                # Give SignalR up to 8 seconds to receive initial driver data
+                for _ in range(16):
+                    await asyncio.sleep(0.5)
+                    if _state.timing_data:
+                        break
 
-            # Fallback: schedule says live but no data arrived → report no session
-            if not _state.timing_data:
-                logger.info("Schedule indicates live session but no SignalR data received – reporting no session")
-                is_live = False
-                _state.is_live = False
+                # Fallback: schedule says live but no data arrived → report no session
+                if not _state.timing_data:
+                    logger.info("Schedule indicates live session but no SignalR data received – reporting no session")
+                    is_live = False
+                    _state.is_live = False
 
-        _broadcast_task = asyncio.create_task(_broadcast_loop(is_live))
+            _broadcast_task = asyncio.create_task(_broadcast_loop(is_live))
 
     try:
         while True:
             # Keep alive – listen for client pings / disconnect
             await websocket.receive_text()
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
         _connected_clients.discard(websocket)
         logger.info("Client disconnected from Live Timing")
+        if not _connected_clients:
+            _stop_signalr()
 

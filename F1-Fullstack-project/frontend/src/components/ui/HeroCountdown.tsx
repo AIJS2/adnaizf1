@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface HeroCountdownProps {
   targetDate: string | Date;
@@ -7,7 +7,7 @@ interface HeroCountdownProps {
    *  - 'future'   — a later race day (plain countdown).
    *  - 'race_day' — today, but the start time has NOT yet arrived: keep the
    *                 countdown and let the caller add a RACE DAY badge. Never
-   *                 show LIVE here.
+   *                 show LIVE before start time.
    *  - 'live'     — race underway: show the LIVE badge, hide the countdown.
    */
   phase?: 'future' | 'race_day' | 'live';
@@ -25,9 +25,17 @@ interface TimeLeft {
 const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, phase = 'future' }) => {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: false });
 
+  const targetTimestamp = useMemo(() => {
+    if (!targetDate) return 0;
+    const t = typeof targetDate === 'string' ? new Date(targetDate).getTime() : targetDate.getTime();
+    return isNaN(t) ? 0 : t;
+  }, [targetDate]);
+
   useEffect(() => {
+    if (!targetTimestamp) return;
+
     const calc = () => {
-      const diff = new Date(targetDate).getTime() - new Date().getTime();
+      const diff = targetTimestamp - Date.now();
       if (diff <= 0) {
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: true });
         return;
@@ -43,12 +51,11 @@ const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, phase = 'futu
     calc();
     const interval = setInterval(calc, 1000);
     return () => clearInterval(interval);
-  }, [targetDate]);
+  }, [targetTimestamp]);
 
-  // LIVE only in the resolved 'live' phase, or when the timer itself has
-  // counted down past the start. In the 'race_day' phase we deliberately
-  // keep counting down even if it reaches zero, so the badge stays honest.
-  if (phase === 'live' || (phase === 'future' && timeLeft.isLive)) {
+  // LIVE in the resolved 'live' phase, or dynamically when the timer has counted
+  // down past lights out (even if the initial page phase was 'race_day' or 'future').
+  if (phase === 'live' || timeLeft.isLive) {
     return (
       <div className="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/40 text-green-400 font-black px-4 py-2 rounded-xl text-sm animate-pulse font-mono uppercase tracking-wider">
         <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>

@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+import threading
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,19 @@ TYRE_COMPOUND_MAP: dict[int, str] = {
 }
 
 
+def parse_compound(comp: Any) -> str:
+    """Normalize numeric or string tyre compound to standard single-letter code."""
+    if comp is None:
+        return "M"
+    if isinstance(comp, int):
+        return TYRE_COMPOUND_MAP.get(comp, "M")
+    if isinstance(comp, str) and comp:
+        if comp.isdigit():
+            return TYRE_COMPOUND_MAP.get(int(comp), "M")
+        return comp[0].upper()
+    return "M"
+
+
 class LiveTimingState:
     """
     Accumulates incremental SignalR updates and produces a full snapshot
@@ -39,6 +53,7 @@ class LiveTimingState:
     """
 
     def __init__(self) -> None:
+        self._lock = threading.Lock()
         self.driver_list: dict[str, dict] = {}     # keyed by racing number str
         self.timing_data: dict[str, dict] = {}      # keyed by racing number str
         self.timing_stats: dict[str, dict] = {}
@@ -59,7 +74,7 @@ class LiveTimingState:
     # ------------------------------------------------------------------
 
     def update(self, topic: str, payload: Any) -> None:
-        """Route an incoming SignalR topic+payload to the right handler."""
+        """Route an incoming SignalR topic+payload to the right handler under lock."""
         handler = {
             "TimingData": self._handle_timing_data,
             "TimingStats": self._handle_timing_stats,
@@ -75,7 +90,8 @@ class LiveTimingState:
 
         if handler:
             try:
-                handler(payload)
+                with self._lock:
+                    handler(payload)
             except Exception:
                 logger.exception(f"Error handling topic {topic}")
 
@@ -159,7 +175,7 @@ class LiveTimingState:
             if isinstance(msgs, dict):
                 new_entries: list[tuple[str, dict]] = []
                 for _, m in msgs.items():
-                    utc = m.get("Utc") or datetime.utcnow().strftime("%H:%M:%S")
+                    utc = m.get("Utc") or datetime.now(timezone.utc).strftime("%H:%M:%S")
                     text = m.get("Message", "")
                     entry = {
                         "time": utc,
@@ -206,106 +222,108 @@ class LiveTimingState:
         """
         Build a full TimingData payload matching the frontend contract:
         {type, is_live_session, lines[], trackStatus, weather{}, messages[]}
+        Thread-safe under self._lock.
         """
-        lines: list[dict] = []
+        with self._lock:
+            lines: list[dict] = []
+            driver_keys = list(self.timing_data.keys())
 
-        for num in self.timing_data:
-            td = self.timing_data.get(num, {})
-            dl = self.driver_list.get(num, {})
-            ts = self.timing_stats.get(num, {})
-            ta = self.timing_app_data.get(num, {})
+            for num in driver_keys:
+                td = self.timing_data.get(num, {})
+                dl = self.driver_list.get(num, {})
+                ts = self.timing_stats.get(num, {})
+                ta = self.timing_app_data.get(num, {})
 
-            abbr = dl.get("Tla", dl.get("RacingNumber", num))
-            team = dl.get("TeamName", TEAM_LOOKUP.get(num, "Unknown"))
+                abbr = dl.get("Tla", dl.get("RacingNumber", num))
+                team = dl.get("TeamName", TEAM_LOOKUP.get(num, "Unknown"))
 
-            # Sectors
-            sectors = td.get("Sectors", {})
-            s0 = sectors.get("0", {})
-            s1 = sectors.get("1", {})
-            s2 = sectors.get("2", {})
+                # Sectors
+                sectors = td.get("Sectors", {})
+                s0 = sectors.get("0", {}) if isinstance(sectors, dict) else {}
+                s1 = sectors.get("1", {}) if isinstance(sectors, dict) else {}
+                s2 = sectors.get("2", {}) if isinstance(sectors, dict) else {}
 
-            # Best lap from TimingStats
-            best_lap_time = ts.get("PersonalBestLapTime", {})
+                # Best lap from TimingStats
+                best_lap_time = ts.get("PersonalBestLapTime", {})
 
-            # Current stint / tyre from TimingAppData
-            stints_raw = ta.get("Stints", {})
-            current_compound = "M"
-            tyre_age = 0
-            pits = 0
-            stints_list = []
-            if isinstance(stints_raw, dict):
-                sorted_stints = sorted(stints_raw.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0)
-                pits = max(0, len(sorted_stints) - 1)
-                for _, stint in sorted_stints:
-                    comp = stint.get("Compound", "M")
-                    if comp:
-                        current_compound = comp[0].upper() if len(comp) > 0 else "M"
-                    total_laps = stint.get("TotalLaps", 0)
-                    tyre_age = total_laps
-                    stints_list.append({"tyre": current_compound, "laps": total_laps})
+                # Current stint / tyre from TimingAppData
+                stints_raw = ta.get("Stints", {})
+                current_compound = "M"
+                tyre_age = 0
+                pits = 0
+                stints_list = []
+                if isinstance(stints_raw, dict):
+                    sorted_stints = sorted(stints_raw.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0)
+                    pits = max(0, len(sorted_stints) - 1)
+                    for _, stint in sorted_stints:
+                        comp_raw = stint.get("Compound")
+                        current_compound = parse_compound(comp_raw)
+                        total_laps = stint.get("TotalLaps", 0)
+                        tyre_age = total_laps
+                        stints_list.append({"tyre": current_compound, "laps": total_laps})
 
-            # Position
-            position = td.get("Position", td.get("Line", 0))
+                # Position
+                position = td.get("Position", td.get("Line", 0))
 
-            # Status
-            in_pit = td.get("InPit", False)
-            pit_out = td.get("PitOut", False)
-            status = "PIT" if in_pit else ("OUT" if pit_out else "TRACK")
+                # Status
+                in_pit = td.get("InPit", False)
+                pit_out = td.get("PitOut", False)
+                status = "PIT" if in_pit else ("OUT" if pit_out else "TRACK")
 
-            # Gap & Interval
-            gap_to_leader = td.get("GapToLeader", "")
-            interval = td.get("IntervalToPositionAhead", {})
-            interval_val = interval.get("Value", "") if isinstance(interval, dict) else str(interval)
+                # Gap & Interval
+                gap_to_leader = td.get("GapToLeader", "")
+                interval = td.get("IntervalToPositionAhead", {})
+                interval_val = interval.get("Value", "") if isinstance(interval, dict) else str(interval)
 
-            # Last lap time
-            last_lap = td.get("LastLapTime", {})
-            last_lap_value = last_lap.get("Value", "") if isinstance(last_lap, dict) else str(last_lap)
+                # Last lap time
+                last_lap = td.get("LastLapTime", {})
+                last_lap_value = last_lap.get("Value", "") if isinstance(last_lap, dict) else str(last_lap)
 
-            lines.append({
-                "driver": abbr,
-                "team": team,
-                "position": int(position) if str(position).isdigit() else 99,
-                "gap": gap_to_leader if gap_to_leader else "LEADER",
-                "interval": interval_val if interval_val else "-",
-                "lastLap": last_lap_value or "-",
-                "lap_time_num": 0,
-                "bestLapNum": 0,
-                "sector1": s0.get("Value", "-"),
-                "sector2": s1.get("Value", "-"),
-                "sector3": s2.get("Value", "-"),
-                "s1_num": 0, "s2_num": 0, "s3_num": 0,
-                "s1_color": self._segment_color(s0),
-                "s2_color": self._segment_color(s1),
-                "s3_color": self._segment_color(s2),
-                "lap_color": self._segment_color(last_lap if isinstance(last_lap, dict) else {}),
-                "tyre": current_compound,
-                "tyre_age": tyre_age,
-                "pits": pits,
-                "status": status,
-                "progress": 0,
-                "stints": stints_list,
-            })
+                lines.append({
+                    "driver": abbr,
+                    "team": team,
+                    "position": int(position) if str(position).isdigit() else 99,
+                    "gap": gap_to_leader if gap_to_leader else "LEADER",
+                    "interval": interval_val if interval_val else "-",
+                    "lastLap": last_lap_value or "-",
+                    "lap_time_num": 0,
+                    "bestLapNum": 0,
+                    "sector1": s0.get("Value", "-") if isinstance(s0, dict) else "-",
+                    "sector2": s1.get("Value", "-") if isinstance(s1, dict) else "-",
+                    "sector3": s2.get("Value", "-") if isinstance(s2, dict) else "-",
+                    "s1_num": 0, "s2_num": 0, "s3_num": 0,
+                    "s1_color": self._segment_color(s0),
+                    "s2_color": self._segment_color(s1),
+                    "s3_color": self._segment_color(s2),
+                    "lap_color": self._segment_color(last_lap if isinstance(last_lap, dict) else {}),
+                    "tyre": current_compound,
+                    "tyre_age": tyre_age,
+                    "pits": pits,
+                    "status": status,
+                    "progress": 0,
+                    "stints": stints_list,
+                })
 
-        # Sort by position
-        lines.sort(key=lambda x: x["position"])
+            # Sort by position
+            lines.sort(key=lambda x: x["position"])
 
-        # Weather
-        wd = self.weather_data
-        weather = {
-            "air": f"{wd.get('AirTemp', '--')}°C",
-            "track": f"{wd.get('TrackTemp', '--')}°C",
-            "humidity": f"{wd.get('Humidity', '--')}%",
-            "rain": f"{wd.get('Rainfall', '0')}%",
-        }
+            # Weather
+            wd = self.weather_data
+            weather = {
+                "air": f"{wd.get('AirTemp', '--')}°C",
+                "track": f"{wd.get('TrackTemp', '--')}°C",
+                "humidity": f"{wd.get('Humidity', '--')}%",
+                "rain": f"{wd.get('Rainfall', '0')}%",
+            }
 
-        return {
-            "type": "TimingData",
-            "is_live_session": self.is_live,
-            "lines": lines,
-            "trackStatus": self.track_status,
-            "weather": weather,
-            "messages": self.race_control_messages[:20],
-        }
+            return {
+                "type": "TimingData",
+                "is_live_session": self.is_live,
+                "lines": lines,
+                "trackStatus": self.track_status,
+                "weather": weather,
+                "messages": list(self.race_control_messages[:20]),
+            }
 
     @staticmethod
     def _segment_color(segment: dict) -> str:

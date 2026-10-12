@@ -23,6 +23,15 @@ const countryCodeMapping: Record<string, string> = {
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 
+function parseRaceDate(dateStr?: string | null): Date {
+  if (!dateStr) return new Date();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return new Date(`${dateStr}T00:00:00`);
+  }
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
 // --- MINI COUNTDOWN ---
 // Shows a compact d/h/m timer for a future race. Three lifecycle states:
 //  - 'future'   -> plain countdown.
@@ -167,7 +176,7 @@ const MonthDivider = ({ month, year, raceCount }: { month: string; year: number;
 
 // --- RACE CARD ---
 const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race: Race; isNextRace: boolean; nextRacePhase?: 'future' | 'race_day' | 'live'; index: number }) => {
-  const raceDate = new Date(countdownTarget(race.date) ?? race.date + 'T00:00:00');
+  const raceDate = parseRaceDate(countdownTarget(race.date) ?? race.date);
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
   const flagCode = race.country ? countryCodeMapping[race.country.trim()] : undefined;
@@ -404,7 +413,7 @@ const RacesPage = () => {
     const groups: { key: string; month: string; year: number; races: Race[] }[] = [];
     let currentMonth: string | null = null;
     filteredRaces.forEach((race: Race) => {
-      const d = new Date(race.date + 'T00:00:00');
+      const d = parseRaceDate(race.date);
       const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
       if (monthKey !== currentMonth) {
         currentMonth = monthKey;

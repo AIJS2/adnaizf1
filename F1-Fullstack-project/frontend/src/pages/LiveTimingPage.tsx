@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Zap } from 'lucide-react';
 import { API_URL } from '../config';
 import TyreStrategy from '../components/ui/TyreStrategy';
@@ -111,6 +111,60 @@ const SectorTime: React.FC<{ time: string, color: string }> = ({ time, color }) 
   return <span className={`font-mono font-bold ${colorClass} ${glowClass}`}>{time}</span>;
 };
 
+interface TimingRowProps {
+  row: LiveTimingLine;
+}
+
+const TimingRow = memo<TimingRowProps>(({ row }) => {
+  const teamColor = teamColors[row.team] || '#fff';
+  const isIntervalClose = Boolean(
+    row.interval && !isNaN(parseFloat(row.interval)) && parseFloat(row.interval) < 1.0
+  );
+
+  return (
+    <tr className="hover:bg-[#111] transition-colors group relative">
+      <td className="p-2.5 text-center font-black text-neutral-500 border-r border-[#151515]">{row.position}</td>
+      
+      <td className="p-2.5 font-black text-white text-[14px] border-r border-[#151515] flex items-center gap-2">
+        <div className="w-1 h-5 rounded-sm shadow-sm" style={{ backgroundColor: teamColor }}></div>
+        {row.driver}
+        {row.status === 'PIT' && (
+          <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[9px] rounded-sm animate-pulse uppercase tracking-wider">
+            IN PIT
+          </span>
+        )}
+        {row.status !== 'PIT' && isIntervalClose && (
+          <span
+            className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[9px] rounded-sm uppercase tracking-wider drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]"
+            title="Manual Override Available"
+          >
+            OVR
+          </span>
+        )}
+      </td>
+      <td className="p-2.5 border-r border-[#151515]">
+        <TyreIcon compound={row.tyre} age={row.tyre_age} />
+      </td>
+      <td className="p-2.5 text-right text-neutral-300 font-mono border-r border-[#151515]">{row.gap}</td>
+      <td className="p-2.5 text-right text-neutral-400 font-mono border-r border-[#151515]">{row.interval}</td>
+      <td className="p-2.5 text-right border-r border-[#151515] bg-[#0c0c0c] group-hover:bg-[#151515] transition-colors shadow-inner">
+        <SectorTime time={row.lastLap} color={row.lap_color} />
+      </td>
+      <td className="p-2.5 text-center border-r border-[#151515]">
+        <SectorTime time={row.sector1} color={row.s1_color} />
+      </td>
+      <td className="p-2.5 text-center border-r border-[#151515]">
+        <SectorTime time={row.sector2} color={row.s2_color} />
+      </td>
+      <td className="p-2.5 text-center border-r border-[#151515]">
+        <SectorTime time={row.sector3} color={row.s3_color} />
+      </td>
+      <td className="p-2.5 text-center text-neutral-600 font-mono font-bold">{row.pits}</td>
+    </tr>
+  );
+});
+TimingRow.displayName = 'TimingRow';
+
 const LiveTimingPage: React.FC = () => {
   const mockMode = isMockRequested();
   const [data, setData] = useState<LiveTimingData>(
@@ -159,15 +213,19 @@ const LiveTimingPage: React.FC = () => {
       };
       
       ws.onmessage = (event: MessageEvent) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'TimingData') {
-          setData(prev => ({
-            lines: msg.lines || prev.lines,
-            trackStatus: msg.trackStatus || prev.trackStatus,
-            weather: msg.weather || prev.weather,
-            messages: msg.messages || prev.messages,
-            isLiveSession: msg.is_live_session
-          }));
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg && msg.type === 'TimingData') {
+            setData(prev => ({
+              lines: msg.lines ?? prev.lines,
+              trackStatus: msg.trackStatus ?? prev.trackStatus,
+              weather: msg.weather ?? prev.weather,
+              messages: msg.messages ?? prev.messages,
+              isLiveSession: msg.is_live_session ?? prev.isLiveSession
+            }));
+          }
+        } catch (err) {
+          console.error('Failed to parse Live Timing WebSocket payload:', err);
         }
       };
       
@@ -190,7 +248,24 @@ const LiveTimingPage: React.FC = () => {
         ws.close();
       }
     };
-  }, []);
+  }, [mockMode]);
+
+  // Dev preview animation: smoothly circulate mock cars along the track
+  useEffect(() => {
+    if (!mockMode) return;
+    const interval = setInterval(() => {
+      setData(prev => ({
+        ...prev,
+        lines: prev.lines.map(line => {
+          if (line.status === 'PIT') return line;
+          const currentProg = line.progress ?? 0;
+          const nextProg = (currentProg + 0.003) % 1.0;
+          return { ...line, progress: Number(nextProg.toFixed(4)) };
+        }),
+      }));
+    }, 200);
+    return () => clearInterval(interval);
+  }, [mockMode]);
 
   const getStatusColor = (status: string) => {
     if (status.includes('YELLOW')) return 'bg-yellow-500 text-black';
@@ -199,14 +274,16 @@ const LiveTimingPage: React.FC = () => {
     return 'bg-green-500 text-black';
   };
 
-  const sortedLines = [...data.lines].sort((a, b) => {
-    const posA = parseInt(String(a.position));
-    const posB = parseInt(String(b.position));
-    if (isNaN(posA) && isNaN(posB)) return 0;
-    if (isNaN(posA)) return 1;
-    if (isNaN(posB)) return -1;
-    return posA - posB;
-  });
+  const sortedLines = useMemo(() => {
+    return [...data.lines].sort((a, b) => {
+      const posA = parseInt(String(a.position));
+      const posB = parseInt(String(b.position));
+      if (isNaN(posA) && isNaN(posB)) return 0;
+      if (isNaN(posA)) return 1;
+      if (isNaN(posB)) return -1;
+      return posA - posB;
+    });
+  }, [data.lines]);
 
   const hasNoSessionData = sortedLines.length === 0;
 
@@ -283,38 +360,7 @@ const LiveTimingPage: React.FC = () => {
                       <td className="p-2"><div className="h-3 bg-[#222] rounded w-4 mx-auto"></div></td>
                     </tr>
                   )) : sortedLines.length > 0 ? sortedLines.map((row) => (
-                    <tr key={row.driver} className="hover:bg-[#111] transition-colors group relative">
-                      <td className="p-2.5 text-center font-black text-neutral-500 border-r border-[#151515]">{row.position}</td>
-                      
-                      <td className="p-2.5 font-black text-white text-[14px] border-r border-[#151515] flex items-center gap-2">
-                        <div className="w-1 h-5 rounded-sm shadow-sm" style={{ backgroundColor: teamColors[row.team] || '#fff' }}></div>
-                        {row.driver}
-                        {row.status === 'PIT' && <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[9px] rounded-sm animate-pulse uppercase tracking-wider">IN PIT</span>}
-                        {row.status !== 'PIT' && row.interval && !isNaN(parseFloat(row.interval)) && parseFloat(row.interval) < 1.0 && (
-                          <span className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[9px] rounded-sm uppercase tracking-wider drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]" title="Manual Override Available">
-                            OVR
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-2.5 border-r border-[#151515]">
-                        <TyreIcon compound={row.tyre} age={row.tyre_age} />
-                      </td>
-                      <td className="p-2.5 text-right text-neutral-300 font-mono border-r border-[#151515]">{row.gap}</td>
-                      <td className="p-2.5 text-right text-neutral-400 font-mono border-r border-[#151515]">{row.interval}</td>
-                      <td className="p-2.5 text-right border-r border-[#151515] bg-[#0c0c0c] group-hover:bg-[#151515] transition-colors shadow-inner">
-                        <SectorTime time={row.lastLap} color={row.lap_color} />
-                      </td>
-                      <td className="p-2.5 text-center border-r border-[#151515]">
-                        <SectorTime time={row.sector1} color={row.s1_color} />
-                      </td>
-                      <td className="p-2.5 text-center border-r border-[#151515]">
-                        <SectorTime time={row.sector2} color={row.s2_color} />
-                      </td>
-                      <td className="p-2.5 text-center border-r border-[#151515]">
-                        <SectorTime time={row.sector3} color={row.s3_color} />
-                      </td>
-                      <td className="p-2.5 text-center text-neutral-600 font-mono font-bold">{row.pits}</td>
-                    </tr>
+                    <TimingRow key={row.driver} row={row} />
                   )) : (
                     <tr>
                       <td colSpan={10} className="p-0">
@@ -365,7 +411,13 @@ const LiveTimingPage: React.FC = () => {
                      const y = 75 + 50 * Math.sin(theta);
                      
                      return (
-                       <g key={d.driver} style={{ transform: `translate(${x}px, ${y}px)`, transition: 'all 2s linear' }}>
+                       <g
+                         key={d.driver}
+                         style={{
+                           transform: `translate(${x}px, ${y}px)`,
+                           transition: mockMode ? 'transform 200ms linear' : 'transform 2s linear'
+                         }}
+                       >
                          <circle r="4" fill={teamColors[d.team] || '#fff'} className="drop-shadow-lg" />
                          <text y="-6" fontSize="7" fill="#fff" textAnchor="middle" className="font-mono font-black" style={{ textShadow: '0px 1px 2px black, 0px 0px 4px rgba(0,0,0,0.8)' }}>
                            {d.driver}

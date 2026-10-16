@@ -1,10 +1,13 @@
+import { useState, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { teamLogos, teamColors } from '../data/teamData';
-import { Trophy, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag } from 'lucide-react';
+import { Trophy, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag, Zap } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { fetchDriverProfile } from '../services/api';
 import type { DriverProfilePayload } from '../services/api';
+import IncidentBreakdownModal from '../components/ui/IncidentBreakdownModal';
+import { incidentBreakdownLabel, incidentTooltip } from '../utils/incidents';
 import type { DriverProgressionEntry } from '../types/f1';
 
 /** Total H2H count for one session, or null when the payload omits that split. */
@@ -24,6 +27,32 @@ const positionLabel = (position: number | string): string =>
       : `P${position}`
     : String(position);
 
+/** One card of the Key Stats grid; DNF/DNS cards become clickable above zero. */
+interface ProfileStatCard {
+  label: string;
+  value: ReactNode;
+  color: string;
+  tooltip?: string;
+  sub?: string;
+  onClick?: () => void;
+  hoverClass?: string;
+}
+
+/** Badge text for a round that had a Sprint session, or null when it didn't. */
+const sprintBadgeLabel = (row: DriverProgressionEntry): string | null => {
+  const status = row.sprint_status;
+  const position = row.sprint_position;
+  if (position == null && (status == null || status === '')) return null;
+  if (position === 'DNF') return 'SPRINT DNF';
+  if (position === 'DNS') return 'SPRINT DNS';
+  const posNum = Number(position);
+  if (Number.isFinite(posNum) && posNum > 0 && posNum < INVALID_POSITION_THRESHOLD) {
+    const pts = Number(row.sprint_points) || 0;
+    return `SPRINT P${posNum}${pts > 0 ? ` (+${pts})` : ''}`;
+  }
+  return 'SPRINT';
+};
+
 const DriverProfilePage = () => {
   const { id } = useParams();
   const currentYear = new Date().getFullYear();
@@ -34,6 +63,9 @@ const DriverProfilePage = () => {
     queryFn: () => fetchDriverProfile(currentYear, id as string),
     enabled: !!id,
   });
+
+  // Which incident breakdown modal is open ('dnf' / 'dns'), if any.
+  const [incidentModal, setIncidentModal] = useState<'dnf' | 'dns' | null>(null);
 
   const teamColor = profile ? (teamColors[profile.team] || '#EF4444') : '#EF4444';
   const teamLogo = profile ? teamLogos[profile.team] : null;
@@ -84,6 +116,37 @@ const DriverProfilePage = () => {
     ? (tm.quali_h2h.driver_ahead / totalQualiH2H) * 100 : 50;
 
   const progression: DriverProgressionEntry[] = profile.progression ?? [];
+
+  // Sprint-aware incident totals (Grand Prix + Sprint sessions combined).
+  const dnfDetails = profile.dnf_details ?? [];
+  const dnsDetails = profile.dns_details ?? [];
+  const dnfTotal = Number(profile.dnfs) || 0;
+  const dnsTotal = Number(profile.dnss) || 0;
+  const stats: ProfileStatCard[] = [
+    { label: 'Wins', value: profile.wins, color: 'text-yellow-400' },
+    { label: 'Podiums', value: profile.podiums, color: 'text-white' },
+    { label: 'Pole Positions', value: profile.poles, color: 'text-purple-400' },
+    { label: 'Best Finish', value: profile.best_finish ? `P${profile.best_finish}` : '-', color: 'text-green-400' },
+    { label: 'Avg. Finish', value: profile.avg_finish ? `P${profile.avg_finish}` : '-', color: 'text-neutral-300' },
+    {
+      label: 'DNFs',
+      value: dnfTotal,
+      color: 'text-red-500',
+      tooltip: incidentTooltip(dnfDetails),
+      sub: incidentBreakdownLabel(Number(profile.race_dnfs) || 0, Number(profile.sprint_dnfs) || 0),
+      onClick: dnfTotal > 0 ? () => setIncidentModal('dnf') : undefined,
+      hoverClass: 'hover:border-red-500/50',
+    },
+    {
+      label: 'DNSs',
+      value: dnsTotal,
+      color: 'text-orange-500',
+      tooltip: incidentTooltip(dnsDetails),
+      sub: incidentBreakdownLabel(Number(profile.race_dnss) || 0, Number(profile.sprint_dnss) || 0),
+      onClick: dnsTotal > 0 ? () => setIncidentModal('dns') : undefined,
+      hoverClass: 'hover:border-orange-500/50',
+    },
+  ];
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
@@ -168,33 +231,52 @@ const DriverProfilePage = () => {
 
         {/* Key Stats Grid */}
         <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-10">
-          {[
-            { label: 'Wins', value: profile.wins, color: 'text-yellow-400' },
-            { label: 'Podiums', value: profile.podiums, color: 'text-white' },
-            { label: 'Pole Positions', value: profile.poles, color: 'text-purple-400' },
-            { label: 'Best Finish', value: profile.best_finish ? `P${profile.best_finish}` : '-', color: 'text-green-400' },
-            { label: 'Avg. Finish', value: profile.avg_finish ? `P${profile.avg_finish}` : '-', color: 'text-neutral-300' },
-            { label: 'DNFs', value: profile.dnfs, color: 'text-red-500', 
-              tooltip: progression.filter(p => p.position === 'DNF').map(p => p.race_name).join(', ') },
-            { label: 'DNSs', value: profile.dnss, color: 'text-orange-500',
-              tooltip: progression.filter(p => p.position === 'DNS').map(p => p.race_name).join(', ') }
-          ].map((stat, idx) => (
-            <div 
-              key={idx}
-              title={stat.tooltip}
-              className="bg-neutral-900/60 border-t border-l border-neutral-800 relative group overflow-hidden"
-              style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}
-            >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300" style={{ backgroundColor: teamColor }} />
-              <div className="p-5 flex flex-col items-start relative z-10">
-                <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-[0.2em] mb-2">{stat.label}</span>
-                <div className={`text-3xl lg:text-4xl font-black font-mono tracking-tighter ${stat.color} ${stat.tooltip ? 'cursor-help border-b border-dashed border-current' : ''}`}>
-                  {stat.value}
+          {stats.map((stat, idx) => {
+            const cardClass = `bg-neutral-900/60 border-t border-l border-neutral-800 relative group overflow-hidden w-full text-left ${
+              stat.onClick ? `cursor-pointer transition-colors ${stat.hoverClass ?? ''}` : ''
+            }`;
+            const cardStyle = {
+              clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)',
+            } as const;
+            const cardBody = (
+              <>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300" style={{ backgroundColor: teamColor }} />
+                {stat.onClick && (
+                  <span className="absolute top-4 right-4 text-[10px] font-mono uppercase tracking-wider text-neutral-600 group-hover:text-white transition-colors">
+                    Details →
+                  </span>
+                )}
+                <div className="p-5 flex flex-col items-start relative z-10">
+                  <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-[0.2em] mb-2">{stat.label}</span>
+                  <div className={`text-3xl lg:text-4xl font-black font-mono tracking-tighter ${stat.color} ${stat.tooltip ? 'cursor-help border-b border-dashed border-current' : ''}`}>
+                    {stat.value}
+                  </div>
+                  {stat.sub && (
+                    <span className="mt-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">
+                      {stat.sub}
+                    </span>
+                  )}
                 </div>
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-neutral-800 group-hover:bg-current transition-colors duration-300" style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 100%)', color: teamColor }} />
+              </>
+            );
+            return stat.onClick ? (
+              <button
+                key={idx}
+                type="button"
+                title={stat.tooltip}
+                onClick={stat.onClick}
+                className={cardClass}
+                style={cardStyle}
+              >
+                {cardBody}
+              </button>
+            ) : (
+              <div key={idx} title={stat.tooltip} className={cardClass} style={cardStyle}>
+                {cardBody}
               </div>
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-neutral-800 group-hover:bg-current transition-colors duration-300" style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 100%)', color: teamColor }} />
-            </div>
-          ))}
+            );
+          })}
         </section>
 
         {/* Teammate Head-to-Head */}
@@ -267,7 +349,7 @@ const DriverProfilePage = () => {
                   formatter={(val) => [`${val} PTS`, 'Cumulative Points']}
                   labelFormatter={(loc, items) => {
                     const row = items?.[0]?.payload;
-                    return row ? `${row.race_name} (Finish: P${row.position}, +${row.points} pts)` : loc;
+                    return row ? `${row.race_name} (Finish: ${positionLabel(row.position)}, +${row.points} pts)` : loc;
                   }}
                 />
                 <Area 
@@ -310,18 +392,29 @@ const DriverProfilePage = () => {
                 {progression.map((row) => {
                   // Numeric fields arrive as NumericString; coerce once per row.
                   const posNum = Number(row.position);
-                  const sprintPts = Number(row.sprint_points) || 0;
                   const gridPos = Number(row.grid_position) || 0;
                   const racePts = Number(row.points) || 0;
+                  const sprintLabel = sprintBadgeLabel(row);
+                  const sprintIncident = row.sprint_position === 'DNF' || row.sprint_position === 'DNS';
                   return (
                   <tr key={row.round} className="hover:bg-neutral-800/30 transition-colors">
                     <td className="p-4 text-center font-mono font-bold text-neutral-500">{row.round}</td>
                     <td className="p-4 font-bold text-white">
                       <div>{row.race_name}</div>
                       <div className="text-xs text-neutral-500 font-normal">{row.location}</div>
+                      {sprintLabel && (
+                        <span className={`inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-black font-mono uppercase tracking-wider border ${
+                          sprintIncident
+                            ? 'bg-red-500/10 text-red-400 border-red-500/40'
+                            : 'bg-orange-500/10 text-orange-400 border-orange-500/40'
+                        }`}>
+                          <Zap size={10} />
+                          {sprintLabel}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-center">
-                      <span title={`${positionLabel(row.position)} • Race: ${row.race_points} pts${sprintPts > 0 ? ' | Sprint: '+row.sprint_points+' pts' : ''} • Started ${gridPos > 0 ? 'P'+row.grid_position : 'Pitlane/DNS'} • ${row.status}`} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
+                      <span title={`${positionLabel(row.position)} • Race: ${row.race_points} pts${sprintLabel ? ` | ${sprintLabel}` : ''} • Started ${gridPos > 0 ? 'P'+row.grid_position : 'Pitlane/DNS'} • ${row.status}`} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
                         row.position === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
                         row.position === 2 ? 'bg-slate-300/20 text-slate-300 border border-slate-300/40' :
                         row.position === 3 ? 'bg-amber-600/20 text-amber-500 border border-amber-600/40' :
@@ -350,6 +443,16 @@ const DriverProfilePage = () => {
             </table>
           </div>
         </section>
+
+        {/* Incident breakdown modal (DNFs / DNSs) */}
+        {incidentModal && (
+          <IncidentBreakdownModal
+            kind={incidentModal}
+            incidents={incidentModal === 'dnf' ? dnfDetails : dnsDetails}
+            onClose={() => setIncidentModal(null)}
+            year={currentYear}
+          />
+        )}
 
       </main>
     </div>

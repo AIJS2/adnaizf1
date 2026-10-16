@@ -1,5 +1,9 @@
 import logging
-from services.championship_service import clean_nans
+from services.championship_service import (
+    clean_nans,
+    is_dnf_classified,
+    is_dns_status,
+)
 
 
 def _safe_float(value, default: float = 0.0) -> float:
@@ -18,6 +22,44 @@ def _safe_int(value, default: int = 0) -> int:
         return int(float(value))
     except (TypeError, ValueError):
         return default
+
+
+def _grid_position(row) -> int:
+    """Starting grid slot; 0 when FastF1 has no value (pit lane / unknown)."""
+    grid_val = row.get("GridPosition", 0)
+    if str(grid_val).lower() in ("nan", "", "none"):
+        return 0
+    return _safe_int(grid_val, 0)
+
+
+def _session_result_label(row):
+    """Render one race/sprint row's result: position, DNF, DNS, or '-'."""
+    if not row:
+        return None
+    if is_dns_status(row.get("Status")):
+        return "DNS"
+    if is_dnf_classified(row.get("ClassifiedPosition"), row.get("Status")):
+        return "DNF"
+    pos = _safe_int(row.get("Position", 99), 99)
+    return pos if pos < 90 else "-"
+
+
+def _incident_detail(row, driver_name: str = "", abbreviation: str = ""):
+    """One entry of the dnf_details / dns_details breakdown arrays.
+
+    Covers both points-scoring sessions: Grand Prix (`R`) and Sprint.
+    """
+    return {
+        "round": _safe_int(row.get("RoundNumber", 0)),
+        "race_name": row.get("EventName") or f"Round {row.get('RoundNumber', '?')}",
+        "location": row.get("Location", ""),
+        "session_type": "Sprint" if row.get("SessionType") == "Sprint" else "Race",
+        "status": str(row.get("Status", "")),
+        "grid": _grid_position(row),
+        "position_text": "DNS" if is_dns_status(row.get("Status")) else "DNF",
+        "driver_name": driver_name,
+        "driver_abbreviation": abbreviation,
+    }
 
 def process_driver_profile(champ_data: dict, year: int, driver_id: str):
     try:
@@ -67,6 +109,12 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                 "avg_finish": None,
                 "dnfs": 0,
                 "dnss": 0,
+                "race_dnfs": 0,
+                "sprint_dnfs": 0,
+                "race_dnss": 0,
+                "sprint_dnss": 0,
+                "dnf_details": [],
+                "dns_details": [],
                 "progression": [],
                 "teammate": {
                     "name": teammate.get("name", "") if teammate else "",
@@ -103,27 +151,57 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             key=lambda x: x.get("RoundNumber", 0),
         )
 
+        # Every points-scoring race-weekend session (Grand Prix + Sprint) is
+        # scanned for DNF/DNS incidents. This uses the exact predicates the
+        # championship endpoint uses, so the driver card, /stats, and the
+        # championship table always agree on the totals.
+        driver_weekend_sessions = sorted(
+            (
+                r for r in session_results
+                if r.get("FullName") == driver_name
+                and r.get("SessionType") in ("R", "Sprint")
+            ),
+            key=lambda x: (x.get("RoundNumber", 0), str(x.get("SessionType", ""))),
+        )
+
         teammate_name = teammate.get("name", "") if teammate else ""
+        driver_abbreviation = driver.get("abbreviation", "")
 
         progression = []
         cum_points = 0.0
         positions_classified = []
         dnfs = 0
         dnss = 0
+        race_dnfs = 0
+        sprint_dnfs = 0
+        race_dnss = 0
+        sprint_dnss = 0
+        dnf_details = []
+        dns_details = []
 
-        def _grid_position(row):
-            grid_val = row.get("GridPosition", 0)
-            if str(grid_val).lower() in ("nan", "", "none"):
-                return 0
-            return _safe_int(grid_val, 0)
+        for r in driver_weekend_sessions:
+            is_sprint = r.get("SessionType") == "Sprint"
+            if is_dns_status(r.get("Status")):
+                dnss += 1
+                if is_sprint:
+                    sprint_dnss += 1
+                else:
+                    race_dnss += 1
+                dns_details.append(_incident_detail(r, driver_name, driver_abbreviation))
+            elif is_dnf_classified(r.get("ClassifiedPosition"), r.get("Status")):
+                dnfs += 1
+                if is_sprint:
+                    sprint_dnfs += 1
+                else:
+                    race_dnfs += 1
+                dnf_details.append(_incident_detail(r, driver_name, driver_abbreviation))
 
         def _teammate_position(tm_row):
             if not tm_row:
                 return "—"
-            status = str(tm_row.get("Status", "")).lower()
-            if "did not start" in status or "dns" in status:
+            if is_dns_status(tm_row.get("Status")):
                 return "DNS"
-            if str(tm_row.get("ClassifiedPosition", "")) in ("R", "D", "E", "W"):
+            if is_dnf_classified(tm_row.get("ClassifiedPosition"), tm_row.get("Status")):
                 return "DNF"
             pos = _safe_int(tm_row.get("Position", 99), 99)
             # A missing position (null / legacy sentinel) must render as "-",
@@ -145,14 +223,11 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             is_dns = "did not start" in status_str or "dns" in status_str
             is_dnf = classified_pos in ("R", "D", "E", "W")
 
-            if is_dns:
-                dnss += 1
-            elif is_dnf:
-                dnfs += 1
-            elif pos < 90:
+            if not (is_dns or is_dnf) and pos < 90:
                 positions_classified.append(pos)
 
             tm_r = by_key.get((teammate_name, rnd, "R"))  # O(1) lookup
+            sprint_r = by_key.get((driver_name, rnd, "Sprint"))  # O(1) lookup
 
             progression.append({
                 "round": rnd,
@@ -166,6 +241,8 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                 "points": total_round_pts,
                 "race_points": pts,
                 "sprint_points": sprint_pts,
+                "sprint_position": _session_result_label(sprint_r),
+                "sprint_status": str(sprint_r.get("Status", "")) if sprint_r else None,
                 "cumulative_points": cum_points,
                 "teammate_position": _teammate_position(tm_r),
                 "teammate_points": _safe_float(tm_r.get("Points", 0)) if tm_r else 0.0,
@@ -233,6 +310,12 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             "avg_finish": avg_finish,
             "dnfs": dnfs,
             "dnss": dnss,
+            "race_dnfs": race_dnfs,
+            "sprint_dnfs": sprint_dnfs,
+            "race_dnss": race_dnss,
+            "sprint_dnss": sprint_dnss,
+            "dnf_details": dnf_details,
+            "dns_details": dns_details,
             "progression": progression,
             "teammate": {
                 "name": teammate_name,
@@ -296,6 +379,14 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
                 "points": _safe_float(team.get("points", 0)),
                 "wins": _safe_int(team.get("wins", 0)),
                 "podiums": _safe_int(team.get("podiums", 0)),
+                "dnfs": 0,
+                "dnss": 0,
+                "race_dnfs": 0,
+                "sprint_dnfs": 0,
+                "race_dnss": 0,
+                "sprint_dnss": 0,
+                "dnf_details": [],
+                "dns_details": [],
                 "drivers": team_drivers,
                 "progression": [],
             })
@@ -304,6 +395,40 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
             r for r in session_results
             if r.get("TeamName") == team_name and r.get("SessionType") in ("R", "Sprint")
         ]
+
+        # DNF/DNS are counted across every points-scoring race session (Grand
+        # Prix + Sprint) with the same predicates /stats uses, so the team card
+        # and the championship table can never disagree.
+        dnfs = 0
+        dnss = 0
+        race_dnfs = 0
+        sprint_dnfs = 0
+        race_dnss = 0
+        sprint_dnss = 0
+        dnf_details = []
+        dns_details = []
+
+        for r in sorted(
+            team_races,
+            key=lambda x: (x.get("RoundNumber", 0), str(x.get("SessionType", "")), str(x.get("FullName", ""))),
+        ):
+            is_sprint = r.get("SessionType") == "Sprint"
+            row_driver_name = r.get("FullName", "")
+            row_abbreviation = r.get("Abbreviation", "")
+            if is_dns_status(r.get("Status")):
+                dnss += 1
+                if is_sprint:
+                    sprint_dnss += 1
+                else:
+                    race_dnss += 1
+                dns_details.append(_incident_detail(r, row_driver_name, row_abbreviation))
+            elif is_dnf_classified(r.get("ClassifiedPosition"), r.get("Status")):
+                dnfs += 1
+                if is_sprint:
+                    sprint_dnfs += 1
+                else:
+                    race_dnfs += 1
+                dnf_details.append(_incident_detail(r, row_driver_name, row_abbreviation))
 
         progression = []
         rounds = sorted({r.get("RoundNumber", 0) for r in team_races})
@@ -332,6 +457,14 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
             "points": _safe_float(team.get("points", 0)),
             "wins": _safe_int(team.get("wins", 0)),
             "podiums": _safe_int(team.get("podiums", 0)),
+            "dnfs": dnfs,
+            "dnss": dnss,
+            "race_dnfs": race_dnfs,
+            "sprint_dnfs": sprint_dnfs,
+            "race_dnss": race_dnss,
+            "sprint_dnss": sprint_dnss,
+            "dnf_details": dnf_details,
+            "dns_details": dns_details,
             "drivers": team_drivers,
             "progression": progression,
         })

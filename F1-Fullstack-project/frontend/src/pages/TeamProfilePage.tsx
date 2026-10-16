@@ -1,11 +1,26 @@
+import { useState, type ReactNode } from 'react';
 import { DriverProfile, TeamProgressionEntry } from '../types/f1';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { teamLogos, teamColors } from '../data/teamData';
-import { Trophy, Award, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag, ChevronRight, PieChart } from 'lucide-react';
+import { Trophy, Award, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag, ChevronRight, PieChart, Ban } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { fetchTeamProfile } from '../services/api';
 import type { TeamProfilePayload } from '../services/api';
+import IncidentBreakdownModal from '../components/ui/IncidentBreakdownModal';
+import { incidentBreakdownLabel } from '../utils/incidents';
+
+/** One card of the team Key Stats grid; DNF/DNS cards become clickable above zero. */
+interface TeamStatCard {
+  label: string;
+  value: ReactNode;
+  icon: LucideIcon;
+  color: string;
+  sub?: string;
+  onOpen?: () => void;
+  hoverClass?: string;
+}
 
 const TeamProfilePage = () => {
   const { id } = useParams();
@@ -19,6 +34,9 @@ const TeamProfilePage = () => {
   });
 
   const profile = data ?? null;
+
+  // Which incident breakdown modal is open ('dnf' / 'dns'), if any.
+  const [incidentModal, setIncidentModal] = useState<'dnf' | 'dns' | null>(null);
 
   const teamColor = profile?.name ? (teamColors[profile.name] || '#EF4444') : '#EF4444';
   const teamLogo = profile?.name ? teamLogos[profile.name] : null;
@@ -58,6 +76,36 @@ const TeamProfilePage = () => {
       </div>
     );
   }
+
+  // Sprint-aware incident totals (Grand Prix + Sprint sessions combined).
+  const dnfDetails = profile.dnf_details ?? [];
+  const dnsDetails = profile.dns_details ?? [];
+  const dnfTotal = Number(profile.dnfs) || 0;
+  const dnsTotal = Number(profile.dnss) || 0;
+  const stats: TeamStatCard[] = [
+    { label: 'Championship Rank', value: `P${profile.position}`, icon: Trophy, color: profile.position === 1 ? 'text-yellow-500' : 'text-white' },
+    { label: 'Total Points', value: profile.points, icon: PieChart, color: 'text-white' },
+    { label: 'Race Wins', value: profile.wins, icon: Flag, color: 'text-yellow-400' },
+    { label: 'Podium Finishes', value: profile.podiums, icon: Award, color: 'text-slate-300' },
+    {
+      label: 'DNFs',
+      value: dnfTotal,
+      icon: AlertTriangle,
+      color: 'text-red-500',
+      sub: incidentBreakdownLabel(Number(profile.race_dnfs) || 0, Number(profile.sprint_dnfs) || 0),
+      onOpen: dnfTotal > 0 ? () => setIncidentModal('dnf') : undefined,
+      hoverClass: 'hover:border-red-500/50',
+    },
+    {
+      label: 'DNSs',
+      value: dnsTotal,
+      icon: Ban,
+      color: 'text-orange-500',
+      sub: incidentBreakdownLabel(Number(profile.race_dnss) || 0, Number(profile.sprint_dnss) || 0),
+      onOpen: dnsTotal > 0 ? () => setIncidentModal('dns') : undefined,
+      hoverClass: 'hover:border-orange-500/50',
+    },
+  ];
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
@@ -140,26 +188,45 @@ const TeamProfilePage = () => {
         </section>
 
         {/* Key Stats Grid */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          {[
-            { label: 'Championship Rank', value: `P${profile.position}`, icon: Trophy, color: profile.position === 1 ? 'text-yellow-500' : 'text-white' },
-            { label: 'Total Points', value: profile.points, icon: PieChart, color: 'text-white' },
-            { label: 'Race Wins', value: profile.wins, icon: Flag, color: 'text-yellow-400' },
-            { label: 'Podium Finishes', value: profile.podiums, icon: Award, color: 'text-slate-300' }
-          ].map((stat, i) => (
-            <div key={i} className="group relative bg-neutral-900/40 border border-neutral-800 rounded-2xl p-6 overflow-hidden hover:bg-neutral-900/80 transition-colors">
-              <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <stat.icon size={80} />
+        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+          {stats.map((stat, i) => {
+            const cardClass = `group relative bg-neutral-900/40 border border-neutral-800 rounded-2xl p-6 overflow-hidden w-full text-left transition-colors hover:bg-neutral-900/80 ${
+              stat.onOpen ? `cursor-pointer ${stat.hoverClass ?? ''}` : ''
+            }`;
+            const cardBody = (
+              <>
+                <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <stat.icon size={80} />
+                </div>
+                {stat.onOpen && (
+                  <span className="absolute top-4 right-4 text-[10px] font-mono uppercase tracking-wider text-neutral-600 group-hover:text-white transition-colors">
+                    Details →
+                  </span>
+                )}
+                <div className="flex items-center gap-3 mb-3">
+                  <stat.icon size={16} className="text-neutral-500" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">{stat.label}</span>
+                </div>
+                <div className={`text-4xl font-black font-mono tracking-tighter ${stat.color}`}>
+                  {stat.value}
+                </div>
+                {stat.sub && (
+                  <span className="mt-1.5 block text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">
+                    {stat.sub}
+                  </span>
+                )}
+              </>
+            );
+            return stat.onOpen ? (
+              <button key={i} type="button" onClick={stat.onOpen} className={cardClass}>
+                {cardBody}
+              </button>
+            ) : (
+              <div key={i} className={cardClass}>
+                {cardBody}
               </div>
-              <div className="flex items-center gap-3 mb-3">
-                <stat.icon size={16} className="text-neutral-500" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">{stat.label}</span>
-              </div>
-              <div className={`text-4xl font-black font-mono tracking-tighter ${stat.color}`}>
-                {stat.value}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </section>
 
         {/* Driver Lineup & Points Distribution */}
@@ -325,6 +392,17 @@ const TeamProfilePage = () => {
             </table>
           </div>
         </section>
+
+        {/* Incident breakdown modal (DNFs / DNSs) */}
+        {incidentModal && (
+          <IncidentBreakdownModal
+            kind={incidentModal}
+            incidents={incidentModal === 'dnf' ? dnfDetails : dnsDetails}
+            onClose={() => setIncidentModal(null)}
+            year={currentYear}
+            showDriver
+          />
+        )}
 
       </main>
     </div>

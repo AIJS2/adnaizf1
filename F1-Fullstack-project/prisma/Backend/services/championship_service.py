@@ -33,6 +33,27 @@ def _empty_season(year: int, message: str) -> dict:
     }
 
 
+def is_dns_status(status) -> bool:
+    """True when a result row represents a Did-Not-Start (DNS).
+
+    Shared with the driver/team profile endpoints so /stats and
+    /driver|/team can never disagree on what counts as a DNS.
+    """
+    status_str = str(status or "").lower()
+    return "did not start" in status_str or "dns" in status_str
+
+
+def is_dnf_classified(classified_position, status=None) -> bool:
+    """True when a result row is a DNF (retired / excluded / withdrawn).
+
+    A DNS is never a DNF, so the DNS status takes precedence. Uses the exact
+    predicate the profile endpoints use, keeping every surface consistent.
+    """
+    if is_dns_status(status):
+        return False
+    return str(classified_position or "") in ("R", "D", "E", "W")
+
+
 def _collect_results(year: int, races_to_process: pd.DataFrame):
     """Load every race/sprint/qualifying result row for the given rounds."""
     all_results_df = []
@@ -138,14 +159,30 @@ def compute_fastf1_championship(year: int):
     df_points_sessions = df_full[df_full["SessionType"].isin(["R", "Sprint"])]
     df_race_only = df_full[df_full["SessionType"] == "R"]
 
+    # DNF/DNS are counted across every points-scoring race session (Grand Prix
+    # + Sprint) with the same predicate the profile endpoints use, so /stats,
+    # /driver and /team can never disagree on the totals.
+    df_race_weekend = df_points_sessions
+    weekend_status = df_race_weekend["Status"].astype(str).str.lower()
+    weekend_dns = (
+        weekend_status.str.contains("did not start", na=False)
+        | weekend_status.str.contains("dns", na=False)
+    )
+    weekend_dnf = (
+        df_race_weekend["ClassifiedPosition"].isin(["R", "D", "E", "W"])
+        & ~weekend_dns
+    )
+
     team_points = df_points_sessions.groupby("TeamName")["Points"].sum()
     team_wins = df_race_only[df_race_only["Position"] == 1].groupby("TeamName").size()
     team_podiums = df_race_only[df_race_only["Position"] <= 3].groupby("TeamName").size()
-    team_dnfs = df_race_only[df_race_only["ClassifiedPosition"].isin(["R", "D", "E", "W"])].groupby("TeamName").size()
+    team_dnfs = df_race_weekend[weekend_dnf].groupby("TeamName").size()
+    team_dnss = df_race_weekend[weekend_dns].groupby("TeamName").size()
     team_standings = pd.DataFrame(team_points).rename(columns={"Points": "points"})
     team_standings["wins"] = team_wins
     team_standings["podiums"] = team_podiums
     team_standings["dnfs"] = team_dnfs
+    team_standings["dnss"] = team_dnss
     team_standings.fillna(0, inplace=True)
     team_standings = team_standings.astype(int).reset_index()
     team_standings.rename(columns={"TeamName": "name"}, inplace=True)
@@ -172,16 +209,17 @@ def compute_fastf1_championship(year: int):
 
     driver_wins = df_race_only[df_race_only["Position"] == 1].groupby("FullName").size().rename("wins")
     driver_podiums = df_race_only[df_race_only["Position"] <= 3].groupby("FullName").size().rename("podiums")
-    is_dnf = df_race_only["ClassifiedPosition"].isin(["R", "D", "E", "W"])
-    driver_dnfs = df_race_only[is_dnf].groupby("FullName").size().rename("dnfs")
+    driver_dnfs = df_race_weekend[weekend_dnf].groupby("FullName").size().rename("dnfs")
+    driver_dnss = df_race_weekend[weekend_dns].groupby("FullName").size().rename("dnss")
     last_race_driver_points = df_last_race.groupby("FullName")["Points"].sum().rename("points_last_race")
 
     driver_standings = driver_standings.merge(driver_wins, on="FullName", how="left")
     driver_standings = driver_standings.merge(driver_podiums, on="FullName", how="left")
     driver_standings = driver_standings.merge(driver_dnfs, on="FullName", how="left")
+    driver_standings = driver_standings.merge(driver_dnss, on="FullName", how="left")
     driver_standings = driver_standings.merge(last_race_driver_points, on="FullName", how="left")
 
-    cols_to_fill = ["wins", "podiums", "dnfs", "points_last_race"]
+    cols_to_fill = ["wins", "podiums", "dnfs", "dnss", "points_last_race"]
     driver_standings[cols_to_fill] = driver_standings[cols_to_fill].fillna(0).astype(int)
     driver_standings["driver_number"] = pd.to_numeric(
         driver_standings["driver_number"], errors="coerce"

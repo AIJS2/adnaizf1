@@ -78,6 +78,7 @@ def init_schema(conn: sqlite3.Connection):
         wins INTEGER NOT NULL DEFAULT 0,
         podiums INTEGER NOT NULL DEFAULT 0,
         dnfs INTEGER NOT NULL DEFAULT 0,
+        dnss INTEGER NOT NULL DEFAULT 0,
         points_last_race REAL DEFAULT 0,
         driver_id TEXT,
         team_id TEXT,
@@ -130,13 +131,14 @@ def seed_data(conn: sqlite3.Connection):
         if pos:
             cursor.execute("""
                 INSERT INTO standings (
-                    year, type, position, points, wins, podiums, dnfs, points_last_race, team_id, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    year, type, position, points, wins, podiums, dnfs, dnss, points_last_race, team_id, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(year, type, position) DO UPDATE SET
                     points = excluded.points,
                     wins = excluded.wins,
                     podiums = excluded.podiums,
                     dnfs = excluded.dnfs,
+                    dnss = excluded.dnss,
                     points_last_race = excluded.points_last_race,
                     team_id = excluded.team_id,
                     updated_at = excluded.updated_at;
@@ -148,6 +150,7 @@ def seed_data(conn: sqlite3.Connection):
                 int(t.get("wins", 0)),
                 int(t.get("podiums", 0)),
                 int(t.get("dnfs", 0)),
+                int(t.get("dnss", 0)),
                 float(t.get("points_last_race", 0)),
                 team_id,
                 now_iso,
@@ -178,13 +181,14 @@ def seed_data(conn: sqlite3.Connection):
         if pos:
             cursor.execute("""
                 INSERT INTO standings (
-                    year, type, position, points, wins, podiums, dnfs, points_last_race, driver_id, team_id, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    year, type, position, points, wins, podiums, dnfs, dnss, points_last_race, driver_id, team_id, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(year, type, position) DO UPDATE SET
                     points = excluded.points,
                     wins = excluded.wins,
                     podiums = excluded.podiums,
                     dnfs = excluded.dnfs,
+                    dnss = excluded.dnss,
                     points_last_race = excluded.points_last_race,
                     driver_id = excluded.driver_id,
                     team_id = excluded.team_id,
@@ -197,6 +201,7 @@ def seed_data(conn: sqlite3.Connection):
                 int(d.get("wins", 0)),
                 int(d.get("podiums", 0)),
                 int(d.get("dnfs", 0)),
+                int(d.get("dnss", 0)),
                 float(d.get("points_last_race", 0)),
                 driver_id,
                 team_id,

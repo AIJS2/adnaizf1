@@ -409,8 +409,27 @@ export interface DriverProgressionEntry {
   points?: NumericString;
   race_points?: NumericString;
   sprint_points?: NumericString;
+  sprint_position?: NumericString | null;
+  sprint_status?: string | null;
   cumulative_points?: NumericString;
   teammate_position?: NumericString;
   teammate_points?: NumericString;
+}
+
+/**
+ * One entry of a driver/team profile's `dnf_details` / `dns_details` arrays
+ * (`Backend/services/profiles_service.py`). Covers both Grand Prix (`R`) and
+ * Sprint sessions.
+ */
+export interface IncidentDetail {
+  round: number;
+  race_name: string;
+  location?: string;
+  session_type: 'Race' | 'Sprint' | string;
+  status?: string;
+  grid?: number;
+  position_text: 'DNF' | 'DNS' | string;
+  driver_name?: string;
+  driver_abbreviation?: string;
 }
 

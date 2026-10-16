@@ -11,6 +11,7 @@ import type {
   DriverProgressionEntry,
   DriverStatsInfo,
   DriverTeammateInfo,
+  IncidentDetail,
   NumericString,
   Race,
   RaceSummary,
@@ -36,6 +37,12 @@ export interface DriverProfilePayload {
   avg_finish?: NumericString | null;
   dnfs?: NumericString;
   dnss?: NumericString;
+  race_dnfs?: NumericString;
+  sprint_dnfs?: NumericString;
+  race_dnss?: NumericString;
+  sprint_dnss?: NumericString;
+  dnf_details?: IncidentDetail[];
+  dns_details?: IncidentDetail[];
   progression?: DriverProgressionEntry[];
   teammate?: DriverTeammateInfo | null;
 }
@@ -77,6 +84,14 @@ export interface TeamProfilePayload {
   wins?: NumericString;
   podiums?: NumericString;
   points_last_race?: NumericString;
+  dnfs?: NumericString;
+  dnss?: NumericString;
+  race_dnfs?: NumericString;
+  sprint_dnfs?: NumericString;
+  race_dnss?: NumericString;
+  sprint_dnss?: NumericString;
+  dnf_details?: IncidentDetail[];
+  dns_details?: IncidentDetail[];
   drivers?: DriverProfile[];
   progression?: TeamProgressionEntry[];
   [key: string]: unknown;

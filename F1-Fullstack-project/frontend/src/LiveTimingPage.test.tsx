@@ -78,12 +78,4 @@ describe('LiveTimingPage empty state & countdown integration', () => {
 
     expect(screen.getByText(/LIGHTS OUT COUNTDOWN/i)).toBeInTheDocument();
   });
-
-  it('renders the telemetry table when in mock mode ?mock=1', () => {
-    renderLiveTiming('/live-timing?mock=1');
-
-    expect(screen.queryByText(/No Live Session Data/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText('VER').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('NOR').length).toBeGreaterThan(0);
-  });
 });

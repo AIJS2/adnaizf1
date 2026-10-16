@@ -109,49 +109,112 @@ redis_client = _build_client()
 if redis_client is None:
     _redis_last_failure = time.monotonic()
 
-def get_advanced_cache(key: str, hours: int = CACHE_DURATION_HOURS) -> Optional[Any]:
-    """Retrieve data from Redis cache."""
-    client = _get_redis()
-    if client is None:
-        return None
+def _get_file_cache_path(key: str) -> str:
+    """Return an absolute path inside _CACHE_DIR for the file-based fallback cache."""
+    clean_name = os.path.basename(key)
+    if not clean_name.endswith('.json'):
+        clean_name += '.json'
+    return os.path.join(_CACHE_DIR, clean_name)
 
+
+def get_advanced_cache(key: str, hours: int = CACHE_DURATION_HOURS) -> Optional[Any]:
+    """
+    Retrieve data from Redis cache or file fallback cache.
+    Returns (data) if found, otherwise None.
+    """
+    client = _get_redis()
+    if client is not None:
+        try:
+            cached_data = client.get(key)
+            if cached_data:
+                return json.loads(cached_data)
+        except Exception as e:
+            logging.warning(f"Error reading from Redis cache for key '{key}': {e}")
+            _invalidate_redis()  # reconnect on the next call
+
+    # File cache fallback
     try:
-        cached_data = client.get(key)
-        if cached_data:
-            return json.loads(cached_data)
+        filepath = _get_file_cache_path(key)
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
     except Exception as e:
-        logging.warning(f"Error reading from Redis cache for key '{key}': {e}")
-        _invalidate_redis()  # reconnect on the next call
+        logging.warning(f"Error reading from file cache for key '{key}': {e}")
 
     return None
 
-def set_advanced_cache(key: str, data: Any, hours: int = CACHE_DURATION_HOURS) -> None:
-    """Store data in Redis cache with an expiration."""
-    client = _get_redis()
-    if client is None:
-        return
 
+def get_advanced_cache_with_meta(key: str) -> Optional[dict]:
+    """
+    Retrieve cached data and its file metadata (modified_time, mtime_epoch).
+    """
+    data = get_advanced_cache(key)
+    if data is None:
+        return None
+
+    mtime = 0.0
     try:
-        ttl_seconds = int(hours * 3600)
-        # Using json.dumps to serialize complex dictionaries and lists
-        client.setex(key, ttl_seconds, json.dumps(data))
+        filepath = _get_file_cache_path(key)
+        if os.path.exists(filepath):
+            mtime = os.path.getmtime(filepath)
+    except Exception:
+        pass
+
+    return {
+        "data": data,
+        "mtime": mtime
+    }
+
+
+def set_advanced_cache(key: str, data: Any, hours: int = CACHE_DURATION_HOURS) -> None:
+    """Store data in Redis cache with an expiration, and always persist to local disk cache."""
+    client = _get_redis()
+    if client is not None:
+        try:
+            ttl_seconds = int(hours * 3600)
+            client.setex(key, ttl_seconds, json.dumps(data))
+        except Exception as e:
+            logging.warning(f"Error writing to Redis cache for key '{key}': {e}")
+            _invalidate_redis()
+
+    # Always persist to disk cache so restarts or lack of Redis still retain fast SWR cache
+    try:
+        filepath = _get_file_cache_path(key)
+        tmp_filepath = filepath + f".tmp.{os.getpid()}"
+        with open(tmp_filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+        os.replace(tmp_filepath, filepath)
     except Exception as e:
-        logging.warning(f"Error writing to Redis cache for key '{key}': {e}")
-        _invalidate_redis()
+        logging.warning(f"Error writing to file cache for key '{key}': {e}")
+
 
 def clear_advanced_cache(keys: Optional[List[str]] = None) -> None:
-    """Clear specific keys or flush the entire Redis database."""
+    """Clear specific keys or flush both Redis and disk cache."""
     client = _get_redis()
-    if client is None:
-        return
+    if client is not None:
+        try:
+            if keys:
+                client.delete(*keys)
+                logging.info(f"Cleared Redis cache keys: {keys}")
+            else:
+                client.flushdb()
+                logging.info("Flushed all Redis cache")
+        except Exception as e:
+            logging.error(f"Failed to clear Redis cache: {e}")
+            _invalidate_redis()
 
     try:
         if keys:
-            client.delete(*keys)
-            logging.info(f"Cleared cache keys: {keys}")
+            for k in keys:
+                fpath = _get_file_cache_path(k)
+                if os.path.exists(fpath):
+                    os.remove(fpath)
         else:
-            client.flushdb()
-            logging.info("Flushed all Redis cache")
+            for fname in os.listdir(_CACHE_DIR):
+                if fname.endswith('.json'):
+                    try:
+                        os.remove(os.path.join(_CACHE_DIR, fname))
+                    except Exception:
+                        pass
     except Exception as e:
-        logging.error(f"Failed to clear Redis cache: {e}")
-        _invalidate_redis()
+        logging.error(f"Failed to clear file cache: {e}")

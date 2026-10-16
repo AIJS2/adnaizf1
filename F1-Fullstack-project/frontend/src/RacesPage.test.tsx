@@ -33,7 +33,7 @@ const LAST_WEEK = new Date(now.getTime() - 7 * 864e5).toISOString().slice(0, 10)
  * state and only forbid a misleading one.
  */
 const RACE_DAY_CALENDAR = [
-  { round: 16, name: 'Bahrain Grand Prix', date: LAST_WEEK, location: 'Kuala Lumpur', status: 'Finished', winner: 'Lando Norris', winner_team: 'McLaren' },
+  { round: 16, name: 'Italian Grand Prix', date: LAST_WEEK, location: 'Monza', status: 'Finished', winner: 'Andrea Kimi Antonelli', winner_team: 'Mercedes' },
   { round: 17, name: 'Singapore Grand Prix', date: TODAY, location: 'Marina Bay', status: 'Ongoing', winner: null },
   { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, location: 'Austin', status: 'Upcoming', winner: null },
   { round: 19, name: 'Mexico City Grand Prix', date: new Date(now.getTime() + 21 * 864e5).toISOString().slice(0, 10), location: 'Mexico City', status: 'Upcoming', winner: null },

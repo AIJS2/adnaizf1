@@ -31,7 +31,7 @@ const DriverProfilePage = () => {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
-        <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
           <div className="animate-pulse space-y-8 w-full">
             <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -51,7 +51,7 @@ const DriverProfilePage = () => {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
-        <main className="container mx-auto px-6 pt-28 pb-16 text-center">
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 text-center">
           <AlertTriangle className="text-red-500 mx-auto mb-4" size={48} />
           <h2 className="text-3xl font-black mb-2">Driver Not Found</h2>
           <p className="text-neutral-400 mb-6">{error?.message || "Could not load data for this driver."}</p>
@@ -77,7 +77,7 @@ const DriverProfilePage = () => {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         
         {/* Back Link */}
         <Link to="/stats" state={{ tab: 'drivers' }} className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors mb-6">
@@ -110,7 +110,7 @@ const DriverProfilePage = () => {
             }}
           />
 
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
                 {teamLogo && <img src={teamLogo} alt={profile.team} className="h-10 w-auto drop-shadow-xl" />}
@@ -156,7 +156,7 @@ const DriverProfilePage = () => {
         </section>
 
         {/* Key Stats Grid */}
-        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-10">
+        <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-10">
           {[
             { label: 'Wins', value: profile.wins, color: 'text-yellow-400' },
             { label: 'Podiums', value: profile.podiums, color: 'text-white' },

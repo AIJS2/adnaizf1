@@ -14,7 +14,7 @@ const RaceDetailPage = lazy(() => import('./pages/RaceDetailPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const DriverProfilePage = lazy(() => import('./pages/DriverProfilePage'));
 const TeamProfilePage = lazy(() => import('./pages/TeamProfilePage'));
-const DriverComparePage = lazy(() => import('./pages/DriverComparePage'));
+const ComparePage = lazy(() => import('./pages/ComparePage'));
 const LiveTimingPage = lazy(() => import('./pages/LiveTimingPage'));
 const SimulatorPage = lazy(() => import('./pages/SimulatorPage'));
 const GuidePage = lazy(() => import('./pages/GuidePage'));
@@ -45,7 +45,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/compare",
-        element: <DriverComparePage />,
+        element: <ComparePage />,
       },
       {
         path: "/driver/:id",

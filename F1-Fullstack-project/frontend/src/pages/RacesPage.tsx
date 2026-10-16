@@ -57,8 +57,9 @@ const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; pha
     return () => clearInterval(interval);
   }, [targetDate]);
 
-  // Race underway: a countdown to the start is meaningless — show LIVE.
-  if (phase === 'live') {
+  // Race underway or start time passed: a countdown to the start is meaningless — show LIVE.
+  const isPastStart = targetDate.getTime() <= Date.now();
+  if (phase === 'live' || isPastStart) {
     return (
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -346,7 +347,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
 const LoadingSkeleton = () => (
   <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
     
-    <main className="container mx-auto px-6 pt-28 pb-12 relative z-10">
+    <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
       <div className="animate-pulse space-y-8">
         <div className="flex flex-col gap-4">
           <div className="h-16 w-96 bg-neutral-900/60 border border-neutral-800 rounded-2xl" />
@@ -356,7 +357,7 @@ const LoadingSkeleton = () => (
             <div className="h-10 w-28 bg-neutral-900/40 rounded-xl" />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="h-72 bg-neutral-900/40 border border-neutral-800/50 rounded-3xl" />
           ))}
@@ -455,22 +456,22 @@ const RacesPage = () => {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
       {/* Backgrounds */}
-      <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.10] pointer-events-none mix-blend-luminosity" />
-      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 bg-gradient-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.08] pointer-events-none mix-blend-luminosity" />
+      <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
+      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none" />
 
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-16 relative z-10">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
         
         {/* Header Section */}
         <section className="mb-10 relative">
           <div className="absolute -left-10 -top-10 w-40 h-40 bg-red-500/20 blur-[70px] rounded-full pointer-events-none" />
           
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+          <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
             <div>
-              <h1 className="text-5xl md:text-7xl font-black tracking-tighter flex items-center gap-4 italic transform -skew-x-6 text-white">
-                <Calendar className="text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.6)]" size={56} />
-                Race <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Calendar</span>
+              <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter flex items-center gap-4 italic transform -skew-x-6 text-white">
+                <Calendar className="text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.6)] shrink-0" size={56} />
+                <span>Race <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Calendar</span></span>
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <span className="bg-neutral-900 border border-neutral-700 text-white font-mono font-bold px-4 py-1.5 rounded-lg shadow-inner">
@@ -483,7 +484,7 @@ const RacesPage = () => {
             {/* Jump to Next Race button */}
             {nextRace && filter === 'all' && (
               <button onClick={scrollToNextRace}
-                className="flex items-center gap-2 px-5 py-2.5 bg-red-600/90 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-xl border border-red-500 transition-all duration-200 hover:-translate-y-0.5 shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_25px_rgba(220,38,38,0.5)] whitespace-nowrap">
+                className="flex items-center gap-2 px-5 py-2.5 bg-red-600/90 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-xl border border-red-500 transition-all duration-200 hover:-translate-y-0.5 shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_25px_rgba(220,38,38,0.5)] whitespace-nowrap self-start xl:self-auto shrink-0">
                 <ArrowDown size={16} className="animate-bounce" />
                 Jump to Next Race
               </button>
@@ -506,17 +507,17 @@ const RacesPage = () => {
               )}
               <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 to-transparent pointer-events-none" />
               
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex items-center gap-5">
+              <div className="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+                <div className="flex items-center gap-5 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
                     <Zap size={24} className="text-red-500 animate-pulse" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1 ${nextRace.phase === 'live' ? 'text-red-400' : nextRace.phase === 'race_day' ? 'text-amber-400' : 'text-red-400'}`}>
                       {nextRace.phase === 'live' ? 'Live Now' : nextRace.phase === 'race_day' ? 'Race Day · Today' : 'Next Up'} · Round {nextRace.round}
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight">{nextRace.name}</h2>
-                    <div className="flex items-center gap-3 mt-1.5 text-neutral-400 text-sm">
+                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight truncate">{nextRace.name}</h2>
+                    <div className="flex flex-wrap items-center gap-3 mt-1.5 text-neutral-400 text-sm">
                       <div className="flex items-center gap-1.5">
                         <MapPin size={13} /> {nextRace.location}
                       </div>
@@ -529,7 +530,7 @@ const RacesPage = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4 shrink-0">
                   <MiniCountdown
                     targetDate={new Date(countdownTarget(nextRace.date) ?? nextRace.date + 'T00:00:00')}
                     phase={nextRace.phase}
@@ -550,7 +551,7 @@ const RacesPage = () => {
             {groupedRaces.map(group => (
               <div key={group.key}>
                 <MonthDivider month={group.month} year={group.year} raceCount={group.races.length} />
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 md:gap-8">
                   {group.races.map((race: Race, idx: number) => (
                     <RaceCard
                       key={race.round}

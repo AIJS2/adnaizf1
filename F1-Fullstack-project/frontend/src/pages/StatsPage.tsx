@@ -4,11 +4,12 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Search, Trophy, Crown, User, AlertTriangle, Loader2,
   Medal, ChevronRight, GitCompareArrows, Star,
-  Factory, Shield, TrendingUp, TrendingDown, Sparkles,
+  Factory, TrendingUp, TrendingDown, Sparkles,
+  ArrowUpDown, ArrowUp, ArrowDown, Database, Radio,
   type LucideIcon
 } from 'lucide-react';
 import { teamLogos, teamColors } from '../data/teamData';
-import { fetchChampionship } from '../services/api';
+import { fetchChampionship, fetchStandings } from '../services/api';
 import type { ChampionshipPayload } from '../services/api';
 import { SessionResultEntry } from '../types/f1';
 import ChampionshipWorm from '../components/ChampionshipWorm';
@@ -18,6 +19,7 @@ type ChampionshipView = {
   drivers: NonNullable<ChampionshipPayload['drivers']>;
   teams: NonNullable<ChampionshipPayload['teams']>;
   session_results: SessionResultEntry[];
+  source?: string;
 };
 
 const EMPTY_CHAMPIONSHIP: ChampionshipView = {
@@ -26,66 +28,51 @@ const EMPTY_CHAMPIONSHIP: ChampionshipView = {
   session_results: [],
 };
 
-interface EntryProps {
-  id?: string;
-  driverId?: string;
+interface LeaderboardEntry {
+  id: string;
   name: string;
   team?: string;
+  teamId?: string;
   points: number;
-  wins?: number;
-  podiums?: number;
-  dnfs?: number;
+  position: number;
+  wins: number;
+  podiums: number;
+  dnfs: number;
+  pointsLastRace?: number;
   abbreviation?: string;
+  driverNumber?: number;
+  color?: string;
+  country?: string;
 }
 
-/**
- * Normalize a championship row into the props the card/row components need.
- * The payload declares `name`/`points` optional, so coerce both at this one
- * boundary instead of scattering `?? 0` through the render sites.
- */
-const toEntry = (
-  row: { name?: string; points?: number },
-  extra: Partial<EntryProps> = {},
-): EntryProps => ({
-  ...extra,
-  name: row.name ?? '-',
-  points: row.points ?? 0,
-});
+type SortField = 'position' | 'points' | 'wins' | 'podiums' | 'dnfs' | 'pointsLastRace';
+type SortOrder = 'asc' | 'desc';
 
+// =======================================================================
+// --- PODIUM CARD (Top 3 Pit-Wall Showcase) ---
+// =======================================================================
 interface PodiumCardProps {
-  entry: EntryProps;
+  entry: LeaderboardEntry;
   rank: number;
   type: 'driver' | 'constructor';
   maxPoints: number;
   leaderPoints: number;
 }
 
-interface StandingRowProps {
-  entry: EntryProps;
-  index: number;
-  type: 'driver' | 'constructor';
-  maxPoints: number;
-  leaderPoints: number;
-  searchTerm?: string;
-}
-
-// =======================================================================
-// --- PODIUM CARD (Top 3 special treatment) ---
-// =======================================================================
 const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardProps) => {
   const teamColor = type === 'driver' && entry.team
-    ? (teamColors[entry.team] || '#EF4444')
-    : (teamColors[entry.name] || '#EF4444');
+    ? (teamColors[entry.team] || entry.color || '#EF4444')
+    : (teamColors[entry.name] || entry.color || '#EF4444');
   const darkLogos = ['Audi', 'Mercedes', 'Haas'];
   const teamName = type === 'driver' && entry.team ? entry.team : entry.name;
   const logoNeedsBrightening = darkLogos.includes(teamName);
 
   const rankConfig: Record<number, { border: string; bg: string; shadow: string; icon: LucideIcon; iconColor: string; label: string; labelBg: string }> = {
-    0: { border: 'border-yellow-500/60', bg: 'from-yellow-500/10 via-yellow-900/5', shadow: 'shadow-yellow-500/20', icon: Crown, iconColor: 'text-yellow-400', label: '1ST', labelBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
-    1: { border: 'border-slate-400/40', bg: 'from-slate-400/10 via-slate-800/5', shadow: 'shadow-slate-400/15', icon: Medal, iconColor: 'text-slate-300', label: '2ND', labelBg: 'bg-slate-400/20 text-slate-300 border-slate-400/40' },
-    2: { border: 'border-amber-600/40', bg: 'from-amber-600/10 via-amber-900/5', shadow: 'shadow-amber-600/15', icon: Medal, iconColor: 'text-amber-500', label: '3RD', labelBg: 'bg-amber-600/20 text-amber-500 border-amber-600/40' },
+    0: { border: 'border-yellow-500/60', bg: 'from-yellow-500/15 via-yellow-900/10', shadow: 'shadow-yellow-500/20', icon: Crown, iconColor: 'text-yellow-400', label: 'P1 // CHAMPIONSHIP LEADER', labelBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
+    1: { border: 'border-slate-400/40', bg: 'from-slate-400/15 via-slate-800/10', shadow: 'shadow-slate-400/15', icon: Medal, iconColor: 'text-slate-300', label: 'P2 // CONTENDER', labelBg: 'bg-slate-400/20 text-slate-300 border-slate-400/40' },
+    2: { border: 'border-amber-600/40', bg: 'from-amber-600/15 via-amber-900/10', shadow: 'shadow-amber-600/15', icon: Medal, iconColor: 'text-amber-500', label: 'P3 // PODIUM SPOT', labelBg: 'bg-amber-600/20 text-amber-500 border-amber-600/40' },
   };
-  const cfg = rankConfig[rank];
+  const cfg = rankConfig[rank] || rankConfig[2];
   const RankIcon = cfg.icon;
   const pct = maxPoints > 0 ? Math.max(5, (entry.points / maxPoints) * 100) : 5;
   const gap = rank === 0 ? null : leaderPoints - entry.points;
@@ -96,22 +83,30 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
 
   return (
     <Link to={linkTo} className="block group">
-      <div className={`relative bg-gradient-to-br ${cfg.bg} to-neutral-950/80 backdrop-blur-xl border ${cfg.border} rounded-3xl p-6 shadow-2xl ${cfg.shadow} overflow-hidden transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-2xl h-full`}>
+      <div className={`relative bg-gradient-to-br ${cfg.bg} to-neutral-950/90 backdrop-blur-xl border ${cfg.border} rounded-2xl p-5 shadow-2xl ${cfg.shadow} overflow-hidden transition-all duration-300 group-hover:-translate-y-1.5 h-full`}>
+        {/* Pit-Wall Laser bar */}
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: teamColor, boxShadow: `0 0 10px ${teamColor}` }} />
+        
         {/* Team color glow */}
-        <div className="absolute -right-10 -bottom-10 w-40 h-40 rounded-full blur-[80px] opacity-15 pointer-events-none group-hover:opacity-30 transition-opacity" style={{ backgroundColor: teamColor }} />
-        {/* Watermark number */}
-        <div className="absolute right-3 -bottom-4 text-[7rem] font-black opacity-[0.03] pointer-events-none select-none font-mono leading-none" style={{ color: teamColor }}>
+        <div className="absolute -right-10 -bottom-10 w-36 h-36 rounded-full blur-[70px] opacity-20 pointer-events-none group-hover:opacity-35 transition-opacity" style={{ backgroundColor: teamColor }} />
+        
+        {/* Watermark position */}
+        <div className="absolute right-3 -bottom-4 text-[6rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none italic" style={{ color: teamColor }}>
           {rank + 1}
         </div>
 
-        {/* Rank badge */}
-        <div className="flex items-center justify-between mb-4">
-          <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${cfg.labelBg}`}>
+        {/* Rank badge + gap */}
+        <div className="flex items-center justify-between mb-3">
+          <div className={`flex items-center gap-1.5 text-[9px] font-mono font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${cfg.labelBg}`}>
             <RankIcon size={12} /> {cfg.label}
           </div>
-          {gap !== null && (
+          {gap !== null ? (
             <span className="text-[11px] font-mono text-red-400 font-bold bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded flex items-center gap-1">
-              <TrendingDown size={10} /> -{gap}
+              <TrendingDown size={10} /> -{gap} PTS
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono text-yellow-400 font-bold bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+              <Sparkles size={10} /> +0 GAP
             </span>
           )}
         </div>
@@ -120,173 +115,65 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
         <div className="mb-4">
           {type === 'driver' ? (
             <>
-              <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight">
+              <div className="flex items-center gap-2">
+                {entry.driverNumber && (
+                  <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+                    #{entry.driverNumber}
+                  </span>
+                )}
+                {entry.abbreviation && (
+                  <span className="font-mono text-xs font-black text-neutral-400 tracking-wider">
+                    {entry.abbreviation}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight mt-1">
                 {entry.name}
               </h3>
-              <div className="flex items-center gap-2.5 mt-2">
+              <div className="flex items-center gap-2 mt-1.5">
                 {entry.team && teamLogos[entry.team] && (
-                  <img src={teamLogos[entry.team]} alt={entry.team} className="h-5 w-auto object-contain" style={logoNeedsBrightening ? { filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.8))' } : { filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
+                  <img src={teamLogos[entry.team]} alt={entry.team} className="h-4 w-auto object-contain" style={logoNeedsBrightening ? { filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.8))' } : { filter: 'drop-shadow(0px 1px 3px rgba(0,0,0,0.5))' }} />
                 )}
                 <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">{entry.team}</span>
               </div>
             </>
           ) : (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {teamLogos[entry.name] && (
-                <img src={teamLogos[entry.name]} alt={entry.name} className="h-10 w-auto object-contain" style={logoNeedsBrightening ? { filter: 'drop-shadow(0px 0px 3px rgba(255,255,255,0.8))' } : { filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
+                <img src={teamLogos[entry.name]} alt={entry.name} className="h-8 w-auto object-contain" style={logoNeedsBrightening ? { filter: 'drop-shadow(0px 0px 3px rgba(255,255,255,0.8))' } : { filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
               )}
-              <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight">
                 {entry.name}
               </h3>
             </div>
           )}
         </div>
 
-        {/* Stats row */}
+        {/* Stats Row */}
         <div className="flex items-end justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <span className="text-4xl md:text-5xl font-black font-mono" style={{ color: teamColor, textShadow: `0 0 20px ${teamColor}60` }}>
-                {entry.points}
-              </span>
-              <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest block mt-0.5">Points</span>
-            </div>
+          <div>
+            <span className="text-3xl md:text-4xl font-black font-mono tracking-tight" style={{ color: teamColor, textShadow: `0 0 16px ${teamColor}60` }}>
+              {entry.points}
+            </span>
+            <span className="text-[9px] text-neutral-500 uppercase font-mono font-bold tracking-widest block mt-0.5">Points</span>
           </div>
-          <div className="flex gap-3 text-center">
-            {entry.wins !== undefined && (
-              <div className="bg-neutral-950/60 border border-neutral-800 px-3 py-2 rounded-xl">
-                <Trophy size={14} className="text-yellow-500 mx-auto mb-1" />
-                <span className="font-black text-white text-lg block leading-none">{entry.wins}</span>
-                <span className="text-[9px] text-neutral-500 uppercase font-bold">Wins</span>
-              </div>
-            )}
-            {entry.podiums !== undefined && (
-              <div className="bg-neutral-950/60 border border-neutral-800 px-3 py-2 rounded-xl">
-                <Medal size={14} className="text-amber-400 mx-auto mb-1" />
-                <span className="font-black text-white text-lg block leading-none">{entry.podiums}</span>
-                <span className="text-[9px] text-neutral-500 uppercase font-bold">Podiums</span>
-              </div>
-            )}
-            {entry.dnfs !== undefined && entry.dnfs > 0 && (
-              <div className="bg-neutral-950/60 border border-neutral-800 px-3 py-2 rounded-xl">
-                <AlertTriangle size={14} className="text-red-500 mx-auto mb-1" />
-                <span className="font-black text-white text-lg block leading-none">{entry.dnfs}</span>
-                <span className="text-[9px] text-neutral-500 uppercase font-bold">DNFs</span>
-              </div>
-            )}
+          <div className="flex gap-2 text-center">
+            <div className="bg-neutral-950/70 border border-neutral-800 px-2.5 py-1.5 rounded-lg">
+              <Trophy size={12} className="text-yellow-500 mx-auto mb-0.5" />
+              <span className="font-mono font-black text-white text-sm block leading-none">{entry.wins}</span>
+              <span className="text-[8px] text-neutral-500 uppercase font-bold">Wins</span>
+            </div>
+            <div className="bg-neutral-950/70 border border-neutral-800 px-2.5 py-1.5 rounded-lg">
+              <Medal size={12} className="text-amber-400 mx-auto mb-0.5" />
+              <span className="font-mono font-black text-white text-sm block leading-none">{entry.podiums}</span>
+              <span className="text-[8px] text-neutral-500 uppercase font-bold">Pods</span>
+            </div>
           </div>
         </div>
 
         {/* Points bar */}
-        <div className="mt-4 w-full bg-neutral-950/80 rounded-full h-2 overflow-hidden border border-neutral-800 relative">
-          <div className="h-full rounded-full transition-all duration-1000 ease-out relative" style={{ width: `${pct}%`, backgroundColor: teamColor, boxShadow: `0 0 12px ${teamColor}` }}>
-            <div className="absolute top-0 right-0 bottom-0 w-16 bg-gradient-to-l from-white/30 to-transparent" />
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-};
-
-// =======================================================================
-// --- STANDING ROW (P4 and below) ---
-// =======================================================================
-const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }: StandingRowProps) => {
-  const teamColor = type === 'driver' && entry.team ? (teamColors[entry.team] || '#EF4444') : (teamColors[entry.name] || '#EF4444');
-  const darkLogos = ['Audi', 'Mercedes', 'Haas'];
-  const pct = maxPoints > 0 ? Math.max(5, (entry.points / maxPoints) * 100) : 5;
-  const gap = leaderPoints - entry.points;
-
-  const linkTo = type === 'driver'
-    ? `/driver/${entry.id || entry.name.toLowerCase().replace(/\s+/g, '_')}`
-    : `/team/${entry.id || entry.name.toLowerCase().replace(/\s+/g, '_')}`;
-
-  return (
-    <Link to={linkTo}
-      className="block group bg-neutral-900/40 backdrop-blur hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-neutral-600 rounded-2xl p-4 md:p-5 transition-all duration-300 shadow-lg relative overflow-hidden cursor-pointer"
-      style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}
-      onMouseEnter={(e) => e.currentTarget.style.boxShadow = `0 8px 40px ${teamColor}25, inset 0 0 15px ${teamColor}08`}
-      onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.4)'}
-    >
-      {/* Left color accent */}
-      <div className="absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 group-hover:w-2.5" style={{ backgroundColor: teamColor, boxShadow: `0 0 10px ${teamColor}` }} />
-
-      {/* Watermark */}
-      <div className="absolute right-4 md:right-12 -bottom-3 md:-bottom-6 text-6xl md:text-8xl font-black text-white/[0.02] leading-none select-none pointer-events-none italic -skew-x-12">
-        {type === 'driver' ? (entry.abbreviation || entry.name.substring(0, 3).toUpperCase()) : entry.name.substring(0, 3).toUpperCase()}
-      </div>
-
-      <div className="flex items-center justify-between gap-3 ml-2">
-        {/* Position + Info */}
-        <div className="flex items-center gap-4 md:gap-6 min-w-0">
-          {/* Position number */}
-          <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center -skew-x-12 border border-neutral-700 bg-neutral-800/80 group-hover:border-neutral-500 group-hover:bg-neutral-700/80 transition-all rounded-lg">
-            <span className="text-lg md:text-xl font-black text-neutral-400 group-hover:text-white skew-x-12 transition-colors">{index + 1}</span>
-          </div>
-
-          <div className="min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              {type === 'constructor' && teamLogos[entry.name] && (
-                <img src={teamLogos[entry.name]} alt={entry.name} className="h-6 md:h-7 w-auto object-contain" style={darkLogos.includes(entry.name) ? { filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.7))' } : { filter: 'drop-shadow(0px 2px 3px rgba(0,0,0,0.5))' }} />
-              )}
-              <h3 className="font-black text-white text-lg md:text-xl tracking-tight group-hover:text-red-400 transition-colors truncate uppercase italic">
-                {entry.name}
-              </h3>
-            </div>
-            {type === 'driver' && (
-              <div className="flex items-center gap-2.5 mt-1">
-                {entry.team && teamLogos[entry.team] && (
-                  <img src={teamLogos[entry.team]} alt={entry.team} className="h-4 md:h-5 w-auto object-contain" style={darkLogos.includes(entry.team || '') ? { filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.7))' } : { filter: 'drop-shadow(0px 1px 3px rgba(0,0,0,0.5))' }} />
-                )}
-                <span className="text-neutral-400 text-xs font-bold uppercase tracking-wider truncate">{entry.team}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Stats + Points */}
-        <div className="flex items-center gap-4 md:gap-8 flex-shrink-0 z-10">
-          <div className="hidden md:flex items-center gap-5 text-xs font-mono text-neutral-400">
-            {entry.wins !== undefined && (
-              <div className="text-center">
-                <Trophy size={12} className="text-yellow-500/60 mx-auto mb-0.5" />
-                <span className="font-black text-base text-white">{entry.wins}</span>
-              </div>
-            )}
-            {entry.podiums !== undefined && (
-              <div className="text-center">
-                <Medal size={12} className="text-amber-400/60 mx-auto mb-0.5" />
-                <span className="font-black text-base text-white">{entry.podiums}</span>
-              </div>
-            )}
-            {entry.dnfs !== undefined && entry.dnfs > 0 && (
-              <div className="text-center">
-                <AlertTriangle size={12} className="text-red-500/60 mx-auto mb-0.5" />
-                <span className="font-black text-base text-white">{entry.dnfs}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="text-right min-w-[70px]">
-            <span className="text-2xl md:text-3xl font-black font-mono italic tracking-tighter text-neutral-200" style={{ textShadow: `0 0 10px ${teamColor}30` }}>
-              {entry.points}
-            </span>
-            <div className="flex items-end justify-end gap-1.5 mt-0.5">
-              <span className="text-[9px] text-neutral-500 uppercase font-bold tracking-widest">PTS</span>
-              {!searchTerm && gap > 0 && (
-                <span className="text-[10px] font-mono text-red-400/80 font-bold">-{gap}</span>
-              )}
-            </div>
-          </div>
-
-          <ChevronRight size={20} className="text-neutral-700 group-hover:text-white group-hover:translate-x-1 transition-all" />
-        </div>
-      </div>
-
-      {/* Points bar */}
-      <div className="mt-4 w-full bg-neutral-950/80 rounded-full h-1.5 overflow-hidden border border-neutral-800/50 relative">
-        <div className="h-full rounded-full transition-all duration-1000 ease-out relative" style={{ width: `${pct}%`, backgroundColor: teamColor, boxShadow: `0 0 8px ${teamColor}80` }}>
-          <div className="absolute top-0 right-0 bottom-0 w-12 bg-gradient-to-l from-white/30 to-transparent" />
+        <div className="mt-3.5 w-full bg-neutral-950/80 rounded-full h-1.5 overflow-hidden border border-neutral-800 relative">
+          <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${pct}%`, backgroundColor: teamColor, boxShadow: `0 0 8px ${teamColor}` }} />
         </div>
       </div>
     </Link>
@@ -298,273 +185,642 @@ const StandingRow = ({ entry, index, type, maxPoints, leaderPoints, searchTerm }
 // =======================================================================
 const StatsPage = () => {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(location.state?.tab || 'drivers');
+  const [activeTab, setActiveTab] = useState<'drivers' | 'constructors' | 'progression'>(
+    location.state?.tab || 'drivers'
+  );
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<SortField>('position');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   const currentYear = new Date().getFullYear();
 
-  // Single source of truth for the championship payload, with the app-wide
-  // caching/retry defaults from QueryClient instead of a bespoke fetch effect.
+  // Fetch championship standings from the backend (relational SQLite / fallback)
   const { data, isLoading: loading, error, refetch } = useQuery<ChampionshipView>({
-    queryKey: ['championship', currentYear],
+    queryKey: ['standings', currentYear],
     queryFn: async () => {
-      const result = await fetchChampionship(currentYear);
-      return {
-        drivers: result.drivers ?? [],
-        teams: result.teams ?? [],
-        session_results: result.session_results ?? [],
-      };
+      try {
+        const result = await fetchStandings(currentYear);
+        return {
+          drivers: result.drivers ?? [],
+          teams: result.teams ?? [],
+          session_results: result.session_results ?? [],
+          source: (result as { source?: string }).source || 'sqlite_database',
+        };
+      } catch {
+        // Fallback to fetchChampionship if route differs
+        const result = await fetchChampionship(currentYear);
+        return {
+          drivers: result.drivers ?? [],
+          teams: result.teams ?? [],
+          session_results: result.session_results ?? [],
+          source: 'cache_fallback',
+        };
+      }
     },
   });
 
-  const { drivers, teams, session_results: sessionResults } = data ?? EMPTY_CHAMPIONSHIP;
+  const { drivers: rawDrivers, teams: rawTeams, session_results: sessionResults } =
+    data ?? EMPTY_CHAMPIONSHIP;
 
-  // safeMax guards against Math.max(...[]) === -Infinity, which would produce
-  // a negative bar width when the season has no standings yet.
-  const maxDriverPoints = safeMax(drivers.map(d => toNumber(d.points)), 1);
-  const maxTeamPoints = safeMax(teams.map(t => toNumber(t.points)), 1);
+  // Normalize driver data
+  const normalizedDrivers: LeaderboardEntry[] = useMemo(() => {
+    return rawDrivers.map((d, index) => {
+      const id = d.id || (d.name ? d.name.toLowerCase().replace(/\s+/g, '_') : `driver_${index}`);
+      const team = d.team || '';
+      const color = teamColors[team] || d.teamColor || '#EF4444';
+      return {
+        id,
+        name: d.name || '-',
+        team,
+        teamId: (d as { team_id?: string }).team_id || team.toLowerCase().replace(/\s+/g, '_'),
+        points: toNumber(d.points),
+        position: toNumber(d.position) || index + 1,
+        wins: toNumber(d.wins),
+        podiums: toNumber(d.podiums),
+        dnfs: toNumber(d.dnfs),
+        pointsLastRace: toNumber(d.points_last_race),
+        abbreviation: d.abbreviation || d.code || '',
+        driverNumber: d.driver_number || d.number,
+        color,
+      };
+    });
+  }, [rawDrivers]);
 
-  const filteredDrivers = useMemo(() => drivers.filter(d =>
-    (d.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (d.team || '').toLowerCase().includes(searchTerm.toLowerCase())
-  ), [drivers, searchTerm]);
+  // Normalize constructor data
+  const normalizedTeams: LeaderboardEntry[] = useMemo(() => {
+    return rawTeams.map((t, index) => {
+      const id = t.id || (t.name ? t.name.toLowerCase().replace(/\s+/g, '_') : `team_${index}`);
+      const color = teamColors[t.name] || '#EF4444';
+      return {
+        id,
+        name: t.name || '-',
+        points: toNumber(t.points),
+        position: toNumber(t.position) || index + 1,
+        wins: toNumber(t.wins),
+        podiums: toNumber(t.podiums),
+        dnfs: toNumber((t as { dnfs?: number }).dnfs),
+        pointsLastRace: toNumber((t as { points_last_race?: number }).points_last_race),
+        color,
+      };
+    });
+  }, [rawTeams]);
 
-  const filteredTeams = useMemo(() => teams.filter(t =>
-    (t.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-  ), [teams, searchTerm]);
+  // Compute maximums and leaders
+  const maxDriverPoints = safeMax(normalizedDrivers.map((d) => d.points), 1);
+  const maxTeamPoints = safeMax(normalizedTeams.map((t) => t.points), 1);
+  const leaderDriverPoints = normalizedDrivers[0]?.points || 0;
+  const leaderTeamPoints = normalizedTeams[0]?.points || 0;
 
-  // Split into podium (top 3) and rest
-  const podiumDrivers = !searchTerm ? filteredDrivers.slice(0, 3) : [];
-  const restDrivers = !searchTerm ? filteredDrivers.slice(3) : filteredDrivers;
-  const podiumTeams = !searchTerm ? filteredTeams.slice(0, 3) : [];
-  const restTeams = !searchTerm ? filteredTeams.slice(3) : filteredTeams;
+  // Filtered and sorted dataset
+  const activeEntries = activeTab === 'drivers' ? normalizedDrivers : normalizedTeams;
+  const maxPoints = activeTab === 'drivers' ? maxDriverPoints : maxTeamPoints;
+  const leaderPoints = activeTab === 'drivers' ? leaderDriverPoints : leaderTeamPoints;
 
-  const leaderDriverPoints = toNumber(drivers[0]?.points);
-  const leaderTeamPoints = toNumber(teams[0]?.points);
+  const filteredEntries = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return activeEntries;
 
-  // Season summary stats
-  const totalRaceWins = useMemo(() => drivers.reduce((sum, d) => sum + toNumber(d.wins), 0), [drivers]);
-  const totalPodiums = useMemo(() => drivers.reduce((sum, d) => sum + toNumber(d.podiums), 0), [drivers]);
+    return activeEntries.filter((entry) => {
+      const matchName = entry.name.toLowerCase().includes(term);
+      const matchTeam = entry.team ? entry.team.toLowerCase().includes(term) : false;
+      const matchAbbr = entry.abbreviation ? entry.abbreviation.toLowerCase().includes(term) : false;
+      const matchNumber = entry.driverNumber ? entry.driverNumber.toString().includes(term) : false;
+      return matchName || matchTeam || matchAbbr || matchNumber;
+    });
+  }, [activeEntries, searchTerm]);
+
+  const sortedEntries = useMemo(() => {
+    return [...filteredEntries].sort((a, b) => {
+      const valA = a[sortField] ?? 0;
+      const valB = b[sortField] ?? 0;
+
+      if (sortField === 'position') {
+        return sortOrder === 'asc' ? (a.position - b.position) : (b.position - a.position);
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return a.position - b.position;
+    });
+  }, [filteredEntries, sortField, sortOrder]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'position' ? 'asc' : 'desc');
+    }
+  };
+
+  // Top 3 Podium for banner
+  const podiumEntries = !searchTerm && sortField === 'position' && sortOrder === 'asc'
+    ? activeEntries.slice(0, 3)
+    : [];
+
+  // Summary HUD statistics
+  const totalWins = useMemo(() => normalizedDrivers.reduce((sum, d) => sum + d.wins, 0), [normalizedDrivers]);
+  const totalPodiums = useMemo(() => normalizedDrivers.reduce((sum, d) => sum + d.podiums, 0), [normalizedDrivers]);
 
   return (
-    <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
-      {/* Backgrounds */}
-      <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.12] pointer-events-none mix-blend-luminosity" />
-      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 bg-gradient-to-b from-red-900/15 via-neutral-950/85 to-neutral-950 pointer-events-none" />
+    <div className="bg-[#0a0a0a] min-h-screen text-white font-sans relative selection:bg-red-500 selection:text-white">
+      {/* Background Pit-Wall Grid & Holographic Glows */}
+      <div className="fixed inset-0 xl:left-72 bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-950/20 via-neutral-950/90 to-neutral-950 pointer-events-none" />
+      <div className="fixed top-0 left-1/4 xl:left-[35%] w-96 h-96 bg-red-600/10 blur-[130px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/5 blur-[140px] rounded-full pointer-events-none" />
 
-      
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-16 relative z-10">
-        
-        {/* Header */}
-        <section className="mb-10">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="relative">
-              <div className="absolute -left-10 -top-10 w-40 h-40 bg-red-500/15 blur-[70px] rounded-full pointer-events-none" />
-              <h1 className="text-5xl md:text-7xl font-black tracking-tighter flex items-center gap-4 italic transform -skew-x-6">
-                <Trophy className="text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" size={52} />
-                Championship <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 pr-2">Stats</span>
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
+        {/* Header telemetry HUD */}
+        <section className="mb-8">
+          <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+            <div>
+              {/* Telemetry status badge */}
+              <div className="flex items-center gap-2 mb-2 font-mono text-[11px] text-neutral-400">
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-300">
+                  <Database size={12} className="text-red-500" />
+                  SQLITE ORM RELATIONAL ENGINE
+                </span>
+                <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-neutral-900/60 border border-neutral-800/80 text-emerald-400">
+                  <Radio size={12} className="animate-pulse" />
+                  FEED LIVE
+                </span>
+              </div>
+
+              <h1 className="text-4xl md:text-6xl font-black tracking-tight uppercase italic flex items-center gap-3">
+                <Trophy className="text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" size={44} />
+                Championship <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Stats</span>
               </h1>
-              <p className="text-neutral-400 mt-2 text-base md:text-lg font-medium">
-                Official standings and season performance for {currentYear}.
+              <p className="text-neutral-400 mt-1 text-sm md:text-base font-medium">
+                Official {currentYear} FIA Formula 1 World Championship Leaderboard & Telemetry Standings.
               </p>
             </div>
 
-            {/* Tab Switcher + Compare Link */}
+            {/* Controls: Tab Switcher & H2H Compare Shortcut */}
             <div className="flex flex-wrap items-center gap-3">
-              <Link to="/compare"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900/80 backdrop-blur hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700/50 rounded-xl text-sm font-black transition-all shadow-lg hover:-translate-y-1 hover:shadow-red-500/20">
-                <GitCompareArrows size={18} className="text-red-500" /> Compare H2H
+              <Link
+                to="/compare"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 hover:border-neutral-700 rounded-xl text-xs font-mono font-bold tracking-wider uppercase transition-all shadow-lg hover:-translate-y-0.5"
+              >
+                <GitCompareArrows size={15} className="text-red-500" /> H2H Compare
               </Link>
 
-              <div className="flex bg-neutral-900/80 backdrop-blur border border-neutral-700/50 p-1.5 rounded-xl shadow-lg">
-                <button onClick={() => { setActiveTab('drivers'); setSearchTerm(''); }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-black transition-all ${
+              <div className="flex bg-neutral-900/90 backdrop-blur border border-neutral-800 p-1 rounded-xl shadow-xl">
+                <button
+                  onClick={() => { setActiveTab('drivers'); setSearchTerm(''); }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black font-mono uppercase tracking-wider transition-all ${
                     activeTab === 'drivers'
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/40'
-                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                  }`}>
-                  <User size={16} /> Drivers
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                  }`}
+                >
+                  <User size={14} /> Drivers
                 </button>
-                <button onClick={() => { setActiveTab('constructors'); setSearchTerm(''); }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-black transition-all ${
+                <button
+                  onClick={() => { setActiveTab('constructors'); setSearchTerm(''); }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black font-mono uppercase tracking-wider transition-all ${
                     activeTab === 'constructors'
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/40'
-                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                  }`}>
-                  <Factory size={16} /> Constructors
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                  }`}
+                >
+                  <Factory size={14} /> Constructors
                 </button>
-                <button onClick={() => { setActiveTab('progression'); setSearchTerm(''); }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-black transition-all ${
+                <button
+                  onClick={() => { setActiveTab('progression'); setSearchTerm(''); }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black font-mono uppercase tracking-wider transition-all ${
                     activeTab === 'progression'
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/40'
-                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                  }`}>
-                  <TrendingUp size={16} /> Worm
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                  }`}
+                >
+                  <TrendingUp size={14} /> Worm
                 </button>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Quick Season Stats Bar */}
-        {!loading && !error && (
-          <section className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-neutral-900/50 backdrop-blur border border-neutral-800/60 rounded-2xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+        {/* Quick Pit-Wall HUD Telemetry Gauges */}
+        {!loading && !error && activeTab !== 'progression' && (
+          <section className="mb-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-xl p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center flex-shrink-0">
                 <Crown size={18} className="text-yellow-400" />
               </div>
-              <div>
-                <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">Leader</span>
-                <span className="font-black text-white text-sm block leading-tight">
-                  {activeTab === 'drivers' ? (drivers[0]?.name || '-') : (teams[0]?.name || '-')}
+              <div className="min-w-0">
+                <span className="text-[9px] text-neutral-500 uppercase font-mono font-bold tracking-widest block">Leader</span>
+                <span className="font-black text-white text-sm block truncate leading-tight">
+                  {activeTab === 'drivers' ? (normalizedDrivers[0]?.name || '-') : (normalizedTeams[0]?.name || '-')}
                 </span>
               </div>
             </div>
-            <div className="bg-neutral-900/50 backdrop-blur border border-neutral-800/60 rounded-2xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+
+            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-xl p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
                 <Star size={18} className="text-red-400" />
               </div>
-              <div>
-                <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">Max Points</span>
-                <span className="font-black text-white text-sm block">{activeTab === 'drivers' ? leaderDriverPoints : leaderTeamPoints} PTS</span>
+              <div className="min-w-0">
+                <span className="text-[9px] text-neutral-500 uppercase font-mono font-bold tracking-widest block">Top Points</span>
+                <span className="font-mono font-black text-white text-sm block leading-tight">
+                  {activeTab === 'drivers' ? leaderDriverPoints : leaderTeamPoints} PTS
+                </span>
               </div>
             </div>
-            <div className="bg-neutral-900/50 backdrop-blur border border-neutral-800/60 rounded-2xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+
+            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-xl p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
                 <Trophy size={18} className="text-emerald-400" />
               </div>
-              <div>
-                <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">Total Wins</span>
-                <span className="font-black text-white text-sm block">{totalRaceWins}</span>
+              <div className="min-w-0">
+                <span className="text-[9px] text-neutral-500 uppercase font-mono font-bold tracking-widest block">Total Wins</span>
+                <span className="font-mono font-black text-white text-sm block leading-tight">{totalWins}</span>
               </div>
             </div>
-            <div className="bg-neutral-900/50 backdrop-blur border border-neutral-800/60 rounded-2xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                <Medal size={18} className="text-purple-400" />
+
+            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-xl p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Medal size={18} className="text-amber-400" />
               </div>
-              <div>
-                <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">Total Podiums</span>
-                <span className="font-black text-white text-sm block">{totalPodiums}</span>
+              <div className="min-w-0">
+                <span className="text-[9px] text-neutral-500 uppercase font-mono font-bold tracking-widest block">Total Podiums</span>
+                <span className="font-mono font-black text-white text-sm block leading-tight">{totalPodiums}</span>
               </div>
             </div>
           </section>
         )}
 
-        {/* Search */}
-        <div className="relative mb-8 max-w-lg group">
-          <div className="absolute inset-0 bg-red-500/15 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
-          <input
-            type="text"
-            placeholder={activeTab === 'drivers' ? 'Search driver or team...' : 'Search constructor...'}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="relative w-full bg-neutral-900/80 backdrop-blur-md border border-neutral-700/50 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50 transition-all font-bold shadow-xl"
-          />
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-red-500 transition-colors" size={18} />
-        </div>
-
-        {/* Error */}
+        {/* Error Notification */}
         {error && (
           <div className="bg-red-950/40 backdrop-blur border border-red-500/50 rounded-2xl p-8 text-center mb-8 max-w-lg mx-auto shadow-[0_0_30px_rgba(239,68,68,0.2)]">
             <AlertTriangle className="text-red-500 mx-auto mb-4" size={40} />
             <h3 className="font-black text-red-400 text-xl uppercase tracking-wider">Failed to load statistics</h3>
-            <p className="text-neutral-300 text-base mt-2 mb-6">{error?.message}</p>
-            <button onClick={() => { void refetch(); }}
-              className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-sm inline-flex items-center gap-2 transition-all shadow-lg hover:shadow-red-500/50 hover:-translate-y-0.5">
-              <Loader2 size={16} /> Retry Connection
+            <p className="text-neutral-300 text-sm mt-2 mb-6">{error?.message}</p>
+            <button
+              onClick={() => { void refetch(); }}
+              className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-mono font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 transition-all shadow-lg hover:shadow-red-500/40"
+            >
+              <Loader2 size={14} /> Retry Connection
             </button>
           </div>
         )}
 
-        {/* Loading */}
+        {/* Loading Skeleton */}
         {loading ? (
           <div className="space-y-4 animate-pulse">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {[1, 2, 3].map(i => <div key={i} className="h-56 bg-neutral-900/40 border border-neutral-800 rounded-3xl" />)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-48 bg-neutral-900/40 border border-neutral-800/80 rounded-2xl" />
+              ))}
             </div>
-            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-24 bg-neutral-900/40 border border-neutral-800 rounded-2xl" />)}
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-16 bg-neutral-900/40 border border-neutral-800/80 rounded-xl" />
+            ))}
           </div>
         ) : (
           <div>
-            {/* ==================== DRIVERS VIEW ==================== */}
-            {activeTab === 'drivers' && (
-              <div className="space-y-4">
-                {/* Podium (Top 3) */}
-                {podiumDrivers.length > 0 && (
-                  <section className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Sparkles size={16} className="text-yellow-400" />
-                      <h2 className="text-sm font-black text-neutral-400 uppercase tracking-widest">Championship Podium</h2>
+            {/* ================================================================= */}
+            {/* --- TAB CONTENT: DRIVERS & CONSTRUCTORS LEADERBOARD TABLE --- */}
+            {/* ================================================================= */}
+            {activeTab !== 'progression' && (
+              <div className="space-y-6">
+                {/* Top 3 Podium Showcase Cards (shown when not actively searching) */}
+                {podiumEntries.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles size={15} className="text-yellow-400" />
+                      <h2 className="text-xs font-mono font-black text-neutral-400 uppercase tracking-widest">
+                        {activeTab === 'drivers' ? 'Drivers Championship Podium' : 'Constructors Championship Podium'}
+                      </h2>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {podiumDrivers.map((driver, idx) => (
-                        <PodiumCard key={driver.name} entry={toEntry(driver, { id: driver.id, team: driver.team, wins: driver.wins, podiums: driver.podiums, dnfs: driver.dnfs, abbreviation: driver.abbreviation })} rank={idx} type="driver" maxPoints={maxDriverPoints} leaderPoints={leaderDriverPoints} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {podiumEntries.map((entry, idx) => (
+                        <PodiumCard
+                          key={entry.id}
+                          entry={entry}
+                          rank={idx}
+                          type={activeTab === 'drivers' ? 'driver' : 'constructor'}
+                          maxPoints={maxPoints}
+                          leaderPoints={leaderPoints}
+                        />
                       ))}
                     </div>
                   </section>
                 )}
 
-                {/* Rest of the field */}
-                {restDrivers.length > 0 && (
-                  <section>
-                    {!searchTerm && (
-                      <div className="flex items-center gap-2 mb-4">
-                        <Shield size={16} className="text-neutral-500" />
-                        <h2 className="text-sm font-black text-neutral-400 uppercase tracking-widest">Rest of the Field</h2>
-                      </div>
+                {/* Search & Leaderboard Toolbar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+                  <div className="relative flex-1 max-w-md group">
+                    <input
+                      type="text"
+                      placeholder={activeTab === 'drivers' ? 'Filter by driver, team, or number (#12)...' : 'Filter by constructor...'}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-neutral-900/80 backdrop-blur border border-neutral-800 rounded-xl py-2.5 pl-10 pr-4 text-white placeholder-neutral-500 text-xs font-mono font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all shadow-inner"
+                    />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-red-500 transition-colors" size={15} />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white text-xs font-mono font-bold"
+                      >
+                        CLEAR
+                      </button>
                     )}
-                    <div className="space-y-3">
-                      {restDrivers.map((driver, idx) => (
-                        <StandingRow key={driver.name} entry={toEntry(driver, { id: driver.id, team: driver.team, wins: driver.wins, podiums: driver.podiums, dnfs: driver.dnfs, abbreviation: driver.abbreviation })} index={searchTerm ? idx : idx + 3} type="driver" maxPoints={maxDriverPoints} leaderPoints={leaderDriverPoints} searchTerm={searchTerm} />
-                      ))}
-                    </div>
-                  </section>
-                )}
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs font-mono text-neutral-400 self-end sm:self-auto">
+                    <span>SHOWING:</span>
+                    <span className="font-black text-white px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800">
+                      {sortedEntries.length} {activeTab === 'drivers' ? 'DRIVERS' : 'CONSTRUCTORS'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* SLEEK PIT-WALL INTERACTIVE LEADERBOARD TABLE */}
+                <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/90 rounded-2xl overflow-hidden shadow-2xl">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
+                      <thead>
+                        <tr className="border-b border-neutral-800/90 bg-neutral-900/70 text-[10px] font-mono font-black uppercase tracking-wider text-neutral-400 select-none">
+                          <th
+                            onClick={() => handleSort('position')}
+                            className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors w-16"
+                          >
+                            <div className="flex items-center gap-1">
+                              POS
+                              {sortField === 'position' ? (
+                                sortOrder === 'asc' ? <ArrowUp size={11} className="text-red-500" /> : <ArrowDown size={11} className="text-red-500" />
+                              ) : <ArrowUpDown size={11} className="text-neutral-600" />}
+                            </div>
+                          </th>
+                          <th className="py-3.5 px-4">
+                            {activeTab === 'drivers' ? 'DRIVER & TEAM' : 'CONSTRUCTOR'}
+                          </th>
+                          <th
+                            onClick={() => handleSort('points')}
+                            className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors text-right"
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              PTS
+                              {sortField === 'points' ? (
+                                sortOrder === 'asc' ? <ArrowUp size={11} className="text-red-500" /> : <ArrowDown size={11} className="text-red-500" />
+                              ) : <ArrowUpDown size={11} className="text-neutral-600" />}
+                            </div>
+                          </th>
+                          <th className="py-3.5 px-4 text-right hidden sm:table-cell">
+                            GAP
+                          </th>
+                          <th
+                            onClick={() => handleSort('wins')}
+                            className="py-3.5 px-3 cursor-pointer hover:text-white transition-colors text-center hidden md:table-cell w-20"
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              WINS
+                              {sortField === 'wins' ? (
+                                sortOrder === 'asc' ? <ArrowUp size={11} className="text-red-500" /> : <ArrowDown size={11} className="text-red-500" />
+                              ) : <ArrowUpDown size={11} className="text-neutral-600" />}
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handleSort('podiums')}
+                            className="py-3.5 px-3 cursor-pointer hover:text-white transition-colors text-center hidden md:table-cell w-20"
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              PODS
+                              {sortField === 'podiums' ? (
+                                sortOrder === 'asc' ? <ArrowUp size={11} className="text-red-500" /> : <ArrowDown size={11} className="text-red-500" />
+                              ) : <ArrowUpDown size={11} className="text-neutral-600" />}
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handleSort('dnfs')}
+                            className="py-3.5 px-3 cursor-pointer hover:text-white transition-colors text-center hidden lg:table-cell w-20"
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              DNFS
+                              {sortField === 'dnfs' ? (
+                                sortOrder === 'asc' ? <ArrowUp size={11} className="text-red-500" /> : <ArrowDown size={11} className="text-red-500" />
+                              ) : <ArrowUpDown size={11} className="text-neutral-600" />}
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handleSort('pointsLastRace')}
+                            className="py-3.5 px-3 cursor-pointer hover:text-white transition-colors text-center hidden lg:table-cell w-24"
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              LAST GP
+                              {sortField === 'pointsLastRace' ? (
+                                sortOrder === 'asc' ? <ArrowUp size={11} className="text-red-500" /> : <ArrowDown size={11} className="text-red-500" />
+                              ) : <ArrowUpDown size={11} className="text-neutral-600" />}
+                            </div>
+                          </th>
+                          <th className="py-3.5 px-4 text-center w-12">
+                            VIEW
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-900/90 font-mono text-sm">
+                        {sortedEntries.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="py-12 text-center text-neutral-500 font-mono text-xs">
+                              NO MATCHING {activeTab === 'drivers' ? 'DRIVERS' : 'CONSTRUCTORS'} FOUND FOR "{searchTerm}"
+                            </td>
+                          </tr>
+                        ) : (
+                          sortedEntries.map((entry) => {
+                            const teamColor = entry.color || (entry.team ? teamColors[entry.team] : teamColors[entry.name]) || '#EF4444';
+                            const linkTo = activeTab === 'drivers'
+                              ? `/driver/${entry.id}`
+                              : `/team/${entry.id}`;
+                            const pct = maxPoints > 0 ? Math.max(3, (entry.points / maxPoints) * 100) : 3;
+                            const gap = leaderPoints - entry.points;
+                            const isP1 = entry.position === 1;
+                            const isP2 = entry.position === 2;
+                            const isP3 = entry.position === 3;
+                            const inPointsZone = entry.position <= 10;
+
+                            return (
+                              <tr
+                                key={entry.id}
+                                className="group hover:bg-neutral-900/60 transition-colors relative"
+                              >
+                                {/* Position Column */}
+                                <td className="py-3 px-4 relative">
+                                  {/* Team laser color indicator */}
+                                  <div
+                                    className="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all"
+                                    style={{ backgroundColor: teamColor, boxShadow: `0 0 8px ${teamColor}80` }}
+                                  />
+                                  <div className="flex items-center gap-2 pl-2">
+                                    {isP1 ? (
+                                      <span className="w-7 h-7 rounded-md bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 font-black text-xs flex items-center justify-center">
+                                        P1
+                                      </span>
+                                    ) : isP2 ? (
+                                      <span className="w-7 h-7 rounded-md bg-slate-400/20 border border-slate-400/50 text-slate-300 font-black text-xs flex items-center justify-center">
+                                        P2
+                                      </span>
+                                    ) : isP3 ? (
+                                      <span className="w-7 h-7 rounded-md bg-amber-600/20 border border-amber-600/50 text-amber-500 font-black text-xs flex items-center justify-center">
+                                        P3
+                                      </span>
+                                    ) : inPointsZone ? (
+                                      <span className="w-7 h-7 rounded-md bg-neutral-900 border border-neutral-700/80 text-white font-bold text-xs flex items-center justify-center group-hover:border-neutral-500">
+                                        {entry.position}
+                                      </span>
+                                    ) : (
+                                      <span className="w-7 h-7 rounded-md text-neutral-500 font-medium text-xs flex items-center justify-center">
+                                        {entry.position}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Name & Team */}
+                                <td className="py-3 px-4">
+                                  <Link to={linkTo} className="flex items-center gap-3 group-hover:text-red-400 transition-colors">
+                                    {activeTab === 'drivers' ? (
+                                      <>
+                                        {entry.driverNumber && (
+                                          <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800 hidden sm:inline-block">
+                                            #{entry.driverNumber}
+                                          </span>
+                                        )}
+                                        {entry.abbreviation && (
+                                          <span className="font-mono text-xs font-black text-neutral-400 tracking-wider">
+                                            {entry.abbreviation}
+                                          </span>
+                                        )}
+                                        <div className="min-w-0">
+                                          <span className="font-black text-sm text-white group-hover:text-red-400 transition-colors uppercase italic truncate block">
+                                            {entry.name}
+                                          </span>
+                                          <div className="flex items-center gap-1.5 mt-0.5">
+                                            {entry.team && teamLogos[entry.team] && (
+                                              <img src={teamLogos[entry.team]} alt={entry.team} className="h-3 w-auto object-contain opacity-70" />
+                                            )}
+                                            <span className="text-[10px] text-neutral-400 uppercase tracking-wider truncate">
+                                              {entry.team}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-3">
+                                        {teamLogos[entry.name] && (
+                                          <img src={teamLogos[entry.name]} alt={entry.name} className="h-6 w-auto object-contain" />
+                                        )}
+                                        <span className="font-black text-sm text-white group-hover:text-red-400 transition-colors uppercase italic truncate">
+                                          {entry.name}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </Link>
+                                </td>
+
+                                {/* Points & Progress Bar */}
+                                <td className="py-3 px-4 text-right">
+                                  <div className="inline-block text-right">
+                                    <span className="font-mono font-black text-base text-white block leading-none">
+                                      {entry.points}
+                                    </span>
+                                    <div className="w-20 sm:w-24 bg-neutral-900 rounded-full h-1 mt-1 overflow-hidden border border-neutral-800 ml-auto">
+                                      <div
+                                        className="h-full rounded-full transition-all duration-500"
+                                        style={{ width: `${pct}%`, backgroundColor: teamColor }}
+                                      />
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Gap to Leader */}
+                                <td className="py-3 px-4 text-right hidden sm:table-cell font-mono text-xs">
+                                  {isP1 ? (
+                                    <span className="text-yellow-400 font-bold bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">
+                                      LEADER
+                                    </span>
+                                  ) : (
+                                    <span className="text-neutral-400">
+                                      -{gap}
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Wins */}
+                                <td className="py-3 px-3 text-center hidden md:table-cell font-mono">
+                                  {entry.wins > 0 ? (
+                                    <span className="inline-flex items-center gap-1 font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-md border border-yellow-500/20 text-xs">
+                                      <Trophy size={10} /> {entry.wins}
+                                    </span>
+                                  ) : (
+                                    <span className="text-neutral-600 text-xs">-</span>
+                                  )}
+                                </td>
+
+                                {/* Podiums */}
+                                <td className="py-3 px-3 text-center hidden md:table-cell font-mono">
+                                  {entry.podiums > 0 ? (
+                                    <span className="inline-flex items-center gap-1 font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 text-xs">
+                                      <Medal size={10} /> {entry.podiums}
+                                    </span>
+                                  ) : (
+                                    <span className="text-neutral-600 text-xs">-</span>
+                                  )}
+                                </td>
+
+                                {/* DNFs */}
+                                <td className="py-3 px-3 text-center hidden lg:table-cell font-mono">
+                                  {entry.dnfs > 0 ? (
+                                    <span className="inline-flex items-center gap-1 font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20 text-xs">
+                                      <AlertTriangle size={10} /> {entry.dnfs}
+                                    </span>
+                                  ) : (
+                                    <span className="text-neutral-600 text-xs">0</span>
+                                  )}
+                                </td>
+
+                                {/* Last GP Points */}
+                                <td className="py-3 px-3 text-center hidden lg:table-cell font-mono text-xs">
+                                  {entry.pointsLastRace && entry.pointsLastRace > 0 ? (
+                                    <span className="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                      +{entry.pointsLastRace}
+                                    </span>
+                                  ) : (
+                                    <span className="text-neutral-600">0</span>
+                                  )}
+                                </td>
+
+                                {/* Action Link */}
+                                <td className="py-3 px-4 text-center">
+                                  <Link
+                                    to={linkTo}
+                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition-colors"
+                                  >
+                                    <ChevronRight size={14} />
+                                  </Link>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* ==================== CONSTRUCTORS VIEW ==================== */}
-            {activeTab === 'constructors' && (
-              <div className="space-y-4">
-                {/* Podium (Top 3) */}
-                {podiumTeams.length > 0 && (
-                  <section className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Sparkles size={16} className="text-yellow-400" />
-                      <h2 className="text-sm font-black text-neutral-400 uppercase tracking-widest">Constructor Podium</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {podiumTeams.map((team, idx) => (
-                        <PodiumCard key={team.name} entry={toEntry(team, { id: team.id, wins: team.wins, podiums: team.podiums })} rank={idx} type="constructor" maxPoints={maxTeamPoints} leaderPoints={leaderTeamPoints} />
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Rest */}
-                {restTeams.length > 0 && (
-                  <section>
-                    {!searchTerm && (
-                      <div className="flex items-center gap-2 mb-4">
-                        <Shield size={16} className="text-neutral-500" />
-                        <h2 className="text-sm font-black text-neutral-400 uppercase tracking-widest">Rest of the Grid</h2>
-                      </div>
-                    )}
-                    <div className="space-y-3">
-                      {restTeams.map((team, idx) => (
-                        <StandingRow key={team.name} entry={toEntry(team, { id: team.id, wins: team.wins, podiums: team.podiums })} index={searchTerm ? idx : idx + 3} type="constructor" maxPoints={maxTeamPoints} leaderPoints={leaderTeamPoints} searchTerm={searchTerm} />
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </div>
-            )}
-
-            {/* ==================== PROGRESSION WORM ==================== */}
+            {/* ================================================================= */}
+            {/* --- TAB CONTENT: PROGRESSION WORM --- */}
+            {/* ================================================================= */}
             {activeTab === 'progression' && (
               <div className="space-y-4">
-                <ChampionshipWorm sessionResults={sessionResults} drivers={drivers} teams={teams} />
+                <ChampionshipWorm
+                  sessionResults={sessionResults}
+                  drivers={rawDrivers}
+                  teams={rawTeams}
+                />
               </div>
             )}
           </div>

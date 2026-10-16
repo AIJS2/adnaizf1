@@ -54,7 +54,7 @@ function DriversPage() {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
-        <main className="container mx-auto px-4 md:px-6 pt-28 pb-12">
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
           <div className="animate-pulse space-y-8 w-full">
             <div className="h-16 w-64 bg-neutral-900/60 border border-neutral-800 rounded-xl"></div>
             <div className="space-y-4">
@@ -73,7 +73,7 @@ function DriversPage() {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-12">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         <header className="mb-10">
           <h1 className="text-5xl md:text-6xl font-black tracking-tighter italic uppercase">
             Driver <span className="text-red-600">Standings</span>
@@ -120,18 +120,18 @@ function DriversPage() {
                     </div>
 
                     {/* Driver Info */}
-                    <div className="flex-grow flex items-center p-4 md:p-6 z-10 relative overflow-hidden">
+                    <div className="flex-grow min-w-0 flex items-center p-4 md:p-6 z-10 relative overflow-hidden">
                       {logo && <img src={logo} className="absolute -right-4 -bottom-6 h-32 md:h-40 opacity-5 pointer-events-none grayscale group-hover:grayscale-0 group-hover:opacity-10 transition-all duration-500 transform group-hover:scale-110" alt="" />}
 
-                      <div className="flex flex-col gap-1.5 z-20">
-                        <div className="flex items-center gap-3">
-                          <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic text-white group-hover:text-red-500 transition-colors">{driver.name}</h2>
-                          <span className="hidden sm:inline-block text-xs font-mono font-bold bg-white/10 px-2 py-1 rounded-sm text-neutral-300">{driver.abbreviation}</span>
-                          {isP1 && <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] animate-pulse" />}
+                      <div className="flex flex-col min-w-0 gap-1.5 z-20">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic text-white group-hover:text-red-500 transition-colors truncate">{driver.name}</h2>
+                          <span className="hidden sm:inline-block text-xs font-mono font-bold bg-white/10 px-2 py-1 rounded-sm text-neutral-300 shrink-0">{driver.abbreviation}</span>
+                          {isP1 && <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] animate-pulse shrink-0" />}
                         </div>
-                        <div className="flex items-center gap-2">
-                          {logo && <img src={logo} className="h-4 w-auto brightness-200 opacity-80" alt="" />}
-                          <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest">{driver.team}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {logo && <img src={logo} className="h-4 w-auto brightness-200 opacity-80 shrink-0" alt="" />}
+                          <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest truncate">{driver.team}</span>
                         </div>
                       </div>
                     </div>

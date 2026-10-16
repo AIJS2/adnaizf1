@@ -20,7 +20,7 @@ async def get_dashboard_data(request: Request, year: int):
     CACHE_FILE = get_dashboard_cache_filename(year)
     cached_data = await asyncio.to_thread(get_advanced_cache, CACHE_FILE)
     if cached_data:
-        print("✅ Menyajikan data dari REDIS/CACHE (Dashboard)...")
+        logging.info("[Dashboard] Serving data from cache...")
         return cached_data
 
     final_data = await asyncio.to_thread(compute_fastf1_dashboard, year)
@@ -36,7 +36,7 @@ async def get_dashboard_data(request: Request, year: int):
     try:
         final_data = await apply_f1_official_standings(final_data)
         await asyncio.to_thread(set_advanced_cache, CACHE_FILE, final_data)
-        print("✅ Perhitungan Dashboard selesai. Data disimpan ke cache.")
+        logging.info("[Dashboard] Computation complete, data saved to cache.")
         return final_data
     except Exception as e:
         logging.error(f"Error pada server: {e}", exc_info=True)

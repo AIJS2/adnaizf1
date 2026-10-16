@@ -38,7 +38,7 @@ export const trackMaps: Record<string, string> = {
   // Azerbaijan
   "Azerbaijan": azerbaijan, "Baku": azerbaijan, "Azerbaijan Grand Prix": azerbaijan,
   // Bahrain
-  "Bahrain": bahrain, "Sakhir": bahrain, "Bahrain Grand Prix": bahrain, "Kuala Lumpur": bahrain,
+  "Bahrain": bahrain, "Sakhir": bahrain, "Bahrain Grand Prix": bahrain,
   // Belgium
   "Belgium": belgium, "Spa-Francorchamps": belgium, "Spa": belgium, "Belgian Grand Prix": belgium,
   // Brazil

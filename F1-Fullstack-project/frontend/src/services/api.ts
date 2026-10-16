@@ -143,6 +143,9 @@ export const fetchRaceDetails = async (
 export const fetchChampionship = async (year: number): Promise<ChampionshipPayload> =>
   fetchJson<ChampionshipPayload>(`/api/championship/${year}`, 'Failed to fetch championship standings');
 
+export const fetchStandings = async (year: number): Promise<ChampionshipPayload> =>
+  fetchJson<ChampionshipPayload>(`/api/standings/${year}`, 'Failed to fetch championship standings');
+
 export const fetchDriverProfile = async (
   year: number,
   id: string,

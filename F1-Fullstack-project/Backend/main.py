@@ -119,6 +119,7 @@ from routers.races import router as races_router
 from routers.race_details import router as race_details_router
 from routers.telemetry import router as telemetry_router
 from routers.championship import router as championship_router
+from routers.standings import router as standings_router
 from routers.profiles import router as profiles_router
 from routers.system import router as system_router
 from routers.livetiming import router as livetiming_router
@@ -129,6 +130,7 @@ app.include_router(races_router)
 app.include_router(race_details_router)
 app.include_router(telemetry_router)
 app.include_router(championship_router)
+app.include_router(standings_router)
 app.include_router(profiles_router)
 app.include_router(system_router)
 app.include_router(livetiming_router)

@@ -27,7 +27,7 @@ const TeamProfilePage = () => {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
-        <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
           <div className="animate-pulse space-y-8 w-full">
             <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -47,7 +47,7 @@ const TeamProfilePage = () => {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
-        <main className="container mx-auto px-6 pt-28 pb-16 text-center">
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 text-center">
           <AlertTriangle className="text-red-500 mx-auto mb-4" size={48} />
           <h2 className="text-3xl font-black mb-2">Team Not Found</h2>
           <p className="text-neutral-400 mb-6">{error?.message || "Could not load data for this team."}</p>
@@ -62,7 +62,7 @@ const TeamProfilePage = () => {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         
         {/* Back Link */}
         <Link to="/stats" state={{ tab: 'constructors' }} className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors mb-6">
@@ -95,7 +95,7 @@ const TeamProfilePage = () => {
             }}
           />
 
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
                 {teamLogo && <img src={teamLogo} alt={profile.name} className="h-12 w-auto drop-shadow-xl" />}
@@ -121,7 +121,7 @@ const TeamProfilePage = () => {
             </div>
 
             {/* Championship Position Badge */}
-            <div className="relative group shrink-0 mt-6 md:mt-0">
+            <div className="relative group shrink-0 mt-6 xl:mt-0">
               <div 
                 className="absolute inset-0 blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500 rounded-full"
                 style={{ backgroundColor: profile.position === 1 ? '#eab308' : teamColor }}

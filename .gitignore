@@ -2,6 +2,7 @@
 *.db
 cache/
 logs/
+**/venv/
 __pycache__/
 node_modules/
 .env

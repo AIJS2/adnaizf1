@@ -19,6 +19,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
+import random
 import time
 import threading
 from datetime import timedelta
@@ -35,6 +37,138 @@ from services.livetiming_service import LiveTimingState
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# ======================================================================
+#  Mock telemetry generator (used when no real session is live)
+# ======================================================================
+
+def _generate_mock_telemetry() -> dict:
+    """Generate realistic mock F1 telemetry data for development/testing."""
+    # 2026 driver grid with numbers, teams, and base pace
+    drivers = [
+        {"number": "1", "code": "VER", "team": "Red Bull Racing", "base_pace": 92.0, "color": "#3671C6"},
+        {"number": "61", "code": "HAD", "team": "Red Bull Racing", "base_pace": 94.5, "color": "#3671C6"},
+        {"number": "4", "code": "NOR", "team": "McLaren", "base_pace": 92.5, "color": "#FF8000"},
+        {"number": "81", "code": "PIA", "team": "McLaren", "base_pace": 93.2, "color": "#FF8000"},
+        {"number": "16", "code": "LEC", "team": "Ferrari", "base_pace": 92.8, "color": "#E8002D"},
+        {"number": "44", "code": "HAM", "team": "Ferrari", "base_pace": 93.0, "color": "#E8002D"},
+        {"number": "63", "code": "RUS", "team": "Mercedes", "base_pace": 93.5, "color": "#27F4D2"},
+        {"number": "12", "code": "ANT", "team": "Mercedes", "base_pace": 94.2, "color": "#27F4D2"},
+        {"number": "14", "code": "ALO", "team": "Aston Martin", "base_pace": 94.8, "color": "#229971"},
+        {"number": "18", "code": "STR", "team": "Aston Martin", "base_pace": 96.1, "color": "#229971"},
+        {"number": "31", "code": "OCO", "team": "Haas F1 Team", "base_pace": 96.5, "color": "#B6BABD"},
+        {"number": "87", "code": "BEA", "team": "Haas F1 Team", "base_pace": 97.0, "color": "#B6BABD"},
+        {"number": "55", "code": "SAI", "team": "Williams", "base_pace": 95.2, "color": "#64C4FF"},
+        {"number": "23", "code": "ALB", "team": "Williams", "base_pace": 95.8, "color": "#64C4FF"},
+        {"number": "10", "code": "GAS", "team": "Alpine", "base_pace": 95.5, "color": "#0093CC"},
+        {"number": "27", "code": "COL", "team": "Alpine", "base_pace": 96.8, "color": "#0093CC"},
+        {"number": "20", "code": "HUL", "team": "Audi", "base_pace": 96.2, "color": "#F40000"},
+        {"number": "5", "code": "BOR", "team": "Audi", "base_pace": 97.2, "color": "#F40000"},
+        {"number": "22", "code": "TSU", "team": "Racing Bulls", "base_pace": 95.0, "color": "#6692FF"},
+        {"number": "30", "code": "LAW", "team": "Racing Bulls", "base_pace": 96.3, "color": "#6692FF"},
+        {"number": "77", "code": "BOT", "team": "Cadillac", "base_pace": 97.5, "color": "#D4AF37"},
+        {"number": "11", "code": "PER", "team": "Cadillac", "base_pace": 98.0, "color": "#D4AF37"},
+    ]
+    
+    compounds = ["S", "M", "H"]
+    statuses = ["TRACK", "TRACK", "TRACK", "TRACK", "TRACK", "PIT"]
+    
+    # Simulate a running lap counter
+    mock_time = time.monotonic()
+    lap_base = int(mock_time / 30)  # New "lap" every 30 seconds of mock time
+    
+    lines = []
+    for i, d in enumerate(drivers):
+        # Add variance to simulate racing
+        variance = random.uniform(-0.5, 0.5)
+        pace = d["base_pace"] + variance + (i * 0.15)  # Stagger by position
+        
+        # Lap time around 92-98 seconds
+        lap_seconds = pace + random.uniform(-0.8, 0.8)
+        minutes = int(lap_seconds // 60)
+        seconds = lap_seconds % 60
+        last_lap = f"{minutes}:{seconds:06.3f}"
+        
+        # Sector times
+        s1 = 28.0 + (pace - 92.0) * 0.3 + random.uniform(-0.3, 0.3)
+        s2 = 41.5 + (pace - 92.0) * 0.4 + random.uniform(-0.4, 0.4)
+        s3 = 22.0 + (pace - 92.0) * 0.3 + random.uniform(-0.3, 0.3)
+        
+        # Random sector colors (purple=best, green=personal best, yellow=slow)
+        def rand_sector_color():
+            r = random.random()
+            if r < 0.1: return "purple"
+            if r < 0.3: return "green"
+            if r < 0.5: return "yellow"
+            return ""
+        
+        # Gap calculation
+        gap = "+" + f"{i * random.uniform(1.5, 3.5):.3f}" if i > 0 else "LEADER"
+        interval = "-" if i == 0 else "+" + f"{random.uniform(1.0, 3.0):.3f}"
+        
+        # Tyre
+        compound = random.choice(compounds)
+        tyre_age = random.randint(1, 28)
+        
+        # Progress around track (0-1)
+        progress = (mock_time * 0.003 + i * 0.045) % 1.0
+        
+        lines.append({
+            "position": i + 1,
+            "driver": d["code"],
+            "team": d["team"],
+            "tyre": compound,
+            "tyre_age": tyre_age,
+            "gap": gap,
+            "interval": interval,
+            "lastLap": last_lap,
+            "lap_color": rand_sector_color(),
+            "sector1": f"{s1:.3f}",
+            "s1_color": rand_sector_color(),
+            "sector2": f"{s2:.3f}",
+            "s2_color": rand_sector_color(),
+            "sector3": f"{s3:.3f}",
+            "s3_color": rand_sector_color(),
+            "pits": random.randint(0, 2),
+            "progress": round(progress, 4),
+            "status": random.choice(statuses) if random.random() < 0.05 else "TRACK",
+        })
+    
+    # Mock weather
+    weather = {
+        "air": f"{random.randint(22, 35)}°C",
+        "track": f"{random.randint(35, 55)}°C",
+        "humidity": f"{random.randint(40, 80)}%",
+        "rain": f"{random.randint(0, 10)}%",
+    }
+    
+    # Mock track status
+    track_status = random.choice(["GREEN", "GREEN", "GREEN", "YELLOW", "SC", "VSC"])
+    
+    # Mock race control messages
+    messages = [
+        {"time": time.strftime("%H:%M:%S", time.localtime(mock_time - random.randint(0, 300))), 
+         "type": random.choice(["flag", "pit", ""]), 
+         "msg": random.choice([
+             "GREEN FLAG - TRACK CLEAR",
+             "DRS ENABLED",
+             f"CAR {random.randint(1, 20):02d} PIT STOP - {random.uniform(2.0, 3.5):.1f}s",
+             f"LAP {lap_base} FASTEST: CAR {random.randint(1, 20):02d} 1:{random.randint(30, 38)}.{random.randint(100, 999):03d}",
+             "YELLOW FLAG SECTOR 2 - DEBRIS",
+             "VSC DEPLOYED",
+             "VSC ENDING",
+         ])}
+        for _ in range(random.randint(3, 7))
+    ]
+    
+    return {
+        "type": "TimingData",
+        "is_live_session": False,  # Mark as mock/simulation
+        "lines": lines,
+        "trackStatus": track_status,
+        "weather": weather,
+        "messages": messages,
+    }
 
 # ======================================================================
 #  Shared state
@@ -226,15 +360,8 @@ def _stop_signalr() -> None:
 
 
 def _empty_snapshot() -> dict:
-    """Payload broadcast when no real session data is available."""
-    return {
-        "type": "TimingData",
-        "is_live_session": False,
-        "lines": [],
-        "trackStatus": "",
-        "weather": {},
-        "messages": [],
-    }
+    """Payload broadcast when no real session data is available — use mock telemetry for dev."""
+    return _generate_mock_telemetry()
 
 
 # ======================================================================

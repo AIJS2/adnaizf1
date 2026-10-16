@@ -20,7 +20,7 @@ def compute_fastf1_all_races(year: int):
     render. A season with no schedule answers with an empty list, which the UI
     shows as "no races", rather than a misleading server error.
     """
-    print(f"⚙️ Menghitung data SEMUA BALAPAN untuk tahun {year}...")
+    logging.info(f"[Races] Computing all races for {year}...")
 
     if not is_valid_year(year):
         print(f"  -> Tahun {year} di luar rentang musim F1. Mengembalikan array kosong.")

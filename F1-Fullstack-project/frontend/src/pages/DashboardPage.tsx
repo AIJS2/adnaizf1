@@ -55,7 +55,7 @@ function DashboardPage() {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
-        <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
           <div className="animate-pulse space-y-6">
             <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -126,7 +126,7 @@ function DashboardPage() {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans selection:bg-red-600">
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-16">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
 
         {/* 1. SEASON PULSE BAR */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
@@ -192,9 +192,9 @@ function DashboardPage() {
           <div className="absolute top-0 right-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 right-0 w-80 h-80 bg-orange-600/5 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 relative z-10">
             <div className="max-w-xl">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
                 <span className="bg-red-600/20 text-red-500 border border-red-500/30 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5">
                   <Zap size={12} className="fill-red-500" />
                   Next Grand Prix Hub &bull; {nextEvent?.round ? `Round ${nextEvent.round}` : 'Upcoming'}
@@ -392,7 +392,7 @@ function DashboardPage() {
 
         {/* 4. TOP CONSTRUCTORS SHOWCASE */}
         <section className="mb-8">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
                 <Shield size={20} />

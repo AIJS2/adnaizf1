@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Zap } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Zap, Clock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '../config';
+import { fetchDashboardData } from '../services/api';
+import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
+import HeroCountdown from '../components/ui/HeroCountdown';
 import TyreStrategy from '../components/ui/TyreStrategy';
 import EmptyState from '../components/ui/EmptyState';
 import { LiveTimingData, LiveTimingLine } from '../types/f1';
@@ -166,7 +171,35 @@ const TimingRow = memo<TimingRowProps>(({ row }) => {
 TimingRow.displayName = 'TimingRow';
 
 const LiveTimingPage: React.FC = () => {
-  const mockMode = isMockRequested();
+  const location = useLocation();
+  const mockMode = useMemo(() => {
+    return new URLSearchParams(location.search).get('mock') === '1' || isMockRequested();
+  }, [location.search]);
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+
+  // Fetch upcoming race schedule for the empty-state countdown centerpiece
+  const { data: dashboardData } = useQuery({
+    queryKey: ['dashboard', currentYear],
+    queryFn: () => fetchDashboardData(currentYear),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const nextEvent = useMemo(() => {
+    return resolveNextRaceFromSources(
+      dashboardData?.race_analytics,
+      dashboardData?.next_race_event,
+    );
+  }, [dashboardData]);
+
+  const heroRaceName = nextEvent
+    ? (nextEvent.name || '').split(' - ')[0] || 'Grand Prix'
+    : null;
+  const heroSessionName = dashboardData?.next_race_event?.name
+    ? dashboardData.next_race_event.name.split(' - ')[1] ?? null
+    : null;
+  const targetCountdownDate = countdownTarget(nextEvent?.date);
+  const heroPhase = nextEvent?.phase ?? 'future';
+
   const [data, setData] = useState<LiveTimingData>(
     mockMode
       ? MOCK_DATA
@@ -289,10 +322,10 @@ const LiveTimingPage: React.FC = () => {
 
   return (
     <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600 w-full overflow-hidden" style={{ overflowAnchor: 'none' }}>
-      <main className="w-full max-w-[1920px] mx-auto px-2 md:px-4 lg:px-8 pt-24 pb-10">
+      <main className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         
         {/* Header Bar */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
+        <div className="flex flex-col xl:flex-row xl:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
           <div>
             <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${mockMode ? 'bg-purple-600/10 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]'}`}>
               <Activity size={12} className={connectionStatus === 'connected' || mockMode ? 'animate-pulse' : ''} /> 
@@ -319,18 +352,52 @@ const LiveTimingPage: React.FC = () => {
             
             <div className="overflow-x-auto flex-1">
               {hasNoSessionData ? (
-                <div className="flex flex-col items-center justify-center text-center py-20 px-6">
-                  <Flag size={40} className="text-neutral-700 mb-4" />
-                  <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">
+                <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+                  {/* Subtle pit-wall radar beacon */}
+                  <div className="relative mb-5 flex items-center justify-center">
+                    <div className="absolute w-20 h-20 rounded-full bg-red-600/15 blur-xl animate-pulse" />
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex items-center justify-center text-neutral-400 shadow-inner">
+                      <Radio size={24} className="text-red-500 animate-pulse" />
+                    </div>
+                  </div>
+
+                  <h2 className="text-base font-black uppercase tracking-[0.25em] text-neutral-200">
                     No Live Session Data
-                  </p>
-                  <p className="text-xs text-neutral-600 mt-2 max-w-md leading-relaxed">
+                  </h2>
+                  <p className="text-xs text-neutral-500 mt-2 max-w-md leading-relaxed font-sans">
                     Timing appears here only while an F1 session is running. This feed
                     reports real data only and never simulates telemetry.
                   </p>
+
+                  {/* Centered Hero Countdown Centerpiece */}
+                  {targetCountdownDate && (
+                    <div className="mt-8 flex flex-col items-center w-full max-w-lg">
+                      {/* Event badge capsule */}
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-[11px] uppercase font-bold tracking-widest text-neutral-400 mb-5 shadow-sm">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                        <span>NEXT UP: <span className="text-white font-black">{heroRaceName}</span></span>
+                        {heroSessionName && (
+                          <span className="text-neutral-500 border-l border-neutral-700 pl-2 font-mono">
+                            {heroSessionName}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* HeroCountdown display card */}
+                      <div className="relative p-5 sm:p-6 rounded-2xl bg-[#0a0a0a] border border-[#222] shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col items-center w-full sm:w-auto">
+                        <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
+                        <HeroCountdown targetDate={targetCountdownDate} phase={heroPhase} />
+                      </div>
+
+                      <div className="mt-4 flex items-center gap-2 text-[10px] text-neutral-500 font-mono tracking-widest uppercase">
+                        <Clock size={12} className="text-neutral-600" />
+                        <span>Lights Out Countdown</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
-              <table className="w-full text-[13px] tracking-tight">
+              <table className="w-full text-[13px] tracking-tight whitespace-nowrap min-w-[700px]">
                 <thead className="bg-[#0f0f0f] text-neutral-500 font-black text-left border-b border-[#222] shadow-sm">
                   <tr>
                     <th className="p-3 w-10 text-center border-r border-[#1a1a1a]">P</th>
@@ -446,7 +513,7 @@ const LiveTimingPage: React.FC = () => {
               <h3 className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
                 <CloudRain size={14} /> Local Conditions
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-[#0a0a0a] p-3 rounded border border-[#151515]">
                   <div className="text-[9px] text-neutral-500 mb-1 font-bold tracking-wider">AIR TEMP</div>
                   <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-red-500"/> {data.weather.air}</div>

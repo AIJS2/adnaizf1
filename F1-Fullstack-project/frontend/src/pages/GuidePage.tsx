@@ -62,7 +62,7 @@ const GuideSection: React.FC<GuideSectionProps> = ({ id, title, icon, colorClass
         {/* Subtle background glow on hover */}
         <div className={`absolute -top-24 -right-24 w-48 h-48 ${currentStyle.glow} blur-[80px] transition-all duration-700 pointer-events-none rounded-full`} />
         
-        <div className="flex flex-col md:flex-row md:items-center gap-5 mb-8 relative z-10">
+        <div className="flex flex-col xl:flex-row xl:items-center gap-5 mb-8 relative z-10">
           <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0)] group-hover:shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all ${currentStyle.iconBg}`}>
             {icon}
           </div>
@@ -93,9 +93,9 @@ const GuidePage = () => {
     <div className="bg-[#050505] min-h-screen text-white font-sans selection:bg-red-600">
       
       {/* Header */}
-      <div className="relative pt-32 pb-16 overflow-hidden border-b border-neutral-900/50">
-        <div className="absolute inset-0 bg-gradient-to-b from-red-600/10 to-transparent blur-[100px] rounded-full pointer-events-none" />
-        <div className="container mx-auto px-6 relative z-10">
+      <div className="relative py-8 md:py-12 xl:py-14 overflow-hidden border-b border-neutral-900/50">
+        <div className="absolute inset-0 xl:left-72 bg-gradient-to-b from-red-600/10 to-transparent blur-[100px] rounded-full pointer-events-none" />
+        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold uppercase tracking-wider mb-6 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
             <BookOpen size={16} /> Official Documentation
           </div>
@@ -108,11 +108,11 @@ const GuidePage = () => {
         </div>
       </div>
 
-      <main className="container mx-auto px-6 py-16">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
           
           {/* Table of Contents / Quick Links */}
-          <div className="lg:col-span-1 sticky top-32">
+          <div className="lg:col-span-1 sticky top-6 xl:top-8">
             <div className="bg-neutral-900/40 border border-neutral-800/60 rounded-3xl p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-[50px]" />
               <h3 className="text-sm font-black uppercase tracking-widest text-neutral-500 mb-6 flex items-center gap-2">

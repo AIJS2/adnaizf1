@@ -114,7 +114,7 @@ function LandingPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative z-10 min-h-[95vh] flex flex-col items-center justify-center pt-24 px-4 text-center">
+      <section className="relative z-10 min-h-[90vh] flex flex-col items-center justify-center py-12 md:py-16 xl:py-20 px-4 text-center">
         
         {/* Countdown Badge */}
         {nextRace ? (
@@ -156,12 +156,12 @@ function LandingPage() {
 
         {/* Massive Headline */}
         <h1 
-          className={`text-6xl md:text-8xl lg:text-[11rem] font-black uppercase tracking-tighter leading-[0.8] text-white transition-all duration-1000 delay-150 ease-out flex flex-col items-center ${
+          className={`text-5xl sm:text-6xl md:text-8xl lg:text-[11rem] font-black uppercase tracking-tighter leading-[0.85] text-white transition-all duration-1000 delay-150 ease-out flex flex-col items-center ${
             isMounted ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
           }`}
         >
-          <span className="opacity-95 -ml-8">ANALYZE</span>
-          <div className="relative inline-block transform -skew-x-12 ml-12">
+          <span className="opacity-95 -ml-4 sm:-ml-8">ANALYZE</span>
+          <div className="relative inline-block transform -skew-x-12 ml-6 sm:ml-12">
             <span className="absolute -inset-4 blur-[40px] opacity-40 bg-red-600 rounded-full"></span>
             <span className="relative text-transparent bg-clip-text bg-gradient-to-br from-red-500 via-red-600 to-orange-500 pr-4">
               THE APEX.

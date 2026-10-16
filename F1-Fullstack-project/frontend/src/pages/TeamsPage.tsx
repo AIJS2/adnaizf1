@@ -55,7 +55,7 @@ function TeamsPage() {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
-        <main className="container mx-auto px-4 md:px-6 pt-28 pb-12">
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
           <div className="animate-pulse space-y-8 w-full">
             <div className="h-16 w-64 bg-neutral-900/60 border border-neutral-800 rounded-xl"></div>
             <div className="space-y-4">
@@ -74,7 +74,7 @@ function TeamsPage() {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans">
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-12">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         <header className="mb-10">
           <h1 className="text-5xl md:text-6xl font-black tracking-tighter italic uppercase">
             Team <span className="text-red-600">Standings</span>
@@ -128,7 +128,7 @@ function TeamsPage() {
                     </div>
 
                     {/* Info Tim */}
-                    <div className="flex-grow flex items-center p-4 md:p-6 z-10 relative overflow-hidden">
+                    <div className="flex-grow min-w-0 flex items-center p-4 md:p-6 z-10 relative overflow-hidden">
                       {logo && (
                         <img
                           src={logo}
@@ -136,14 +136,14 @@ function TeamsPage() {
                           alt=""
                         />
                       )}
-                      <div className="flex flex-col gap-2 z-20">
-                        <div className="flex items-center gap-3">
-                          {logo && <img src={logo} className="h-6 w-auto brightness-200 opacity-90 drop-shadow-md" alt="" />}
-                          <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic text-white group-hover:text-red-500 transition-colors">
+                      <div className="flex flex-col min-w-0 gap-2 z-20">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {logo && <img src={logo} className="h-6 w-auto brightness-200 opacity-90 drop-shadow-md shrink-0" alt="" />}
+                          <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic text-white group-hover:text-red-500 transition-colors truncate">
                             {team.name}
                           </h2>
                           {isP1 && (
-                            <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] animate-pulse ml-2" />
+                            <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] animate-pulse ml-2 shrink-0" />
                           )}
                         </div>
                       </div>

@@ -38,9 +38,11 @@ interface RadarChartPoint {
 interface DriverRadarChartProps {
   profile1: RadarDriverProfile | null | undefined;
   profile2: RadarDriverProfile | null | undefined;
+  color1?: string;
+  color2?: string;
 }
 
-const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2 }) => {
+const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2, color1: customColor1, color2: customColor2 }) => {
   const chartData = useMemo<RadarChartPoint[]>(() => {
     if (!profile1 || !profile2) return [];
 
@@ -115,8 +117,8 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2 
     );
   }
 
-  const color1 = teamColors[profile1.team] || '#EF4444';
-  const color2 = teamColors[profile2.team] || '#3B82F6';
+  const color1 = customColor1 || teamColors[profile1.team] || '#EF4444';
+  const color2 = customColor2 || teamColors[profile2.team] || '#3B82F6';
 
   return (
     <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">

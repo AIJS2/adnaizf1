@@ -235,11 +235,11 @@ const DriverComparePage = () => {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans selection:bg-red-600 relative">
       {/* Backgrounds */}
-      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
+      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-950 pointer-events-none" />
 
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-16 relative z-10">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
 
         {/* Page Header */}
         <section className="mb-8 relative">
@@ -258,9 +258,9 @@ const DriverComparePage = () => {
 
         {/* Controls: Pick 2 Drivers */}
         <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-5 md:p-6 shadow-2xl mb-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
             {/* Driver 1 Selector */}
-            <div className="w-full md:w-5/12">
+            <div className="w-full xl:w-5/12">
               <label className="flex items-center gap-1.5 text-xs font-bold text-neutral-400 mb-2 uppercase tracking-wider">
                 <User size={12} className="text-red-400" /> Driver 1
               </label>
@@ -288,7 +288,7 @@ const DriverComparePage = () => {
             </button>
 
             {/* Driver 2 Selector */}
-            <div className="w-full md:w-5/12">
+            <div className="w-full xl:w-5/12">
               <label className="flex items-center gap-1.5 text-xs font-bold text-neutral-400 mb-2 uppercase tracking-wider">
                 <User size={12} className="text-blue-400" /> Driver 2
               </label>
@@ -361,12 +361,11 @@ const DriverComparePage = () => {
 
             <div id="h2h-card" className="space-y-6 p-4 md:p-6 bg-neutral-950/90 rounded-3xl">
 
-              {/* 1. FIGHTER BANNER (HERO CARDS) — Always visible */}
-              <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-stretch">
+              <div className="grid grid-cols-1 xl:grid-cols-11 gap-4 items-stretch">
                 
                 {/* Driver 1 Card */}
                 <div
-                  className="md:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
+                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
                   style={{ borderLeftWidth: '6px', borderLeftColor: d1Color }}
                 >
                   {/* Big number watermark */}
@@ -386,7 +385,7 @@ const DriverComparePage = () => {
                   <Link to={`/driver/${profile1.id}`} className="block group-hover:text-red-400 transition-colors">
                     <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">{profile1.name}</h2>
                   </Link>
-                  <div className="mt-5 flex items-center gap-3">
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
                     <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
                       <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
                       <span className="text-2xl font-black font-mono text-white">P{profile1.position}</span>
@@ -403,7 +402,7 @@ const DriverComparePage = () => {
                 </div>
 
                 {/* VS Center Badge */}
-                <div className="md:col-span-1 flex flex-col items-center justify-center text-center py-2">
+                <div className="xl:col-span-1 flex flex-col items-center justify-center text-center py-2">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-red-600 to-orange-500 font-black text-white flex items-center justify-center shadow-lg shadow-red-600/30 text-base font-mono tracking-tighter relative">
                     <Swords size={22} />
                     <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
@@ -420,7 +419,7 @@ const DriverComparePage = () => {
 
                 {/* Driver 2 Card */}
                 <div
-                  className="md:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right md:text-left"
+                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
                   style={{ borderRightWidth: '6px', borderRightColor: d2Color }}
                 >
                   <div className="absolute left-4 -bottom-6 text-[8rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none" style={{ color: d2Color }}>
@@ -428,7 +427,7 @@ const DriverComparePage = () => {
                   </div>
                   <div className="absolute -left-10 -top-10 w-32 h-32 rounded-full blur-[60px] opacity-10 pointer-events-none" style={{ backgroundColor: d2Color }} />
                   
-                  <div className="flex items-center gap-3 mb-3 justify-end md:justify-start">
+                  <div className="flex items-center gap-3 mb-3 justify-end xl:justify-start">
                     {teamLogos[profile2.team] && <img src={teamLogos[profile2.team]} alt={profile2.team} className="h-5 w-auto object-contain opacity-70" />}
                     <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">{profile2.team}</span>
                     <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded text-neutral-300 flex items-center gap-1">
@@ -438,7 +437,7 @@ const DriverComparePage = () => {
                   <Link to={`/driver/${profile2.id}`} className="block group-hover:text-red-400 transition-colors">
                     <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">{profile2.name}</h2>
                   </Link>
-                  <div className="mt-5 flex items-center gap-3 justify-end md:justify-start">
+                  <div className="mt-5 flex flex-wrap items-center gap-3 justify-end xl:justify-start">
                     <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
                       <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
                       <span className="text-2xl font-black font-mono text-white">P{profile2.position}</span>
@@ -592,7 +591,7 @@ const DriverComparePage = () => {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                                      <table className="w-full text-sm whitespace-nowrap min-w-[700px]">
                       <thead className="bg-neutral-950/80 text-neutral-400 text-xs uppercase font-semibold text-left">
                         <tr>
                           <th className="p-4 w-12 text-center"><Hash size={12} className="inline" /></th>

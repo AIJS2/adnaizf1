@@ -133,14 +133,14 @@ const SimulatorPage = () => {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
       {/* Dynamic F1 Background Image */}
-      <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.15] pointer-events-none mix-blend-luminosity"></div>
+      <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.10] pointer-events-none mix-blend-luminosity"></div>
       
       {/* Background Grid & Gradients */}
-      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay"></div>
-      <div className="fixed inset-0 bg-gradient-to-b from-red-900/20 via-neutral-950/80 to-neutral-950 pointer-events-none"></div>
+      <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay"></div>
+      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-900/20 via-neutral-950/80 to-neutral-950 pointer-events-none"></div>
 
       
-      <main className="container mx-auto px-4 md:px-6 pt-28 pb-16 relative z-10">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
         
         {/* Header */}
         <div className="mb-10 relative">
@@ -248,8 +248,8 @@ const SimulatorPage = () => {
           <div className="lg:col-span-8">
             <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col h-full">
               
-              <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-6 mb-6 gap-4">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between border-b border-white/10 pb-6 mb-6 gap-4">
+                <div className="flex flex-wrap items-center gap-3">
                   <h3 className="text-2xl font-black flex items-center gap-3 italic uppercase tracking-tight text-white">
                     <Activity className="text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" size={28} /> 
                     Predicted Standings

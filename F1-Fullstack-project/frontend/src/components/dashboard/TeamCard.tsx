@@ -7,6 +7,7 @@ export interface TeamStanding {
   id?: string;
   name: string;
   points: number | string;
+  wins?: number | string;
   points_last_race?: number | string;
 }
 
@@ -32,21 +33,26 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
       <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: color }} />
 
       <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2.5">
-          <span className="font-mono text-xs font-black text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="font-mono text-xs font-black text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800 shrink-0">
             P{index + 1}
           </span>
-          <span className="font-extrabold text-neutral-300 group-hover:text-red-400 transition-colors uppercase tracking-wider text-sm truncate max-w-[130px]">
+          <span className="font-extrabold text-neutral-300 group-hover:text-red-400 transition-colors uppercase tracking-wider text-sm truncate">
             {team.name}
           </span>
         </div>
-        {logo && <img src={logo} alt={team.name} className="h-5 w-auto object-contain opacity-90" />}
+        {logo && <img src={logo} alt={team.name} className="h-5 w-auto object-contain opacity-90 shrink-0 ml-2" />}
       </div>
 
       <div className="flex items-baseline justify-between mt-2">
-        <p className="text-3xl sm:text-4xl font-black italic text-white tracking-tight font-mono">
-          {parseInt(String(team.points), 10)} <span className="text-xs font-bold text-neutral-500 not-italic">PTS</span>
-        </p>
+        <div>
+          <p className="text-3xl sm:text-4xl font-black italic text-white tracking-tight font-mono">
+            {parseInt(String(team.points), 10)} <span className="text-xs font-bold text-neutral-500 not-italic">PTS</span>
+          </p>
+          <p className="text-xs font-bold text-neutral-400 font-mono mt-0.5">
+            {team.wins !== undefined ? `${team.wins} WINS` : '0 WINS'}
+          </p>
+        </div>
 
         {team.points_last_race && parseInt(String(team.points_last_race), 10) > 0 && (
           <div className="flex items-center gap-1 text-green-400 font-bold text-xs bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 font-mono">

@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model drivers {
+  id            String      @id
+  name          String
+  abbreviation  String?
+  driver_number Int?
+  nationality   String?
+  team_id       String?
+  created_at    DateTime?   @default(now())
+  updated_at    DateTime?   @default(now())
+  teams         teams?      @relation(fields: [team_id], references: [id], onUpdate: NoAction)
+  standings     standings[]
+}
+
+model standings {
+  id               Int       @id @default(autoincrement())
+  year             Int       @default(2026)
+  type             String
+  position         Int
+  points           Float     @default(0)
+  wins             Int       @default(0)
+  podiums          Int       @default(0)
+  dnfs             Int       @default(0)
+  points_last_race Float?    @default(0)
+  driver_id        String?
+  team_id          String?
+  created_at       DateTime? @default(now())
+  updated_at       DateTime? @default(now())
+  teams            teams?    @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  drivers          drivers?  @relation(fields: [driver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([year, type, position], map: "sqlite_autoindex_standings_1")
+  @@index([year, type], map: "idx_standings_year_type")
+}
+
+model teams {
+  id         String      @id
+  name       String      @unique(map: "sqlite_autoindex_teams_2")
+  full_name  String?
+  color      String?
+  logo_url   String?
+  country    String?
+  created_at DateTime?   @default(now())
+  updated_at DateTime?   @default(now())
+  drivers    drivers[]
+  standings  standings[]
+}

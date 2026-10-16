@@ -19,7 +19,7 @@ async def get_all_races_for_year(request: Request, year: int):
     CACHE_FILE = f"all_races_cache_{year}.json"
     cached_data = await asyncio.to_thread(get_advanced_cache, CACHE_FILE)
     if cached_data:
-        print(f"✅ Menyajikan data dari REDIS/CACHE (All Races {year})...")
+        logging.info(f"[Races] Serving data from cache for {year}...")
         return cached_data
         
     all_races_data = await asyncio.to_thread(compute_fastf1_all_races, year)
@@ -27,5 +27,5 @@ async def get_all_races_for_year(request: Request, year: int):
         return all_races_data
         
     set_advanced_cache(CACHE_FILE, all_races_data)
-    print(f"✅ Perhitungan SEMUA BALAPAN untuk {year} selesai.")
+    logging.info(f"[Races] Computation complete for {year}.")
     return all_races_data

@@ -222,6 +222,22 @@ const StatsPage = () => {
   const { drivers: rawDrivers, teams: rawTeams, session_results: sessionResults } =
     data ?? EMPTY_CHAMPIONSHIP;
 
+  // The WORM chart needs real per-round session results (Race + Sprint
+  // merged per round). The relational standings payload has none, so the
+  // championship cache is fetched alongside — the same ['championship']
+  // query the Simulator and Compare pages share, so it costs nothing extra.
+  const { data: championshipData } = useQuery<ChampionshipPayload>({
+    queryKey: ['championship', currentYear],
+    queryFn: () => fetchChampionship(currentYear),
+  });
+
+  // Prefer the championship session_results; the standings fallback covers
+  // the case where the standings route itself returned FastF1-shaped data.
+  const wormSessionResults =
+    championshipData?.session_results?.length
+      ? championshipData.session_results
+      : sessionResults;
+
   // Normalize driver data
   const normalizedDrivers: LeaderboardEntry[] = useMemo(() => {
     return rawDrivers.map((d, index) => {
@@ -817,7 +833,7 @@ const StatsPage = () => {
             {activeTab === 'progression' && (
               <div className="space-y-4">
                 <ChampionshipWorm
-                  sessionResults={sessionResults}
+                  sessionResults={wormSessionResults}
                   drivers={rawDrivers}
                   teams={rawTeams}
                 />

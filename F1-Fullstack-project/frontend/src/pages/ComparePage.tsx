@@ -73,6 +73,32 @@ const incidentCount = (
   key: 'dnfs' | 'dnss',
 ): number => (profile ? toNumber(profile[key]) : toNumber(fallback));
 
+/**
+ * Sprint-aware session rows identify drivers by FullName, while the
+ * championship table can carry a shorter display name (e.g. FastF1's
+ * "Andrea Kimi Antonelli" vs the table's "Kimi Antonelli"). Match on the FIA
+ * abbreviation first — unique per driver — then fall back to a normalized
+ * name comparison so every round maps to both drivers 100% of the time.
+ */
+const normalizeDriverName = (value: unknown): string =>
+  String(value ?? '').toLowerCase().replace(/[^a-z]/g, '');
+
+const rowMatchesDriver = (
+  row: { FullName?: unknown; Abbreviation?: unknown },
+  driver: CompareDriver,
+): boolean => {
+  const rowAbbr = String(row.Abbreviation ?? '').toLowerCase();
+  const driverAbbr = driver.abbreviation.toLowerCase();
+  if (driverAbbr && rowAbbr && rowAbbr === driverAbbr) return true;
+  const rowName = normalizeDriverName(row.FullName);
+  const driverName = normalizeDriverName(driver.name);
+  return (
+    rowName !== '' &&
+    driverName !== '' &&
+    (rowName === driverName || rowName.endsWith(driverName))
+  );
+};
+
 interface DriverSelectorProps {
   label: string;
   selectedId: string;
@@ -174,7 +200,7 @@ const DriverSelector = ({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-2 max-h-80 flex flex-col">
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-2 max-h-72 flex flex-col">
           <div className="relative mb-2">
             <Search
               size={14}
@@ -343,7 +369,13 @@ const ComparePage = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   const { data, isLoading, error } = useQuery<ChampionshipPayload>({
-    queryKey: ['standings', currentYear],
+    // Dedicated championship key: StatsPage caches the SQLite standings
+    // (no session_results) under ['standings', year], and with the global
+    // 5-minute staleTime that payload used to satisfy this query without a
+    // refetch, leaving the battle log empty. Same key + queryFn as the
+    // Simulator page, so the championship payload is shared and never
+    // confused with the relational standings.
+    queryKey: ['championship', currentYear],
     queryFn: async () => {
       // Championship endpoint includes session_results needed for real
       // per-race progression; standings endpoint (SQLite) does not.
@@ -531,30 +563,6 @@ const ComparePage = () => {
     ];
   }, [driver1, driver2, profile1, profile2]);
 
-  const h2hScore = useMemo(() => {
-    if (!metrics.length) return { score1: 0, score2: 0, leader: null };
-    let score1 = 0;
-    let score2 = 0;
-
-    metrics.forEach((m) => {
-      if (m.val1 !== m.val2) {
-        if (m.invert) {
-          if (m.val1 < m.val2) score1 += 1;
-          else score2 += 1;
-        } else {
-          if (m.val1 > m.val2) score1 += 1;
-          else score2 += 1;
-        }
-      }
-    });
-
-    let leader: 'd1' | 'd2' | 'tied' = 'tied';
-    if (score1 > score2) leader = 'd1';
-    else if (score2 > score1) leader = 'd2';
-
-    return { score1, score2, leader };
-  }, [metrics]);
-
   const mergedProgression: MergedProgressionRow[] = useMemo(() => {
     const sessionResults = data?.session_results;
     if (!driver1 || !driver2 || !sessionResults) return [];
@@ -567,10 +575,10 @@ const ComparePage = () => {
 
     const isPointsSession = (t: unknown) => t === 'R' || t === 'Sprint';
     const d1Results = sessionResults.filter(
-      (r) => isPointsSession(r.SessionType) && r.FullName === driver1.name
+      (r) => isPointsSession(r.SessionType) && rowMatchesDriver(r, driver1)
     );
     const d2Results = sessionResults.filter(
-      (r) => isPointsSession(r.SessionType) && r.FullName === driver2.name
+      (r) => isPointsSession(r.SessionType) && rowMatchesDriver(r, driver2)
     );
 
     const byRound = (rows: Entry[]) => {
@@ -649,6 +657,25 @@ const ComparePage = () => {
 
     return trajectory;
   }, [driver1, driver2, data?.session_results]);
+
+  // The centre badge is the race-by-race head-to-head record (R1..R17
+  // winners from the battle log), not a count of the metric bars above —
+  // that is what "Race H2H" promises, and it stays consistent with WINS and
+  // the DriverProfilePage results.
+  const h2hScore = useMemo(() => {
+    let score1 = 0;
+    let score2 = 0;
+    for (const row of mergedProgression) {
+      if (driver1 && row.winner === driver1.name) score1 += 1;
+      else if (driver2 && row.winner === driver2.name) score2 += 1;
+    }
+
+    let leader: 'd1' | 'd2' | 'tied' = 'tied';
+    if (score1 > score2) leader = 'd1';
+    else if (score2 > score1) leader = 'd2';
+
+    return { score1, score2, leader };
+  }, [mergedProgression, driver1, driver2]);
 
   const handleExportPNG = async () => {
     const el = document.getElementById('h2h-card');
@@ -753,7 +780,7 @@ const ComparePage = () => {
 
         {!isLoading && driver1 && driver2 && (
           <div className="space-y-8">
-            <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-5 md:p-6 shadow-2xl mb-8">
+            <div className="relative z-30 bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-5 md:p-6 shadow-2xl mb-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="w-full md:w-5/12">
                   <DriverSelector
@@ -836,7 +863,10 @@ const ComparePage = () => {
                 </div>
                 <div className="mt-3 text-center">
                   <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider block">Race H2H</span>
-                  <div className="font-mono font-black text-base mt-0.5 flex items-center gap-1 justify-center">
+                  <div
+                    className="font-mono font-black text-base mt-0.5 flex items-center gap-1 justify-center"
+                    aria-label={`Race H2H ${h2hScore.score1} - ${h2hScore.score2}`}
+                  >
                     <span style={{ color: d1Color }}>{h2hScore.score1}</span>
                     <Minus size={12} className="text-neutral-600" />
                     <span style={{ color: d2Color }}>{h2hScore.score2}</span>
@@ -1137,7 +1167,9 @@ const ComparePage = () => {
                       </div>
                     ) : (
                       <p className="text-neutral-400 text-sm text-center py-6">
-                        Select two drivers to see their head-to-head battle history.
+                        {driver1 && driver2
+                          ? 'No race results are available for this pairing yet.'
+                          : 'Select two drivers to see their head-to-head battle history.'}
                       </p>
                     )}
                   </div>

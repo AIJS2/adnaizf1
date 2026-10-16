@@ -89,11 +89,14 @@ describe('RacesPage "Next Up" hero banner', () => {
     expect(bannerHeadings).toContain('Singapore Grand Prix');
     expect(bannerHeadings).not.toContain('United States Grand Prix');
 
-    // Race day honesty: the Singapore card must NOT show a 0h 0m countdown.
-    // It shows either LIVE NOW (start passed) or a TODAY badge + real countdown
-    // (start still ahead) — both correct, neither misleading.
-    expect(screen.queryByText('0h')).not.toBeInTheDocument();
-    expect(screen.queryByText('0m')).not.toBeInTheDocument();
+    // Race day honesty: the Singapore card must NOT show a stale all-zero
+    // countdown. While the start is still ahead the honest countdown can read
+    // "0h XXm" (or "XXh 0m"), so only the all-zero pair is forbidden; the
+    // card must show either LIVE NOW (start passed) or a TODAY badge + a real
+    // countdown (start still ahead).
+    const zeroHours = screen.queryAllByText('0h').length;
+    const zeroMinutes = screen.queryAllByText('0m').length;
+    expect(zeroHours === 0 || zeroMinutes === 0).toBe(true);
     const liveOrToday =
       screen.queryAllByText(/LIVE NOW/i).length > 0 ||
       screen.queryAllByText(/TODAY/i).length > 0;

@@ -36,6 +36,11 @@ interface MetricConfig {
   format?: (v: NumericString | null | undefined) => string;
   /** When true the lower value is the better one (best/avg finishing position). */
   invert?: boolean;
+  /**
+   * For inverted *count* metrics (DNFs/DNSs) zero is a valid — and best —
+   * value, unlike finishing positions where 0 means "no data".
+   */
+  zeroIsValue?: boolean;
 }
 
 /** One merged round of the two drivers' progression arrays. */
@@ -187,18 +192,30 @@ const DriverComparePage = () => {
     { key: 'poles', label: 'Pole Positions', icon: Crosshair, iconColor: 'text-purple-400', val1: profile1?.poles, val2: profile2?.poles },
     { key: 'best', label: 'Best Finish', icon: Crown, iconColor: 'text-emerald-400', val1: profile1?.best_finish, val2: profile2?.best_finish, format: v => v ? `P${v}` : '-', invert: true },
     { key: 'avg', label: 'Average Finish', icon: Target, iconColor: 'text-blue-400', val1: profile1?.avg_finish, val2: profile2?.avg_finish, format: v => v ? `P${v}` : '-', invert: true },
+    // Sprint-aware incident totals (Grand Prix + Sprint), same source and
+    // predicates as DriverProfilePage and /stats.
+    { key: 'dnfs', label: 'Did Not Finish (DNFs)', icon: AlertTriangle, iconColor: 'text-red-400', val1: profile1?.dnfs, val2: profile2?.dnfs, invert: true, zeroIsValue: true },
+    { key: 'dnss', label: 'Did Not Start (DNSs)', icon: AlertTriangle, iconColor: 'text-orange-400', val1: profile1?.dnss, val2: profile2?.dnss, invert: true, zeroIsValue: true },
   ], [profile1, profile2]);
 
   const renderComparisonBar = (metric: MetricConfig) => {
-    const { label, icon: Icon, iconColor, val1, val2, unit = '', format, invert } = metric;
+    const { label, icon: Icon, iconColor, val1, val2, unit = '', format, invert, zeroIsValue } = metric;
     const displayVal1 = format ? format(val1) : val1;
     const displayVal2 = format ? format(val2) : val2;
     const num1 = Number(val1) || 0;
     const num2 = Number(val2) || 0;
     const total = num1 + num2;
 
-    const d1IsBetter = invert ? (num1 > 0 && (num2 === 0 || num1 < num2)) : num1 > num2;
-    const d2IsBetter = invert ? (num2 > 0 && (num1 === 0 || num2 < num1)) : num2 > num1;
+    const d1IsBetter = invert
+      ? zeroIsValue
+        ? num1 < num2
+        : num1 > 0 && (num2 === 0 || num1 < num2)
+      : num1 > num2;
+    const d2IsBetter = invert
+      ? zeroIsValue
+        ? num2 < num1
+        : num2 > 0 && (num1 === 0 || num2 < num1)
+      : num2 > num1;
     const pct1 = total > 0 ? (num1 / total) * 100 : 50;
 
     return (

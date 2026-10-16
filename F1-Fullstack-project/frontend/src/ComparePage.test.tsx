@@ -17,6 +17,7 @@ const MOCK_STANDINGS = {
       wins: 8,
       podiums: 13,
       dnfs: 0,
+      dnss: 0,
       abbreviation: 'ANT',
       driver_number: 12,
       points_last_race: 18,
@@ -32,6 +33,7 @@ const MOCK_STANDINGS = {
       wins: 4,
       podiums: 10,
       dnfs: 1,
+      dnss: 0,
       abbreviation: 'RUS',
       driver_number: 63,
       points_last_race: 15,
@@ -47,6 +49,7 @@ const MOCK_STANDINGS = {
       wins: 3,
       podiums: 9,
       dnfs: 2,
+      dnss: 1,
       abbreviation: 'LEC',
       driver_number: 16,
       points_last_race: 12,
@@ -62,6 +65,18 @@ const MOCK_STANDINGS = {
       wins: 12,
       podiums: 23,
     },
+  ],
+  // Real R16 (Bahrain) and R17 (Singapore) rows: R17 carried a Sprint where
+  // Russell retired (ClassifiedPosition "R") while still finishing P9 in the
+  // Grand Prix — the exact shape the battle log must render correctly.
+  session_results: [
+    { RoundNumber: 16, FullName: 'Kimi Antonelli', SessionType: 'R', Position: 2, Points: 18, Status: 'Finished', ClassifiedPosition: '2', EventName: 'Bahrain Grand Prix', Location: 'Sakhir' },
+    { RoundNumber: 16, FullName: 'George Russell', SessionType: 'R', Position: 20, Points: 0, Status: 'Retired', ClassifiedPosition: '20', EventName: 'Bahrain Grand Prix', Location: 'Sakhir' },
+    { RoundNumber: 16, FullName: 'George Russell', SessionType: 'Q', Position: 8, Points: 0, Status: '', ClassifiedPosition: '', EventName: 'Bahrain Grand Prix', Location: 'Sakhir' },
+    { RoundNumber: 17, FullName: 'Kimi Antonelli', SessionType: 'R', Position: 3, Points: 15, Status: 'Finished', ClassifiedPosition: '3', EventName: 'Singapore Grand Prix', Location: 'Marina Bay' },
+    { RoundNumber: 17, FullName: 'George Russell', SessionType: 'R', Position: 9, Points: 2, Status: 'Finished', ClassifiedPosition: '9', EventName: 'Singapore Grand Prix', Location: 'Marina Bay' },
+    { RoundNumber: 17, FullName: 'Kimi Antonelli', SessionType: 'Sprint', Position: 4, Points: 5, Status: 'Finished', ClassifiedPosition: '4', EventName: 'Singapore Grand Prix', Location: 'Marina Bay' },
+    { RoundNumber: 17, FullName: 'George Russell', SessionType: 'Sprint', Position: 20, Points: 0, Status: 'Retired', ClassifiedPosition: 'R', EventName: 'Singapore Grand Prix', Location: 'Marina Bay' },
   ],
 };
 
@@ -172,5 +187,40 @@ describe('ComparePage H2H Feature', () => {
     // Driver 1 has 0 DNFs (better), Driver 2 has 1 DNF
     // Multiple metrics are inverted (DNFs, Position) so there are multiple "Lower is better" labels
     expect(screen.getAllByText('Lower is better').length).toBeGreaterThan(0);
+  });
+
+  it('renders the Sprint-aware DNS metric next to the DNF metric', async () => {
+    renderComparePage('/compare');
+
+    await waitFor(() => {
+      expect(screen.getByText('Did Not Finish (DNFs)')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Did Not Start (DNSs)')).toBeInTheDocument();
+  });
+
+  it('merges Sprint results into the Race H2H log without P99 or fake zeros', async () => {
+    renderComparePage('/compare');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('George Russell').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /race h2h/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Grand Prix Battle Log')).toBeInTheDocument();
+    });
+
+    // R16: a classified retiree keeps its official position (P20), not P99.
+    expect(screen.getByText('P20')).toBeInTheDocument();
+
+    // R17: race + Sprint points are merged per round.
+    expect(screen.getByText('+18 pts')).toBeInTheDocument(); // R16 Antonelli
+    expect(screen.getByText('+20 pts')).toBeInTheDocument(); // R17 Antonelli: 15 + 5
+    expect(screen.getByText('+2 pts')).toBeInTheDocument(); // R17 Russell: 2 + 0
+
+    // Sprint badges: a points finish and a retirement.
+    expect(screen.getByText('SPRINT P4 (+5)')).toBeInTheDocument();
+    expect(screen.getByText('SPRINT DNF')).toBeInTheDocument();
   });
 });

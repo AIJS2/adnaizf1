@@ -12,6 +12,22 @@ from services.fastf1_safe import (
 LIGHT_LOAD_KWARGS = dict(telemetry=False, weather=False, messages=False, laps=False)
 
 
+def _is_sprint_event(race) -> bool:
+    """
+    True when an event runs a Sprint session.
+
+    Derived from the FastF1 schedule row itself (`EventFormat` plus the
+    Session1..Session5 names), never from a hardcoded venue list, so
+    sprint-points maths (e.g. the championship simulator) follows the real
+    calendar for any season.
+    """
+    if "sprint" in str(race.get("EventFormat", "")).lower():
+        return True
+    return any(
+        "sprint" in str(race.get(f"Session{i}", "")).lower() for i in range(1, 6)
+    )
+
+
 def compute_fastf1_all_races(year: int):
     """
     Every Grand Prix of a season with status and (once classified) winner.
@@ -66,6 +82,7 @@ def compute_fastf1_all_races(year: int):
             "country": race.get("Country", ""),
             "date": race_date.strftime("%Y-%m-%d"),
             "status": status,
+            "is_sprint": _is_sprint_event(race),
             "winner": None,
             "winner_team": None,
         }

@@ -6,11 +6,11 @@ import {
   Database, Sparkles, ChevronDown,
   Search, Zap, Swords, Flame, TrendingUp, Star,
   Download, Hash, Gauge, Scale, CircleDot, Flag, Users,
-  BarChart3, Shield, Minus
+  BarChart3, Shield, Minus, Crosshair, Ban
 } from 'lucide-react';
 import { teamLogos, teamColors } from '../data/teamData';
-import { fetchChampionship } from '../services/api';
-import type { ChampionshipPayload } from '../services/api';
+import { fetchChampionship, fetchDriverProfile } from '../services/api';
+import type { ChampionshipPayload, DriverProfilePayload } from '../services/api';
 import { toNumber } from '../utils/data';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import html2canvas from 'html2canvas';
@@ -26,6 +26,7 @@ interface CompareDriver {
   wins: number;
   podiums: number;
   dnfs: number;
+  dnss: number;
   pointsLastRace: number;
   abbreviation: string;
   driverNumber?: number;
@@ -40,6 +41,8 @@ interface StatMetric {
   unit?: string;
   invert?: boolean;
   icon: typeof Trophy;
+  /** Custom value formatter, e.g. finishing positions as `P3` / `-`. */
+  format?: (v: number) => string;
 }
 
 interface MergedProgressionRow {
@@ -49,11 +52,26 @@ interface MergedProgressionRow {
   d1_points: number;
   d1_cum: number;
   d1_pos: number | string;
+  d1_sprint_pos: number | string | null;
+  d1_sprint_points: number;
   d2_points: number;
   d2_cum: number;
   d2_pos: number | string;
+  d2_sprint_pos: number | string | null;
+  d2_sprint_points: number;
   winner: string | null;
 }
+
+/**
+ * Sprint-aware incident count: the driver-profile endpoint is the source of
+ * truth (identical numbers to DriverProfilePage and /stats); the championship
+ * payload is only the fallback while that request is in flight.
+ */
+const incidentCount = (
+  profile: DriverProfilePayload | undefined,
+  fallback: number | undefined,
+  key: 'dnfs' | 'dnss',
+): number => (profile ? toNumber(profile[key]) : toNumber(fallback));
 
 interface DriverSelectorProps {
   label: string;
@@ -243,7 +261,9 @@ interface ComparativeMetricBarProps {
 }
 
 const ComparativeMetricBar = ({ metric, driver1, driver2 }: ComparativeMetricBarProps) => {
-  const { label, val1, val2, unit = '', invert = false, icon: Icon } = metric;
+  const { label, val1, val2, unit = '', invert = false, icon: Icon, format } = metric;
+  const display1 = format ? format(val1) : `${val1}${unit}`;
+  const display2 = format ? format(val2) : `${val2}${unit}`;
 
   let winner: 1 | 2 | 0 = 0;
   if (val1 !== val2) {
@@ -292,7 +312,7 @@ const ComparativeMetricBar = ({ metric, driver1, driver2 }: ComparativeMetricBar
     <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-4 shadow-sm hover:border-neutral-700 transition-colors">
       <div className="flex justify-between items-center text-xs mb-2">
         <span className={`font-black text-sm font-mono ${winner === 1 ? 'text-white' : 'text-neutral-500'}`}>
-          {val1}{unit && unit}
+          {display1}
           {winner === 1 && <Flame size={12} className="inline ml-1 text-orange-400" />}
         </span>
         <span className="text-neutral-400 font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
@@ -301,7 +321,7 @@ const ComparativeMetricBar = ({ metric, driver1, driver2 }: ComparativeMetricBar
         </span>
         <span className={`font-black text-sm font-mono ${winner === 2 ? 'text-white' : 'text-neutral-500'}`}>
           {winner === 2 && <Flame size={12} className="inline mr-1 text-orange-400" />}
-          {val2}{unit && unit}
+          {display2}
         </span>
       </div>
       <div className="w-full bg-neutral-800 rounded-full h-2.5 overflow-hidden flex">
@@ -347,6 +367,7 @@ const ComparePage = () => {
         wins: toNumber(d.wins),
         podiums: toNumber(d.podiums),
         dnfs: toNumber(d.dnfs),
+        dnss: toNumber(d.dnss),
         pointsLastRace: toNumber(d.points_last_race),
         abbreviation: d.abbreviation || d.code || '',
         driverNumber: d.driver_number || d.number,
@@ -396,6 +417,21 @@ const ComparePage = () => {
   const driver1 = useMemo(() => drivers.find((d) => d.id === driver1Id), [drivers, driver1Id]);
   const driver2 = useMemo(() => drivers.find((d) => d.id === driver2Id), [drivers, driver2Id]);
 
+  // Full driver profiles power the Pole/Best/Avg metrics and guarantee the
+  // DNF/DNS numbers are byte-identical with the driver profile pages and
+  // /stats (same endpoint, same Sprint-aware predicates). Failures are
+  // tolerated: the championship values remain as fallback.
+  const { data: profile1 } = useQuery<DriverProfilePayload>({
+    queryKey: ['driverProfile', currentYear, driver1Id],
+    queryFn: () => fetchDriverProfile(currentYear, driver1Id),
+    enabled: !!driver1Id,
+  });
+  const { data: profile2 } = useQuery<DriverProfilePayload>({
+    queryKey: ['driverProfile', currentYear, driver2Id],
+    queryFn: () => fetchDriverProfile(currentYear, driver2Id),
+    enabled: !!driver2Id,
+  });
+
   // Teammate color collision logic
   let d1Color = driver1?.color || '#EF4444';
   let d2Color = driver2?.color || '#3B82F6';
@@ -406,6 +442,12 @@ const ComparePage = () => {
 
   const metrics: StatMetric[] = useMemo(() => {
     if (!driver1 || !driver2) return [];
+    // Sprint-aware incident counts (Grand Prix + Sprint), exactly the values
+    // DriverProfilePage and /stats render.
+    const d1Dnfs = incidentCount(profile1, driver1.dnfs, 'dnfs');
+    const d2Dnfs = incidentCount(profile2, driver2.dnfs, 'dnfs');
+    const d1Dnss = incidentCount(profile1, driver1.dnss, 'dnss');
+    const d2Dnss = incidentCount(profile2, driver2.dnss, 'dnss');
     return [
       {
         key: 'points',
@@ -430,12 +472,45 @@ const ComparePage = () => {
         icon: Medal,
       },
       {
+        key: 'poles',
+        label: 'Pole Positions',
+        val1: toNumber(profile1?.poles),
+        val2: toNumber(profile2?.poles),
+        icon: Crosshair,
+      },
+      {
+        key: 'best',
+        label: 'Best Finish',
+        val1: toNumber(profile1?.best_finish),
+        val2: toNumber(profile2?.best_finish),
+        invert: true,
+        icon: Crown,
+        format: (v) => (v > 0 ? `P${v}` : '-'),
+      },
+      {
+        key: 'avg',
+        label: 'Average Finish',
+        val1: toNumber(profile1?.avg_finish),
+        val2: toNumber(profile2?.avg_finish),
+        invert: true,
+        icon: Gauge,
+        format: (v) => (v > 0 ? `P${v}` : '-'),
+      },
+      {
         key: 'dnfs',
         label: 'Did Not Finish (DNFs)',
-        val1: driver1.dnfs,
-        val2: driver2.dnfs,
+        val1: d1Dnfs,
+        val2: d2Dnfs,
         invert: true,
         icon: AlertTriangle,
+      },
+      {
+        key: 'dnss',
+        label: 'Did Not Start (DNSs)',
+        val1: d1Dnss,
+        val2: d2Dnss,
+        invert: true,
+        icon: Ban,
       },
       {
         key: 'pointsLastRace',
@@ -454,7 +529,7 @@ const ComparePage = () => {
         icon: Crown,
       },
     ];
-  }, [driver1, driver2]);
+  }, [driver1, driver2, profile1, profile2]);
 
   const h2hScore = useMemo(() => {
     if (!metrics.length) return { score1: 0, score2: 0, leader: null };
@@ -481,80 +556,99 @@ const ComparePage = () => {
   }, [metrics]);
 
   const mergedProgression: MergedProgressionRow[] = useMemo(() => {
-    if (!driver1 || !driver2 || !data?.session_results) return [];
+    const sessionResults = data?.session_results;
+    if (!driver1 || !driver2 || !sessionResults) return [];
 
-    // Build real per-race progression from the championship session_results.
+    // Build real per-round progression from the championship session_results.
+    // Grand Prix and Sprint rows are merged per round so Sprint points are
+    // included (R17 Singapore: a race DNF can still carry sprint points) and
+    // the cumulative totals match the official championship figures.
+    type Entry = (typeof sessionResults)[number];
 
-      const d1Results = data.session_results.filter(
-        (r) => r.SessionType === 'R' && r.FullName === driver1.name
-      );
-      const d2Results = data.session_results.filter(
-        (r) => r.SessionType === 'R' && r.FullName === driver2.name
-      );
+    const isPointsSession = (t: unknown) => t === 'R' || t === 'Sprint';
+    const d1Results = sessionResults.filter(
+      (r) => isPointsSession(r.SessionType) && r.FullName === driver1.name
+    );
+    const d2Results = sessionResults.filter(
+      (r) => isPointsSession(r.SessionType) && r.FullName === driver2.name
+    );
 
-      const roundsSet = new Set<number>();
-      for (const r of [...d1Results, ...d2Results]) {
-        if (typeof r.RoundNumber === 'number') roundsSet.add(r.RoundNumber);
+    const byRound = (rows: Entry[]) => {
+      const map = new Map<number, { race?: Entry; sprint?: Entry }>();
+      for (const r of rows) {
+        if (typeof r.RoundNumber !== 'number') continue;
+        const slot = map.get(r.RoundNumber) ?? {};
+        if (r.SessionType === 'Sprint') slot.sprint = r;
+        else slot.race = r;
+        map.set(r.RoundNumber, slot);
       }
-      const rounds = [...roundsSet].sort((a, b) => a - b);
+      return map;
+    };
 
-      const d1ByRound = new Map<number, typeof data.session_results[number]>();
-      for (const r of d1Results) {
-        if (typeof r.RoundNumber === 'number') d1ByRound.set(r.RoundNumber, r);
-      }
-      const d2ByRound = new Map<number, typeof data.session_results[number]>();
-      for (const r of d2Results) {
-        if (typeof r.RoundNumber === 'number') d2ByRound.set(r.RoundNumber, r);
-      }
+    const d1ByRound = byRound(d1Results);
+    const d2ByRound = byRound(d2Results);
 
-      const trajectory: MergedProgressionRow[] = [];
-      let d1Cum = 0;
-      let d2Cum = 0;
+    const roundsSet = new Set<number>();
+    for (const r of [...d1Results, ...d2Results]) {
+      if (typeof r.RoundNumber === 'number') roundsSet.add(r.RoundNumber);
+    }
+    const rounds = [...roundsSet].sort((a, b) => a - b);
 
-      for (const round of rounds) {
-        const d1r = d1ByRound.get(round);
-        const d2r = d2ByRound.get(round);
+    // Never surface the legacy 99 "missing position" sentinel as P99; a
+    // retired/absent driver shows the real DNF/DNS label instead (DNS takes
+    // precedence, mirroring the backend predicates).
+    const resultLabel = (row?: Entry): number | string => {
+      if (!row) return '--';
+      const status = String((row as { Status?: unknown }).Status ?? '').toLowerCase();
+      if (status.includes('did not start') || status.includes('dns')) return 'DNS';
+      const classified = String((row as { ClassifiedPosition?: unknown }).ClassifiedPosition ?? '');
+      if (['R', 'D', 'E', 'W'].includes(classified)) return 'DNF';
+      const pos = (row as { Position?: unknown }).Position;
+      return typeof pos === 'number' ? (pos < 90 ? pos : '--') : pos != null ? String(pos) : '--';
+    };
 
-        const d1Pts = d1r ? Number(d1r.Points) || 0 : 0;
-        const d2Pts = d2r ? Number(d2r.Points) || 0 : 0;
+    const trajectory: MergedProgressionRow[] = [];
+    let d1Cum = 0;
+    let d2Cum = 0;
 
-        d1Cum += d1Pts;
-        d2Cum += d2Pts;
+    for (const round of rounds) {
+      const d1 = d1ByRound.get(round) ?? {};
+      const d2 = d2ByRound.get(round) ?? {};
 
-        const pos1 = d1r ? (d1r as { Position?: unknown }).Position : undefined;
-        const pos2 = d2r ? (d2r as { Position?: unknown }).Position : undefined;
-        // Never surface the legacy 99 "missing position" sentinel as P99.
-        const toDisplayPos = (p: unknown): number | string =>
-          typeof p === 'number' ? (p < 90 ? p : '--') : p != null ? String(p) : '--';
-        const d1Pos = toDisplayPos(pos1);
-        const d2Pos = toDisplayPos(pos2);
+      const d1Pts = (Number(d1.race?.Points) || 0) + (Number(d1.sprint?.Points) || 0);
+      const d2Pts = (Number(d2.race?.Points) || 0) + (Number(d2.sprint?.Points) || 0);
 
-        const winner =
-          typeof d1Pos === 'number' && typeof d2Pos === 'number'
-            ? d1Pos < d2Pos
-              ? driver1.name
-              : d2Pos < d1Pos
-                ? driver2.name
-                : null
-            : null;
+      d1Cum += d1Pts;
+      d2Cum += d2Pts;
 
-        const raceInfo = d1r ?? d2r;
-        trajectory.push({
-          round,
-          race_name: (raceInfo?.EventName as string) || `Round ${round}`,
-          location: (raceInfo?.Location as string) || '',
-          d1_points: d1Pts,
-          d1_cum: d1Cum,
-          d1_pos: d1Pos,
-          d2_points: d2Pts,
-          d2_cum: d2Cum,
-          d2_pos: d2Pos,
-          winner,
-        });
-      }
+      const d1Pos = resultLabel(d1.race);
+      const d2Pos = resultLabel(d2.race);
 
-      return trajectory;
-    }, [driver1, driver2, data?.session_results]);
+      const num1 = typeof d1Pos === 'number' ? d1Pos : 999;
+      const num2 = typeof d2Pos === 'number' ? d2Pos : 999;
+      const winner = num1 < num2 ? driver1.name : num2 < num1 ? driver2.name : null;
+
+      const raceInfo = d1.race ?? d2.race ?? d1.sprint ?? d2.sprint;
+      trajectory.push({
+        round,
+        race_name: (raceInfo?.EventName as string) || `Round ${round}`,
+        location: (raceInfo?.Location as string) || '',
+        d1_points: d1Pts,
+        d1_cum: d1Cum,
+        d1_pos: d1Pos,
+        d1_sprint_pos: d1.sprint ? resultLabel(d1.sprint) : null,
+        d1_sprint_points: Number(d1.sprint?.Points) || 0,
+        d2_points: d2Pts,
+        d2_cum: d2Cum,
+        d2_pos: d2Pos,
+        d2_sprint_pos: d2.sprint ? resultLabel(d2.sprint) : null,
+        d2_sprint_points: Number(d2.sprint?.Points) || 0,
+        winner,
+      });
+    }
+
+    return trajectory;
+  }, [driver1, driver2, data?.session_results]);
 
   const handleExportPNG = async () => {
     const el = document.getElementById('h2h-card');
@@ -832,23 +926,23 @@ const ComparePage = () => {
                           name: driver1.name,
                           team: driver1.team,
                           points: driver1.points,
-                          poles: 0,
+                          poles: toNumber(profile1?.poles),
                           wins: driver1.wins,
                           podiums: driver1.podiums,
-                          dnfs: driver1.dnfs,
-                          avg_finish: driver1.position,
-                          teammate: null,
+                          dnfs: incidentCount(profile1, driver1.dnfs, 'dnfs'),
+                          avg_finish: profile1?.avg_finish ?? driver1.position,
+                          teammate: profile1?.teammate ?? null,
                         }}
                         profile2={{
                           name: driver2.name,
                           team: driver2.team,
                           points: driver2.points,
-                          poles: 0,
+                          poles: toNumber(profile2?.poles),
                           wins: driver2.wins,
                           podiums: driver2.podiums,
-                          dnfs: driver2.dnfs,
-                          avg_finish: driver2.position,
-                          teammate: null,
+                          dnfs: incidentCount(profile2, driver2.dnfs, 'dnfs'),
+                          avg_finish: profile2?.avg_finish ?? driver2.position,
+                          teammate: profile2?.teammate ?? null,
                         }}
                         color1={d1Color}
                         color2={d2Color}
@@ -928,9 +1022,11 @@ const ComparePage = () => {
                     {mergedProgression.length > 0 ? (
                       <div className="space-y-3">
                         {mergedProgression.map((race) => {
-                          const d1Ahead = race.d1_pos < race.d2_pos;
-                          const d2Ahead = race.d2_pos < race.d1_pos;
-                          const tie = race.d1_pos === race.d2_pos;
+                          // `winner` is computed numerically in the memo (a
+                          // finisher beats a DNF/DNS; both retired = draw).
+                          const d1Ahead = race.winner === driver1?.name;
+                          const d2Ahead = race.winner === driver2?.name;
+                          const tie = !race.winner;
 
                           return (
                             <div
@@ -972,7 +1068,7 @@ const ComparePage = () => {
                                           border: `1px solid ${d1Color}40`,
                                         }}
                                       >
-                                        P{race.d1_pos}
+                                        {typeof race.d1_pos === 'number' ? `P${race.d1_pos}` : race.d1_pos}
                                       </div>
                                       <div>
                                         <div className="text-white text-xs font-bold">
@@ -981,6 +1077,12 @@ const ComparePage = () => {
                                         <div className="text-neutral-500 text-[10px] font-mono">
                                           +{race.d1_points} pts
                                         </div>
+                                        {race.d1_sprint_pos != null && (
+                                          <div className="text-orange-400 text-[9px] font-mono font-bold mt-0.5">
+                                            SPRINT {typeof race.d1_sprint_pos === 'number' ? `P${race.d1_sprint_pos}` : race.d1_sprint_pos}
+                                            {race.d1_sprint_points > 0 ? ` (+${race.d1_sprint_points})` : ''}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                     {d1Ahead && (
@@ -1006,7 +1108,7 @@ const ComparePage = () => {
                                           border: `1px solid ${d2Color}40`,
                                         }}
                                       >
-                                        P{race.d2_pos}
+                                        {typeof race.d2_pos === 'number' ? `P${race.d2_pos}` : race.d2_pos}
                                       </div>
                                       <div>
                                         <div className="text-white text-xs font-bold">
@@ -1015,6 +1117,12 @@ const ComparePage = () => {
                                         <div className="text-neutral-500 text-[10px] font-mono">
                                           +{race.d2_points} pts
                                         </div>
+                                        {race.d2_sprint_pos != null && (
+                                          <div className="text-orange-400 text-[9px] font-mono font-bold mt-0.5">
+                                            SPRINT {typeof race.d2_sprint_pos === 'number' ? `P${race.d2_sprint_pos}` : race.d2_sprint_pos}
+                                            {race.d2_sprint_points > 0 ? ` (+${race.d2_sprint_points})` : ''}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                     {d2Ahead && (

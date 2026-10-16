@@ -8,6 +8,8 @@ export interface Race {
   status: 'upcoming' | 'ongoing' | 'completed' | 'Upcoming' | 'Ongoing' | 'Finished' | string;
   location?: string;
   country?: string;
+  /** True when the event runs a Sprint session (from the FastF1 schedule). */
+  is_sprint?: boolean;
   /** `null` until the race is classified; `"Data not available"` when the session load failed. */
   winner?: string | null;
   winner_team?: string | null;
@@ -30,6 +32,7 @@ export interface DriverProfile {
   points_share?: number;
   points_last_race?: number;
   dnfs?: number;
+  dnss?: number;
   id?: string;
   abbreviation?: string;
   driver_number?: number;

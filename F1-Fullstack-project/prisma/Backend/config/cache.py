@@ -17,8 +17,18 @@ _CACHE_DIR = os.environ.get(
 )
 os.makedirs(_CACHE_DIR, exist_ok=True)
 
-# Enable FastF1 default file cache for its own requests (required by fastf1)
-fastf1.Cache.enable_cache(_CACHE_DIR)
+# Dedicated sub-folder for FastF1's internal HTTP/session cache so it never
+# collides with our JSON cache files, and never falls back to %TEMP%\fastf1
+# (which FastF1's req.py opens with os.makedirs WITHOUT exist_ok=True,
+# triggering FileExistsError on Windows and hanging every request).
+_FASTF1_CACHE_DIR = os.path.join(_CACHE_DIR, "fastf1")
+os.makedirs(_FASTF1_CACHE_DIR, exist_ok=True)
+
+# Point FastF1 at our controlled directory before any session/schedule load.
+fastf1.Cache.enable_cache(_FASTF1_CACHE_DIR)
+# Also honour the env var FastF1's req.py reads internally, as a belt-and-
+# suspenders guard against it recreating %TEMP%\fastf1.
+os.environ.setdefault("FASTF1_CACHE_DIR", _FASTF1_CACHE_DIR)
 
 CACHE_DURATION_HOURS = 6
 

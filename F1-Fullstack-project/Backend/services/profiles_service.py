@@ -1,5 +1,4 @@
 import logging
-
 from services.championship_service import clean_nans
 
 
@@ -12,7 +11,6 @@ def _safe_float(value, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
 
-
 def _safe_int(value, default: int = 0) -> int:
     try:
         if value is None or value == "":
@@ -20,7 +18,6 @@ def _safe_int(value, default: int = 0) -> int:
         return int(float(value))
     except (TypeError, ValueError):
         return default
-
 
 def process_driver_profile(champ_data: dict, year: int, driver_id: str):
     try:
@@ -51,18 +48,43 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         )
 
         session_results = champ_data.get("session_results", [])
+        driver_name = driver.get("name", "")
+
+        if not session_results or len(session_results) == 0:
+            # No session results available — fall back to standings-only profile (no mock data)
+            return clean_nans({
+                "name": driver_name,
+                "id": driver.get("id", ""),
+                "abbreviation": driver.get("abbreviation", ""),
+                "driver_number": _safe_int(driver.get("driver_number", 0)),
+                "team": driver.get("team", ""),
+                "position": _safe_int(driver.get("position", 0)),
+                "points": _safe_float(driver.get("points", 0)),
+                "wins": _safe_int(driver.get("wins", 0)),
+                "podiums": _safe_int(driver.get("podiums", 0)),
+                "poles": _safe_int(driver.get("poles", 0)),
+                "best_finish": None,
+                "avg_finish": None,
+                "dnfs": 0,
+                "dnss": 0,
+                "progression": [],
+                "teammate": {
+                    "name": teammate.get("name", "") if teammate else "",
+                    "id": teammate.get("id", "") if teammate else "",
+                    "abbreviation": teammate.get("abbreviation", "") if teammate else "",
+                    "driver_number": _safe_int(teammate.get("driver_number", 0)) if teammate else 0,
+                    "points": _safe_float(teammate.get("points", 0)) if teammate else 0,
+                    "position": _safe_int(teammate.get("position", 0)) if teammate else 0,
+                    "race_h2h": {"driver_ahead": 0, "teammate_ahead": 0},
+                    "quali_h2h": {"driver_ahead": 0, "teammate_ahead": 0},
+                } if teammate else None,
+            })
 
         # Index every session row by (FullName, RoundNumber, SessionType) ONCE.
-        # The previous implementation called next(...)/sum(...) scans inside the
-        # per-round loop, making this O(races x results) on a cold cache.
-        # championship_service emits exactly one row per driver/round/session,
-        # so this key is unique and last-write-wins matches next()'s first-match.
         by_key = {
             (r.get("FullName"), r.get("RoundNumber"), r.get("SessionType")): r
             for r in session_results
         }
-
-        driver_name = driver.get("name", "")
 
         # Sprint points per round, pre-summed for this driver only.
         sprint_pts_by_round = {}
@@ -97,7 +119,7 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
 
         def _teammate_position(tm_row):
             if not tm_row:
-                return "-"
+                return "—"
             status = str(tm_row.get("Status", "")).lower()
             if "did not start" in status or "dns" in status:
                 return "DNS"
@@ -222,7 +244,6 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         logging.error(f"Error memuat profil driver: {e}", exc_info=True)
         return {"error": "Driver profile data is currently unavailable."}
 
-
 def process_team_profile(champ_data: dict, year: int, team_id: str):
     try:
         teams = champ_data.get("teams", [])
@@ -261,6 +282,19 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
             })
 
         session_results = champ_data.get("session_results", [])
+
+        if not session_results or len(session_results) == 0:
+            return clean_nans({
+                "name": team_name,
+                "id": team.get("id", ""),
+                "position": _safe_int(team.get("position", 0)),
+                "points": _safe_float(team.get("points", 0)),
+                "wins": _safe_int(team.get("wins", 0)),
+                "podiums": _safe_int(team.get("podiums", 0)),
+                "drivers": team_drivers,
+                "progression": [],
+            })
+
         team_races = [
             r for r in session_results
             if r.get("TeamName") == team_name and r.get("SessionType") in ("R", "Sprint")

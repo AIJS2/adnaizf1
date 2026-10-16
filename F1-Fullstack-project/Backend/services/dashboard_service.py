@@ -32,8 +32,31 @@ def _empty_season(year: int, message: str) -> dict:
 
 
 def _find_next_session(schedule: pd.DataFrame, now_utc: pd.Timestamp):
-    """First session on the calendar that starts after *now_utc*."""
+    """First session on the calendar that starts after *now_utc*.
+
+    Falls back to the next event's EventDate (Race) when FastF1 returns
+    null Session*Date fields (offline/fallback schedule source).
+    """
+    fallback_event = None
+
     for _, event in schedule.iterrows():
+        # Track the first event whose EventDate is still in the future
+        # as a fallback in case all Session*Date fields are null.
+        try:
+            event_date = pd.to_datetime(event.get("EventDate"), utc=True)
+        except (TypeError, ValueError):
+            event_date = None
+        if event_date is not None and event_date > now_utc and fallback_event is None:
+            try:
+                fallback_round = int(event.get("RoundNumber"))
+            except (TypeError, ValueError):
+                fallback_round = None
+            fallback_event = {
+                "name": f"{event['EventName']} - Race",
+                "date": event_date.isoformat(),
+                "round": fallback_round,
+            }
+
         for i in range(1, 6):
             session_name_col = f"Session{i}"
             session_date_col = f"Session{i}Date"
@@ -44,17 +67,24 @@ def _find_next_session(schedule: pd.DataFrame, now_utc: pd.Timestamp):
                     continue
                 if session_date > now_utc:
                     session_name = event.get(session_name_col, "Session")
+                    try:
+                        rnd = int(event.get("RoundNumber"))
+                    except (TypeError, ValueError):
+                        rnd = None
                     return {
                         "name": f"{event['EventName']} - {session_name}",
                         "date": session_date.isoformat(),
+                        "round": rnd,
                     }
-    return None
+
+    return fallback_event
 
 
 def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int, year: int):
     """Aggregate per-driver / per-team points from every race + sprint."""
     all_driver_results = []
     last_race_driver_results = []
+    team_wins_map = {}
 
     for _, race in races_to_process.iterrows():
         try:
@@ -74,7 +104,7 @@ def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int
             if results is None or getattr(results, "empty", True):
                 continue
 
-            needed = ["FirstName", "LastName", "TeamName", "Points"]
+            needed = ["FirstName", "LastName", "TeamName", "Points", "Position"]
             if not set(needed).issubset(set(results.columns)):
                 logging.warning(
                     f"Session {year}/{round_number}/{session_type} results missing "
@@ -84,9 +114,19 @@ def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int
 
             sub = results[needed].copy()
             sub["Points"] = pd.to_numeric(sub["Points"], errors="coerce").fillna(0.0)
+            sub["Position"] = pd.to_numeric(sub["Position"], errors="coerce")
             all_driver_results.append(sub)
             if is_last_race:
                 last_race_driver_results.append(sub)
+
+            # Track wins per team: a win is a race finish in P1 (sprints excluded)
+            # so constructor win totals reflect official Grand Prix victories only.
+            if session_type == "R":
+                p1_rows = sub[sub["Position"] == 1.0]
+                for _, row in p1_rows.iterrows():
+                    team_name = row["TeamName"]
+                    if team_name and str(team_name).strip():
+                        team_wins_map[team_name] = team_wins_map.get(team_name, 0) + 1
 
     if not all_driver_results:
         return None, None
@@ -95,6 +135,9 @@ def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int
     print(f"DEBUG DASHBOARD: total session rows = {len(df_all_drivers)}")
     df_all_teams = df_all_drivers[["TeamName", "Points"]]
     total_team_standings = df_all_teams.groupby("TeamName", as_index=False)["Points"].sum()
+
+    # Add race wins computed above (official race wins only, no sprint wins).
+    total_team_standings["wins"] = total_team_standings["TeamName"].apply(lambda x: team_wins_map.get(x, 0)).astype(int)
 
     if last_race_driver_results:
         df_last_race = pd.concat(last_race_driver_results, ignore_index=True)
@@ -146,8 +189,10 @@ def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp
 
     for _, race in races_for_analytics.iterrows():
         try:
-            race_date = pd.to_datetime(race["EventDate"]).normalize()
-        except (TypeError, ValueError):
+            race_date = pd.to_datetime(race["EventDate"], errors="coerce").normalize()
+            if pd.isna(race_date):
+                continue
+        except (TypeError, ValueError, OSError):
             continue
 
         status = "Finished"
@@ -159,7 +204,7 @@ def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp
         race_info = {
             "round": int(race["RoundNumber"]),
             "name": race["EventName"],
-            "date": pd.to_datetime(race["EventDate"]).strftime("%Y-%m-%d"),
+            "date": pd.to_datetime(race["EventDate"], errors="coerce").strftime("%Y-%m-%d"),
             "location": race.get("Location", ""),
             "status": status,
             "winner": None,
@@ -189,7 +234,7 @@ def compute_fastf1_dashboard(year: int):
         print(f"  -> Tahun {year} di luar rentang musim F1. Mengirim pre_season.")
         return _empty_season(year, f"The {year} season has no data.")
 
-    print("⚙️ Menghitung data Dashboard...")
+    logging.info("[Dashboard] Computing dashboard data...")
     today = pd.to_datetime("today").normalize()
     now_utc = pd.to_datetime("now", utc=True)
 

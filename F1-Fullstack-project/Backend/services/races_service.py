@@ -45,8 +45,11 @@ def compute_fastf1_all_races(year: int):
     all_races_data = []
     for _, race in official_races.iterrows():
         try:
-            race_date = pd.to_datetime(race["EventDate"]).normalize()
-        except (TypeError, ValueError):
+            race_date = pd.to_datetime(race["EventDate"], errors="coerce").normalize()
+            if pd.isna(race_date):
+                logging.warning(f"Skipping race with unparseable EventDate: {race}")
+                continue
+        except (TypeError, ValueError, OSError):
             logging.warning(f"Skipping race with unreadable EventDate: {race}")
             continue
 
@@ -61,7 +64,7 @@ def compute_fastf1_all_races(year: int):
             "name": race["EventName"],
             "location": race.get("Location", ""),
             "country": race.get("Country", ""),
-            "date": pd.to_datetime(race["EventDate"]).strftime("%Y-%m-%d"),
+            "date": race_date.strftime("%Y-%m-%d"),
             "status": status,
             "winner": None,
             "winner_team": None,

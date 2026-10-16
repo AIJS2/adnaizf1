@@ -26,9 +26,10 @@ os.makedirs(_FASTF1_CACHE_DIR, exist_ok=True)
 
 # Point FastF1 at our controlled directory before any session/schedule load.
 fastf1.Cache.enable_cache(_FASTF1_CACHE_DIR)
-# Also honour the env var FastF1's req.py reads internally, as a belt-and-
-# suspenders guard against it recreating %TEMP%\fastf1.
-os.environ.setdefault("FASTF1_CACHE_DIR", _FASTF1_CACHE_DIR)
+# Also honour the env var FastF1's req.py actually reads (FASTF1_CACHE, not
+# FASTF1_CACHE_DIR) as a belt-and-suspenders guard against it ever recreating
+# %TEMP%\fastf1 in a process that skips this import.
+os.environ.setdefault("FASTF1_CACHE", _FASTF1_CACHE_DIR)
 
 CACHE_DURATION_HOURS = 6
 

@@ -125,7 +125,10 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                 return "DNS"
             if str(tm_row.get("ClassifiedPosition", "")) in ("R", "D", "E", "W"):
                 return "DNF"
-            return _safe_int(tm_row.get("Position", 99), 99)
+            pos = _safe_int(tm_row.get("Position", 99), 99)
+            # A missing position (null / legacy sentinel) must render as "-",
+            # never as "P99".
+            return pos if pos < 90 else "-"
 
         for r in driver_races:
             rnd = r.get("RoundNumber", 0)
@@ -155,7 +158,9 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                 "round": rnd,
                 "race_name": r.get("EventName") or f"Round {rnd}",
                 "location": r.get("Location", ""),
-                "position": "DNS" if is_dns else ("DNF" if is_dnf else pos),
+                # Never expose the legacy 99 sentinel: a missing classification
+                # shows as "-" (or the real DNF/DNS status).
+                "position": "DNS" if is_dns else ("DNF" if is_dnf else (pos if pos < 90 else "-")),
                 "grid_position": _grid_position(r),
                 "status": str(r.get("Status", "")),
                 "points": total_round_pts,

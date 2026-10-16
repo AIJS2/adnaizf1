@@ -222,6 +222,11 @@ function RaceDetailPage() {
   })();
   const trackMapImg = getTrackMap(raceData?.race_info);
 
+  // A completed race missing a summary highlight (e.g. a still-revalidating
+  // cache) must not claim the race "has not run yet".
+  const summaryFallbackText =
+    raceData?.status === 'Upcoming' ? 'Race not run yet.' : 'Data not available.';
+
   const baseAvailableTabs = ALL_POSSIBLE_TABS.filter(tab => raceData?.available_tabs?.includes(tab));
   const availableTabs = [...baseAvailableTabs];
   if (raceData?.lap_chart && !availableTabs.includes('Lap Chart')) availableTabs.push('Lap Chart');
@@ -377,9 +382,9 @@ function RaceDetailPage() {
 
         {/* Summary Cards */}
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 mb-10">
-          <SummaryCard title="Race Winner"  icon={<Trophy size={20} />}          data={raceWinnerData} />
-          <SummaryCard title="Pole Position" icon={<GitCommitVertical size={20} />} data={poleSitterData} />
-          <SummaryCard title="Fastest Lap"  icon={<Clock size={20} />}           data={fastestLapData} />
+          <SummaryCard title="Race Winner"  icon={<Trophy size={20} />}          data={raceWinnerData} fallbackText={summaryFallbackText} />
+          <SummaryCard title="Pole Position" icon={<GitCommitVertical size={20} />} data={poleSitterData} fallbackText={summaryFallbackText} />
+          <SummaryCard title="Fastest Lap"  icon={<Clock size={20} />}           data={fastestLapData} fallbackText={summaryFallbackText} />
         </section>
 
         {/* Tab Navigation Bars: Official Sessions & Data & Telemetry (Above the Content Area) */}

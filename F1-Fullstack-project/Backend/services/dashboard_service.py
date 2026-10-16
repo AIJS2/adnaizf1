@@ -171,7 +171,11 @@ def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int
 
 
 def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp):
-    """Last two finished races, plus the live / next upcoming one."""
+    """The last two finished races plus the next two upcoming ones.
+
+    Four entries keep the dashboard card visually balanced with the seven-row
+    driver standings list (2 finished + 2 upcoming; a live race adds a fifth).
+    """
     analytics = []
 
     try:
@@ -181,7 +185,7 @@ def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp
         ongoing = official[event_date == today]
         upcoming = official[event_date > today]
         races_for_analytics = pd.concat(
-            [completed.tail(2), ongoing.head(1), upcoming.head(1)]
+            [completed.tail(2), ongoing.head(1), upcoming.head(2)]
         )
     except Exception as e:  # noqa: BLE001
         logging.warning(f"Could not select races for analytics ({year}): {e}")

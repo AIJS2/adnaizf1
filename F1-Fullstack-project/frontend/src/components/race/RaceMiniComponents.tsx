@@ -15,11 +15,13 @@ interface SummaryCardProps {
   title: string;
   icon: ReactNode;
   data?: SummaryCardData | null;
+  /** Copy shown when `data` is absent; defaults to the upcoming-race line. */
+  fallbackText?: string;
 }
 
 // =======================================================================
 
-const SummaryCard = ({ title, icon, data }: SummaryCardProps) => (
+const SummaryCard = ({ title, icon, data, fallbackText }: SummaryCardProps) => (
   <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-2xl p-6 h-full shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_8px_30px_rgba(255,0,0,0.1)] hover:border-neutral-700 transition-all duration-500 group relative overflow-hidden">
     <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-red-500/10 transition-colors"></div>
     <div className="flex justify-between items-center text-neutral-400 text-sm relative z-10">
@@ -45,7 +47,7 @@ const SummaryCard = ({ title, icon, data }: SummaryCardProps) => (
         )}
       </div>
     ) : (
-      <p className="mt-5 text-neutral-500 text-sm italic relative z-10">Race not run yet.</p>
+      <p className="mt-5 text-neutral-500 text-sm italic relative z-10">{fallbackText || 'Race not run yet.'}</p>
     )}
   </div>
 );

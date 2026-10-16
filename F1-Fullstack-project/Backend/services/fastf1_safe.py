@@ -73,6 +73,81 @@ def has_rows(obj: Any, name: str) -> bool:
             return bool(value)
 
 
+# --- Event metadata sanitisation -------------------------------------------
+# Upstream ships one corrupt event in the 2026 schedule: round 16 is the
+# Bahrain Grand Prix, but its Location reads "Kuala Lumpur" and its official
+# name "... BAHRAIN GRAND PRIX IN MALAYSIA 2026". Every service reads the
+# schedule through `load_event_schedule`, so the metadata is normalised once
+# here and all consumers (dashboard, races, championship, race details) serve
+# the same sane event.
+_CORRUPT_EVENT_FIXES: tuple[dict[str, str], ...] = (
+    {
+        "name_contains": "bahrain grand prix",
+        "location_contains": "kuala lumpur",
+        "EventName": "Bahrain Grand Prix",
+        "Location": "Sakhir",
+        "Country": "Bahrain",
+        "official_name_strip": r"(?i)\s+in\s+malaysia",
+    },
+)
+
+
+def sanitize_event_schedule(schedule: Any) -> Any:
+    """Fix known-corrupt event metadata on a FastF1 schedule frame."""
+    if schedule is None or getattr(schedule, "empty", True):
+        return schedule
+
+    for fix in _CORRUPT_EVENT_FIXES:
+        try:
+            rows = (
+                schedule["EventName"].astype(str).str.lower()
+                .str.contains(fix["name_contains"], na=False)
+                & schedule["Location"].astype(str).str.lower()
+                .str.contains(fix["location_contains"], na=False)
+            )
+            if not rows.any():
+                continue
+            for column in ("EventName", "Location", "Country"):
+                if column in schedule.columns:
+                    schedule.loc[rows, column] = fix[column]
+            if "OfficialEventName" in schedule.columns and fix.get("official_name_strip"):
+                schedule.loc[rows, "OfficialEventName"] = (
+                    schedule.loc[rows, "OfficialEventName"].astype(str)
+                    .str.replace(fix["official_name_strip"], "", regex=True)
+                )
+            logger.warning(
+                "Sanitised corrupt event metadata for round(s) %s: location "
+                "'%s' -> '%s', event '%s'.",
+                schedule.loc[rows, "RoundNumber"].tolist(),
+                fix["location_contains"], fix["Location"], fix["EventName"],
+            )
+        except Exception as e:  # noqa: BLE001 - never fail a load over a fixup
+            logger.warning(f"Could not sanitise schedule metadata: {e}")
+    return schedule
+
+
+_CACHE_ENSURE_DONE = False
+
+
+def _ensure_fastf1_cache() -> None:
+    """Point FastF1 at the app's cache dir even in scripts that never import
+    `config.cache` (which normally enables it at import time).
+
+    Without this, FastF1 falls back to its default %TEMP%\\fastf1 cache, whose
+    req.py opens directories with `os.makedirs` (no exist_ok) — raising
+    FileExistsError on Windows and hanging every request.
+    """
+    global _CACHE_ENSURE_DONE
+    if _CACHE_ENSURE_DONE:
+        return
+    try:
+        from config.cache import _FASTF1_CACHE_DIR  # local import avoids cycles
+        fastf1.Cache.enable_cache(_FASTF1_CACHE_DIR)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not enable the FastF1 cache: {e}")
+    _CACHE_ENSURE_DONE = True
+
+
 def load_session_safe(year: int, round_number: int, session_type: str,
                       **load_kwargs: Any) -> Optional[Any]:
     """
@@ -83,6 +158,7 @@ def load_session_safe(year: int, round_number: int, session_type: str,
     Callers treat None as "this session contributes nothing", which is the
     honest payload when the data genuinely does not exist.
     """
+    _ensure_fastf1_cache()
     try:
         session = fastf1.get_session(year, round_number, session_type)
     except ValueError as e:
@@ -117,13 +193,16 @@ def load_event_schedule(year: int, include_testing: bool = False):
 
     An empty-but-valid frame (0 rows) is returned as-is; only an exception
     yields None, so callers can tell "no such season" from "season with no
-    events".
+    events". Known-corrupt upstream event metadata is sanitised before the
+    schedule is handed to callers.
     """
+    _ensure_fastf1_cache()
     try:
-        return fastf1.get_event_schedule(year, include_testing=include_testing)
+        schedule = fastf1.get_event_schedule(year, include_testing=include_testing)
     except Exception as e:  # noqa: BLE001
         logger.warning(f"get_event_schedule({year}) failed: {type(e).__name__}: {e}")
         return None
+    return sanitize_event_schedule(schedule)
 
 
 def is_valid_year(year: Any) -> bool:

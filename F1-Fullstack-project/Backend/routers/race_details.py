@@ -47,10 +47,18 @@ async def get_race_details(
         now = time.time()
         age_seconds = now - cache_mtime if cache_mtime > 0 else 0
 
-        # Completed races with rich telemetry have a long TTL (24h = 86400s)
-        # Incomplete, Ongoing, or Upcoming sessions have a short TTL (10m = 600s)
+        # Completed races with rich telemetry have a long TTL (24h = 86400s).
+        # Incomplete, Ongoing, or Upcoming sessions have a short TTL (10m = 600s).
+        # A "Completed" payload that is missing the lap-derived data (fastest
+        # lap / tyre strategy) is a stale artifact of an earlier computation,
+        # not a finished cache — keep the short TTL so it gets revalidated
+        # instead of being served for 24h.
+        has_lap_data = (
+            bool(cached_data.get("fastest_lap"))
+            and bool(cached_data.get("tyre_strategy"))
+        )
         is_completed = status == "Completed" and bool(cached_data.get("results"))
-        ttl_seconds = 86400 if is_completed else 600
+        ttl_seconds = 86400 if (is_completed and has_lap_data) else 600
         is_stale = age_seconds > ttl_seconds or status in ("Ongoing", "Upcoming") or not cached_data.get("results")
 
         if is_stale:

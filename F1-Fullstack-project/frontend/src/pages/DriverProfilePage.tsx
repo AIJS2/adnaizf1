@@ -13,6 +13,17 @@ const h2hTotal = (
 ): number | null =>
   h2h ? h2h.driver_ahead + h2h.teammate_ahead : null;
 
+/** Positions at or above this value are legacy "missing position" sentinels. */
+const INVALID_POSITION_THRESHOLD = 90;
+
+/** Never render the legacy 99 sentinel as "P99" — show "-" instead. */
+const positionLabel = (position: number | string): string =>
+  typeof position === 'number'
+    ? position >= INVALID_POSITION_THRESHOLD
+      ? '-'
+      : `P${position}`
+    : String(position);
+
 const DriverProfilePage = () => {
   const { id } = useParams();
   const currentYear = new Date().getFullYear();
@@ -310,7 +321,7 @@ const DriverProfilePage = () => {
                       <div className="text-xs text-neutral-500 font-normal">{row.location}</div>
                     </td>
                     <td className="p-4 text-center">
-                      <span title={`${row.position === 'DNF' || row.position === 'DNS' ? row.position : 'P'+row.position} • Race: ${row.race_points} pts${sprintPts > 0 ? ' | Sprint: '+row.sprint_points+' pts' : ''} • Started ${gridPos > 0 ? 'P'+row.grid_position : 'Pitlane/DNS'} • ${row.status}`} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
+                      <span title={`${positionLabel(row.position)} • Race: ${row.race_points} pts${sprintPts > 0 ? ' | Sprint: '+row.sprint_points+' pts' : ''} • Started ${gridPos > 0 ? 'P'+row.grid_position : 'Pitlane/DNS'} • ${row.status}`} className={`inline-block px-3 py-1 rounded-full text-xs font-black font-mono cursor-help ${
                         row.position === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
                         row.position === 2 ? 'bg-slate-300/20 text-slate-300 border border-slate-300/40' :
                         row.position === 3 ? 'bg-amber-600/20 text-amber-500 border border-amber-600/40' :
@@ -318,7 +329,7 @@ const DriverProfilePage = () => {
                         row.position === 'DNF' ? 'bg-red-500/10 text-red-500' :
                         row.position === 'DNS' ? 'bg-orange-500/10 text-orange-500' : 'bg-neutral-800 text-neutral-400'
                       }`}>
-                        {typeof row.position === 'number' ? `P${row.position}` : row.position}
+                        {positionLabel(row.position)}
                       </span>
                     </td>
                     <td className="p-4 text-right font-mono font-bold text-white">
@@ -329,7 +340,7 @@ const DriverProfilePage = () => {
                     </td>
                     {tm && (
                       <td className="p-4 text-center font-mono text-neutral-400 text-xs">
-                        {typeof row.teammate_position === 'number' ? `P${row.teammate_position}` : row.teammate_position}
+                        {positionLabel(row.teammate_position ?? '—')}
                       </td>
                     )}
                   </tr>

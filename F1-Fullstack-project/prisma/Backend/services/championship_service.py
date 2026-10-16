@@ -66,9 +66,12 @@ def _collect_results(year: int, races_to_process: pd.DataFrame):
             sub_df["Points"] = pd.to_numeric(
                 results.get("Points", 0), errors="coerce"
             ).fillna(0.0)
+            # Keep a missing position as NaN (serialised as null) instead of
+            # stamping a sentinel 99 — downstream code renders null as "-"
+            # rather than "P99".
             sub_df["Position"] = pd.to_numeric(
                 sub_df["Position"], errors="coerce"
-            ).fillna(99)
+            )
             sub_df["SessionType"] = session_type
             sub_df["RoundNumber"] = int(round_number)
             sub_df["EventName"] = str(race.get("EventName", ""))

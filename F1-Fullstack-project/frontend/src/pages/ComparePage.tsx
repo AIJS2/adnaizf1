@@ -523,8 +523,11 @@ const ComparePage = () => {
 
         const pos1 = d1r ? (d1r as { Position?: unknown }).Position : undefined;
         const pos2 = d2r ? (d2r as { Position?: unknown }).Position : undefined;
-        const d1Pos = typeof pos1 === 'number' ? pos1 : pos1 != null ? String(pos1) : '--';
-        const d2Pos = typeof pos2 === 'number' ? pos2 : pos2 != null ? String(pos2) : '--';
+        // Never surface the legacy 99 "missing position" sentinel as P99.
+        const toDisplayPos = (p: unknown): number | string =>
+          typeof p === 'number' ? (p < 90 ? p : '--') : p != null ? String(p) : '--';
+        const d1Pos = toDisplayPos(pos1);
+        const d2Pos = toDisplayPos(pos2);
 
         const winner =
           typeof d1Pos === 'number' && typeof d2Pos === 'number'

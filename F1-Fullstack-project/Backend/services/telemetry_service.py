@@ -66,6 +66,69 @@ def _validate_car_data(car_data: Optional[pd.DataFrame], drv: str) -> tuple:
     return car_data, None
 
 
+def _attach_position_data(target_lap, tel: pd.DataFrame, drv: str) -> pd.DataFrame:
+    """Merge the X/Y position stream onto the car-channel timeline.
+
+    ``get_car_data()`` has no position channels, so without this merge every
+    track-map point collapsed to (0, 0) and the map rendered as a dot. The
+    nearest position sample within 1s is attached to each car-data row.
+    """
+    if {"X", "Y"}.issubset(set(tel.columns)):
+        return tel
+    try:
+        pos = target_lap.get_pos_data()
+    except Exception as e:  # noqa: BLE001
+        logging.warning(f"get_pos_data() unavailable for {drv}: {e}")
+        return tel
+    if pos is None or getattr(pos, "empty", True) or not {"X", "Y"}.issubset(set(pos.columns)):
+        return tel
+
+    try:
+        merged = pd.merge_asof(
+            tel.sort_values("Time"),
+            pos.loc[:, ["Time", "X", "Y"]].sort_values("Time"),
+            on="Time",
+            direction="nearest",
+            tolerance=pd.Timedelta("1s"),
+        )
+    except Exception as e:  # noqa: BLE001
+        logging.warning(f"Position merge failed for {drv}: {e}")
+        return tel
+    return merged if not merged.empty else tel
+
+
+def _extract_lap_telemetry(target_lap, drv: str) -> tuple:
+    """Return (frame with Speed+Distance[+X/Y], error_or_None) for one lap."""
+    candidates = []
+
+    # Primary: dedicated car-channel stream.
+    try:
+        car = target_lap.get_car_data()
+        if car is not None and not getattr(car, "empty", True):
+            if "Distance" not in car.columns:
+                car = car.add_distance()
+            candidates.append(_attach_position_data(target_lap, car, drv))
+    except Exception as e:  # noqa: BLE001
+        logging.warning(f"get_car_data() unavailable for {drv}: {e}")
+
+    # Fallback: legacy merged stream that also carries position channels.
+    try:
+        legacy = target_lap.get_telemetry()
+        if legacy is not None and not getattr(legacy, "empty", True):
+            if "Distance" not in legacy.columns:
+                legacy = legacy.add_distance()
+            legacy["Distance"] = legacy["Distance"].ffill().bfill()
+            candidates.append(legacy)
+    except Exception as e:  # noqa: BLE001
+        logging.warning(f"get_telemetry() unavailable for {drv}: {e}")
+
+    for frame in candidates:
+        validated, _err = _validate_car_data(frame, drv)
+        if validated is not None:
+            return validated, None
+    return None, "No lap data for this driver in this session."
+
+
 def process_telemetry_compare(year: int, round_number: int, driver_list: list, lap: Optional[int] = None):
     # Validate before spending a network round-trip on an impossible request.
     if not is_valid_year(year) or not isinstance(round_number, int) or round_number < 1:
@@ -98,12 +161,28 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
 
     all_drivers_set = set(laps["Driver"]) if "Driver" in laps.columns else set()
 
+    # Drivers who never took the start will never have lap telemetry; saying
+    # "did not start" is far clearer than the generic "no lap data" message.
+    dns_drivers = set()
+    results = safe_getattr(session, "results")
+    if results is not None and not getattr(results, "empty", True):
+        for _, row in results.iterrows():
+            status = str(row.get("Status", "") or "").lower()
+            abbr = row.get("Abbreviation")
+            if "did not start" in status and pd.notna(abbr):
+                dns_drivers.add(str(abbr))
+
     # ── Per-driver isolation: one driver's failure never breaks another's ──
     for drv in driver_list:
+        no_lap_reason = (
+            "Did not start this race - no lap telemetry exists for this driver."
+            if drv in dns_drivers
+            else "No lap data for this driver in this session."
+        )
         try:
             drv_laps = laps[laps["Driver"] == drv] if drv in all_drivers_set else None
             if drv_laps is None or drv_laps.empty:
-                unavailable[drv] = "No lap data for this driver in this session."
+                unavailable[drv] = no_lap_reason
                 continue
 
             if lap is not None:
@@ -117,14 +196,14 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
                     else drv_laps
                 )
                 if valid_laps.empty:
-                    unavailable[drv] = "No lap data for this driver in this session."
+                    unavailable[drv] = no_lap_reason
                     continue
                 fastest_idx = valid_laps["LapTime"].idxmin()
                 target_lap = valid_laps.loc[fastest_idx]
 
             target_lap, err = _validate_lap(target_lap, drv)
             if err:
-                unavailable[drv] = err
+                unavailable[drv] = no_lap_reason
                 continue
 
             drv_info = session.get_driver(drv)
@@ -135,31 +214,10 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
                 else drv
             )
 
-            # Get car data with distance added. Fall back to get_telemetry() if needed.
-            tel = None
-            tel_err = None
-            try:
-                tel = target_lap.get_car_data().add_distance()
-                tel, tel_err = _validate_car_data(tel, drv)
-            except Exception as e:  # noqa: BLE001
-                logging.warning(
-                    f"get_car_data() unavailable for {drv} at {year}/{round_number}: {e}"
-                )
-                tel_err = "get_car_data() raised"
-
+            # Car channels + distance + X/Y. See _extract_lap_telemetry().
+            tel, tel_err = _extract_lap_telemetry(target_lap, drv)
             if tel is None or tel_err:
-                try:
-                    tel = target_lap.get_telemetry()
-                    tel, tel_err = _validate_car_data(tel, drv)
-                except Exception as e2:  # noqa: BLE001
-                    logging.warning(
-                        f"get_telemetry() unavailable for {drv} at {year}/{round_number}: {e2}"
-                    )
-                    unavailable[drv] = "No lap data for this driver in this session."
-                    continue
-
-            if tel_err:
-                unavailable[drv] = tel_err
+                unavailable[drv] = no_lap_reason
                 continue
 
             tel = tel.copy()
@@ -200,7 +258,7 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
                 f"Unexpected error processing {drv} at {year}/{round_number}: {e}",
                 exc_info=True,
             )
-            unavailable[drv] = "No lap data for this driver in this session."
+            unavailable[drv] = no_lap_reason
             continue
 
     if not binned_dfs:

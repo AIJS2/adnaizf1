@@ -29,10 +29,17 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
   const xs = telemetry.map(d => d.x).filter((x): x is number => x !== undefined && !isNaN(x));
   const ys = telemetry.map(d => d.y).filter((y): y is number => y !== undefined && !isNaN(y));
 
+  // Degenerate coordinates (all points identical — e.g. an all-zero payload
+  // from a data source without position channels) would render as a single
+  // dot, which reads as "broken map". Treat that as missing position data.
+  const hasSpread =
+    xs.length > 1 &&
+    (Math.max(...xs) - Math.min(...xs) > 1 || Math.max(...ys) - Math.min(...ys) > 1);
+
   // No positional telemetry: render an explicit empty state rather than
   // returning null, which made the whole section disappear with no
   // explanation and left a layout hole on the page.
-  if (!telemetry || telemetry.length === 0 || xs.length === 0 || ys.length === 0) {
+  if (!telemetry || telemetry.length === 0 || !hasSpread) {
     return (
       <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl mb-8">
         <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">

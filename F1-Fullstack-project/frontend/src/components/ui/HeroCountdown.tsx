@@ -21,33 +21,39 @@ interface TimeLeft {
   isLive: boolean;
 }
 
+/**
+ * Derive the countdown from a target timestamp. Used as the lazy `useState`
+ * initializer so the very first painted frame already shows the real numbers
+ * (a post-mount `useEffect` would flash 00:00:00:00 for one frame).
+ */
+function computeTimeLeft(targetTimestamp: number): TimeLeft {
+  // No parseable target: keep the all-zero, non-live state (same as before).
+  if (!targetTimestamp) return { days: 0, hours: 0, minutes: 0, seconds: 0, isLive: false };
+  const diff = targetTimestamp - Date.now();
+  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isLive: true };
+  return {
+    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+    minutes: Math.floor((diff / 1000 / 60) % 60),
+    seconds: Math.floor((diff / 1000) % 60),
+    isLive: false,
+  };
+}
+
 // --- DIGITAL HERO COUNTDOWN COMPONENT ---
 const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, phase = 'future' }) => {
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: false });
-
   const targetTimestamp = useMemo(() => {
     if (!targetDate) return 0;
     const t = typeof targetDate === 'string' ? new Date(targetDate).getTime() : targetDate.getTime();
     return isNaN(t) ? 0 : t;
   }, [targetDate]);
 
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => computeTimeLeft(targetTimestamp));
+
   useEffect(() => {
     if (!targetTimestamp) return;
 
-    const calc = () => {
-      const diff = targetTimestamp - Date.now();
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isLive: true });
-        return;
-      }
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((diff / 1000 / 60) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
-        isLive: false,
-      });
-    };
+    const calc = () => setTimeLeft(computeTimeLeft(targetTimestamp));
     calc();
     const interval = setInterval(calc, 1000);
     return () => clearInterval(interval);

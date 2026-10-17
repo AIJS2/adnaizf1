@@ -53,7 +53,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
   const minY = Math.min(...ys);
   const maxY = Math.max(...ys);
   
-  const padding = 1000;
+  const padding = 800;
   const viewBox = `${minX - padding} ${minY - padding} ${maxX - minX + padding*2} ${maxY - minY + padding*2}`;
 
   let activePoint: TelemetryDataPoint | null = null;
@@ -120,7 +120,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
           <polyline 
             points={allPoints}
             stroke="#2a2a2a"
-            strokeWidth={500}
+            strokeWidth={80}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
@@ -132,7 +132,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
                 key={i}
                 points={line.points.join(' ')}
                 stroke={style.color}
-                strokeWidth={500}
+                strokeWidth={80}
                 strokeDasharray={style.strokeDasharray}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -144,10 +144,10 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
             <circle 
               cx={activePoint.x} 
               cy={activePoint.y} 
-              r={300} 
+              r={80} 
               fill="#ffffff" 
               stroke="#000000"
-              strokeWidth={100}
+              strokeWidth={20}
             />
           )}
         </svg>

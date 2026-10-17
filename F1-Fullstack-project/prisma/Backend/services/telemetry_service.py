@@ -379,11 +379,15 @@ def get_telemetry_drivers_list(year: int, round_number: int):
     for _, row in safe_getattr(session, "results").iterrows():
         abbr = row.get("Abbreviation")
         if pd.notna(abbr) and abbr:
+            status = row.get("Status")
             drivers_list.append(
                 {
                     "abbreviation": str(abbr),
                     "full_name": f"{row.get('FirstName', '')} {row.get('LastName', '')}".strip(),
                     "team_name": row.get("TeamName", ""),
+                    # Official race status ("Lapped", "Did not start", ...) so the
+                    # UI can flag drivers who will never have lap telemetry.
+                    "status": str(status) if pd.notna(status) else "",
                 }
             )
     return drivers_list

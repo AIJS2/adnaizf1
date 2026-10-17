@@ -19,7 +19,13 @@ interface TelemetryDriverOption {
   abbreviation: string;
   full_name?: string;
   team_name?: string;
+  /** Official race status from FastF1 results ("Lapped", "Did not start", ...). */
+  status?: string;
 }
+
+/** Drivers classified as non-starters can never have lap telemetry. */
+const isDidNotStart = (status?: string): boolean =>
+  typeof status === 'string' && status.toLowerCase().includes('did not start');
 
 const adjustColor = (col: string, amt: number): string => {
   if (!col) return '#ffffff';
@@ -130,7 +136,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
   const [loading, setLoading] = useState<boolean>(false);
   const [telemetryData, setTelemetryData] = useState<TelemetryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
+  const [warning, setWarning] = useState<{ driver: string; reason: string }[] | null>(null);
 
   const defaultDrivers = [
     'VER', 'NOR', 'LEC', 'HAM', 'RUS', 'PIA', 'SAI', 'PER', 'ALO', 'STR',
@@ -211,11 +217,12 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       } as TelemetryResponse & Required<Pick<TelemetryResponse, 'drivers' | 'driver_info' | 'telemetry' | 'unavailable_drivers' | 'unavailable_reasons'>>;
       setTelemetryData(normalized);
       if (normalized.unavailable_drivers.length) {
-        const warningParts = normalized.unavailable_drivers.map((drv: string) => {
-          const reason = normalized.unavailable_reasons[drv] || 'No data available';
-          return `${drv}: ${reason}`;
-        });
-        setWarning(warningParts.join(' | '));
+        setWarning(
+          normalized.unavailable_drivers.map((drv: string) => ({
+            driver: drv,
+            reason: normalized.unavailable_reasons[drv] || 'No data available',
+          })),
+        );
       }
     } catch (err) {
       if (fetchId !== fetchIdRef.current) return;
@@ -247,6 +254,13 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       console.error('Export failed', err);
     }
   };
+
+  const statusByDriver = new Map(availableDrivers.map(d => [d.abbreviation, d.status]));
+  const selectedWithoutData = selectedDrivers.filter(d => isDidNotStart(statusByDriver.get(d)));
+  const emptyStateMessage =
+    telemetryData && typeof telemetryData.message === 'string' && telemetryData.message
+      ? telemetryData.message
+      : null;
 
   return (
     <div className="p-6">
@@ -294,6 +308,14 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                 >
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
                   {d.abbreviation}
+                  {isDidNotStart(d.status) && (
+                    <span
+                      className="ml-0.5 px-1 py-px rounded text-[9px] leading-none font-black bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                      title="Did not start - no telemetry available for this driver"
+                    >
+                      DNS
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -302,9 +324,16 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
         {/* Selection hint */}
         {selectedDrivers.length > 0 && !telemetryData && (
-          <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-center gap-2 text-xs font-bold text-amber-400">
-            <AlertTriangle size={14} className="flex-shrink-0" />
-            <span>{selectedDrivers.length} driver dipilih — klik <b>Run Analysis</b> untuk memuat telemetry.</span>
+          <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-start gap-2 text-xs font-bold text-amber-400">
+            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="block">{selectedDrivers.length} driver dipilih — klik <b>Run Analysis</b> untuk memuat telemetry.</span>
+              {selectedWithoutData.length > 0 && (
+                <span className="block text-amber-300/90">
+                  Tanpa data: {selectedWithoutData.join(', ')} — did not start (tidak ada lap telemetry).
+                </span>
+              )}
+            </div>
           </div>
         )}
 
@@ -331,10 +360,17 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
         </div>
       )}
 
-      {warning && !error && (
-        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-2xl p-4 mb-6 flex items-center gap-3">
-          <AlertTriangle size={20} className="flex-shrink-0" />
-          <span className="font-semibold text-sm">{warning}</span>
+      {warning && warning.length > 0 && !error && telemetryData && telemetryData.drivers.length > 0 && (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-2xl p-4 mb-6 flex items-start gap-3">
+          <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-bold">Tanpa data telemetry:</p>
+            <ul className="mt-1 space-y-0.5 font-medium">
+              {warning.map(w => (
+                <li key={w.driver}>{w.driver}: {w.reason}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
@@ -347,17 +383,26 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       )}
 
       {/* A payload with no selected drivers still carries a `message`; show it
-          instead of rendering an empty card with nothing to read. */}
+          instead of rendering an empty card with nothing to read. When instead
+          every requested driver failed, list each one with its own reason. */}
       {telemetryData && telemetryData.drivers.length === 0 && (
         <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-10 mb-8 text-center">
           <Radio className="mx-auto text-neutral-600 mb-3" size={32} />
           <p className="text-sm font-semibold text-neutral-300">
-            {typeof telemetryData.message === 'string' && telemetryData.message
-              ? telemetryData.message
-              : telemetryData.unavailable_drivers?.length
-                ? `Tidak ada data telemetry untuk: ${telemetryData.unavailable_drivers.join(', ')}`
-                : 'Tidak ada data telemetry tersedia untuk ronde yang dipilih.'}
+            {emptyStateMessage ??
+              (telemetryData.unavailable_drivers?.length
+                ? 'Tidak ada data telemetry untuk driver berikut:'
+                : 'Tidak ada data telemetry tersedia untuk ronde yang dipilih.')}
           </p>
+          {!emptyStateMessage && telemetryData.unavailable_drivers && telemetryData.unavailable_drivers.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs font-medium text-amber-300/90">
+              {telemetryData.unavailable_drivers.map((drv: string) => (
+                <li key={drv}>
+                  {drv}: {telemetryData.unavailable_reasons?.[drv] || 'No data available'}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

@@ -1,0 +1,17 @@
+{
+  "short_name": "F1 PitWall",
+  "name": "F1 Pit-Wall & Telemetry Hub",
+  "description": "Professional Formula 1 Telemetry, Live Timing, Driver H2H & Championship Analytics",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0a0a",
+  "theme_color": "#e10600",
+  "display": "standalone",
+  "orientation": "any"
+}

@@ -561,7 +561,7 @@ const StatsPage = () => {
                         <tr className="border-b border-neutral-800/90 bg-neutral-900/70 text-[10px] font-mono font-black uppercase tracking-wider text-neutral-400 select-none">
                           <th
                             onClick={() => handleSort('position')}
-                            className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors w-16"
+                            className="py-3.5 px-3 cursor-pointer hover:text-white transition-colors w-14 min-w-[56px] max-w-[56px] sticky left-0 z-20 bg-neutral-900/95 backdrop-blur"
                           >
                             <div className="flex items-center gap-1">
                               POS
@@ -570,7 +570,7 @@ const StatsPage = () => {
                               ) : <ArrowUpDown size={11} className="text-neutral-600" />}
                             </div>
                           </th>
-                          <th className="py-3.5 px-4">
+                          <th className="py-3.5 px-4 sticky left-[56px] z-20 bg-neutral-900/95 backdrop-blur shadow-[4px_0_8px_rgba(0,0,0,0.4)] min-w-[180px]">
                             {activeTab === 'drivers' ? 'DRIVER & TEAM' : 'CONSTRUCTOR'}
                           </th>
                           <th
@@ -661,8 +661,8 @@ const StatsPage = () => {
                                 key={entry.id}
                                 className="group hover:bg-neutral-900/60 transition-colors relative"
                               >
-                                {/* Position Column */}
-                                <td className="py-3 px-4 relative">
+                                {/* Position Column - Sticky on mobile */}
+                                <td className="py-3 px-3 relative sticky left-0 z-10 bg-neutral-950/95 backdrop-blur w-14 min-w-[56px] max-w-[56px]">
                                   {/* Team laser color indicator */}
                                   <div
                                     className="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all"
@@ -693,8 +693,8 @@ const StatsPage = () => {
                                   </div>
                                 </td>
 
-                                {/* Name & Team */}
-                                <td className="py-3 px-4">
+                                {/* Name & Team - Sticky on mobile */}
+                                <td className="py-3 px-4 sticky left-[56px] z-10 bg-neutral-950/95 backdrop-blur shadow-[4px_0_8px_rgba(0,0,0,0.4)] min-w-[180px]">
                                   <Link to={linkTo} className="flex items-center gap-3 group-hover:text-red-400 transition-colors">
                                     {activeTab === 'drivers' ? (
                                       <>

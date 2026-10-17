@@ -8,16 +8,18 @@ export interface ThrottleChartProps {
   drivers: string[];
   driverStyles: Record<string, { color: string; strokeDasharray?: string }>;
   setActiveDistance: (distance: number | null) => void;
+  activeDistance?: number | null;
 }
 
 const ThrottleChart: React.FC<ThrottleChartProps> = ({
   data,
   drivers,
   driverStyles,
-  setActiveDistance
+  setActiveDistance,
+  activeDistance
 }) => {
   return (
-    <TelemetryChart 
+    <TelemetryChart
       title="Throttle Application"
       icon={<Zap className="text-orange-500"/>}
       data={data}
@@ -26,6 +28,7 @@ const ThrottleChart: React.FC<ThrottleChartProps> = ({
       drivers={drivers}
       driverStyles={driverStyles}
       setActiveDistance={setActiveDistance}
+      activeDistance={activeDistance}
     />
   );
 };

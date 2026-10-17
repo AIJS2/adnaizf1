@@ -21,6 +21,7 @@ interface TelemetryChartProps {
   drivers: string[];
   driverStyles: Record<string, { color: string; strokeDasharray?: string }>;
   setActiveDistance: (distance: number | null) => void;
+  activeDistance?: number | null;
   unit?: string;
 }
 
@@ -67,13 +68,22 @@ const TelemetryChart: React.FC<TelemetryChartProps> = ({
   domain,
   drivers,
   driverStyles,
-  setActiveDistance
+  setActiveDistance,
+  activeDistance
 }) => {
   return (
     <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl">
-      <h3 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
-        {icon} {title}
-      </h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          {icon} {title}
+        </h3>
+        {activeDistance !== null && activeDistance !== undefined && (
+          <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-red-950/50 text-red-400 border border-red-500/30 flex items-center gap-1.5 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            TRACK {activeDistance.toLocaleString()} m
+          </span>
+        )}
+      </div>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
@@ -113,6 +123,14 @@ const TelemetryChart: React.FC<TelemetryChartProps> = ({
               );
             })}
             {dataKeys.startsWith('delta') && <ReferenceLine y={0} stroke="#444" strokeDasharray="3 3" />}
+            {activeDistance !== null && activeDistance !== undefined && (
+              <ReferenceLine
+                x={activeDistance}
+                stroke="#ef4444"
+                strokeWidth={1.5}
+                strokeDasharray="4 2"
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>

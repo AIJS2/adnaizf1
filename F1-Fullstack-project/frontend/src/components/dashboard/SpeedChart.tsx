@@ -8,16 +8,18 @@ export interface SpeedChartProps {
   drivers: string[];
   driverStyles: Record<string, { color: string; strokeDasharray?: string }>;
   setActiveDistance: (distance: number | null) => void;
+  activeDistance?: number | null;
 }
 
 const SpeedChart: React.FC<SpeedChartProps> = ({
   data,
   drivers,
   driverStyles,
-  setActiveDistance
+  setActiveDistance,
+  activeDistance
 }) => {
   return (
-    <TelemetryChart 
+    <TelemetryChart
       title="Speed Profile"
       icon={<Gauge className="text-blue-500"/>}
       data={data}
@@ -26,6 +28,7 @@ const SpeedChart: React.FC<SpeedChartProps> = ({
       drivers={drivers}
       driverStyles={driverStyles}
       setActiveDistance={setActiveDistance}
+      activeDistance={activeDistance}
       unit="km/h"
     />
   );

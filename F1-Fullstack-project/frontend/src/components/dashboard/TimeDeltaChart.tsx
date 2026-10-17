@@ -8,19 +8,21 @@ export interface TimeDeltaChartProps {
   drivers: string[];
   driverStyles: Record<string, { color: string; strokeDasharray?: string }>;
   setActiveDistance: (distance: number | null) => void;
+  activeDistance?: number | null;
 }
 
 const TimeDeltaChart: React.FC<TimeDeltaChartProps> = ({
   data,
   drivers,
   driverStyles,
-  setActiveDistance
+  setActiveDistance,
+  activeDistance
 }) => {
   // If only 1 driver is selected, time delta doesn't make sense
   if (drivers.length <= 1) return null;
 
   return (
-    <TelemetryChart 
+    <TelemetryChart
       title={`Time Delta (to ${drivers[0]})`}
       icon={<TrendingUp className="text-green-500"/>}
       data={data}
@@ -29,6 +31,7 @@ const TimeDeltaChart: React.FC<TimeDeltaChartProps> = ({
       drivers={drivers}
       driverStyles={driverStyles}
       setActiveDistance={setActiveDistance}
+      activeDistance={activeDistance}
     />
   );
 };

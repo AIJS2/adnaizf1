@@ -7,6 +7,7 @@ import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
 import HeroCountdown from '../components/ui/HeroCountdown';
 import TyreStrategy from '../components/ui/TyreStrategy';
 import EmptyState from '../components/ui/EmptyState';
+import TeamRadioSection from '../components/dashboard/TeamRadioSection';
 import { LiveTimingData, LiveTimingLine } from '../types/f1';
 import { teamColors } from '../data/teamData';
 
@@ -349,7 +350,7 @@ const LiveTimingPage: React.FC = () => {
         {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           {/* Race Control Messages */}
-          <div className="bg-[#080808] border border-[#1a1a1a] rounded-xl p-4 flex flex-col shadow-xl h-48 relative overflow-hidden">
+          <div className="bg-[#080808] border border-[#1a1a1a] rounded-xl p-4 flex flex-col shadow-xl min-h-[300px] relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
             <h3 className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-2">
               <Radio size={14} /> Race Control Log
@@ -367,6 +368,9 @@ const LiveTimingPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Pit Wall Team Radio Comms */}
+          <TeamRadioSection />
         </div>
       </main>
     </div>

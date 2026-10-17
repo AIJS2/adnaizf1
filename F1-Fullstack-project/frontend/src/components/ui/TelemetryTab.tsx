@@ -447,23 +447,26 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
               return (
                 <div className="space-y-6">
-                  <SpeedChart 
+                  <SpeedChart
                     data={telemetryData.telemetry}
                     drivers={telemetryData.drivers}
                     driverStyles={driverStyles}
                     setActiveDistance={setActiveDistance}
+                    activeDistance={activeDistance}
                   />
-                  <ThrottleChart 
+                  <ThrottleChart
                     data={telemetryData.telemetry}
                     drivers={telemetryData.drivers}
                     driverStyles={driverStyles}
                     setActiveDistance={setActiveDistance}
+                    activeDistance={activeDistance}
                   />
-                  <TimeDeltaChart 
+                  <TimeDeltaChart
                     data={telemetryData.telemetry}
                     drivers={telemetryData.drivers}
                     driverStyles={driverStyles}
                     setActiveDistance={setActiveDistance}
+                    activeDistance={activeDistance}
                   />
                 </div>
               );

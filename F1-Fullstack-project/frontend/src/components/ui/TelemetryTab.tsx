@@ -186,7 +186,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
         rawText = await res.text();
         data = JSON.parse(rawText) as TelemetryResponse;
       } catch {
-        // Fallback handled below
+        throw new Error(`Invalid JSON response from backend: ${rawText.slice(0, 200)}`);
       }
 
       if (fetchId !== fetchIdRef.current) return;
@@ -300,6 +300,14 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           </div>
         </div>
 
+        {/* Selection hint */}
+        {selectedDrivers.length > 0 && !telemetryData && (
+          <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-center gap-2 text-xs font-bold text-amber-400">
+            <AlertTriangle size={14} className="flex-shrink-0" />
+            <span>{selectedDrivers.length} driver dipilih — klik <b>Run Analysis</b> untuk memuat telemetry.</span>
+          </div>
+        )}
+
         <LapRuler lap={lap} setLap={setLap} />
 
         <div className="flex flex-col justify-end">
@@ -340,10 +348,16 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
       {/* A payload with no selected drivers still carries a `message`; show it
           instead of rendering an empty card with nothing to read. */}
-      {telemetryData && telemetryData.drivers.length === 0 && typeof telemetryData.message === 'string' && telemetryData.message && (
+      {telemetryData && telemetryData.drivers.length === 0 && (
         <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-10 mb-8 text-center">
           <Radio className="mx-auto text-neutral-600 mb-3" size={32} />
-          <p className="text-sm font-semibold text-neutral-300">{telemetryData.message}</p>
+          <p className="text-sm font-semibold text-neutral-300">
+            {typeof telemetryData.message === 'string' && telemetryData.message
+              ? telemetryData.message
+              : telemetryData.unavailable_drivers?.length
+                ? `Tidak ada data telemetry untuk: ${telemetryData.unavailable_drivers.join(', ')}`
+                : 'Tidak ada data telemetry tersedia untuk ronde yang dipilih.'}
+          </p>
         </div>
       )}
 

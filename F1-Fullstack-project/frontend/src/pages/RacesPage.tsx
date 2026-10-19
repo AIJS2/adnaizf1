@@ -3,22 +3,14 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
 import { Calendar, Trophy, Clock, Info, MapPin, ChevronDown, Zap, ArrowDown, CheckCircle2, Timer } from 'lucide-react';
+import WorldFlag from 'react-world-flags';
 import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
-import { getTrackMap } from '../data/trackData';
+import { getTrackMap, getCountryCode } from '../data/trackData';
 import { teamColors } from '../data/teamData';
 import { resolveNextRace, countdownTarget } from '../utils/nextRace';
 
 const CURRENT_YEAR = new Date().getFullYear();
-
-const countryCodeMapping: Record<string, string> = {
-  'Australia': 'AU', 'Bahrain': 'BH', 'China': 'CN', 'Saudi Arabia': 'SA',
-  'USA': 'US', 'United States': 'US', 'Japan': 'JP', 'Italy': 'IT',
-  'Monaco': 'MC', 'Spain': 'ES', 'Canada': 'CA', 'Austria': 'AT',
-  'UK': 'GB', 'Great Britain': 'GB', 'United Kingdom': 'GB', 'Hungary': 'HU',
-  'Belgium': 'BE', 'Netherlands': 'NL', 'Azerbaijan': 'AZ', 'Singapore': 'SG',
-  'Mexico': 'MX', 'Brazil': 'BR', 'Qatar': 'QA', 'United Arab Emirates': 'AE',
-};
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
@@ -180,7 +172,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
   const raceDate = parseRaceDate(countdownTarget(race.date) ?? race.date);
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
-  const flagCode = race.country ? countryCodeMapping[race.country.trim()] : undefined;
+  const flagCode = getCountryCode(race);
   const winnerTeamColor = race.winner_team ? (teamColors[race.winner_team] || '#666') : '#333';
 
   // The next-race card reflects the resolved lifecycle phase, so on race day
@@ -248,11 +240,10 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                 <div className="flex flex-wrap items-center gap-3 mb-2">
                   <div className=" rounded-sm overflow-hidden">
                     {flagCode ? (
-                      <img
-                        src={`https://flagcdn.com/w40/${flagCode.toLowerCase()}.png`}
-                        alt={`${race.country} flag`}
+                      <WorldFlag
+                        code={flagCode}
+                        alt={`${race.country || race.location || race.name} flag`}
                         className="w-8 h-auto"
-                        loading="lazy"
                       />
                     ) : (
                       <div className="w-8 h-5 bg-neutral-800" />

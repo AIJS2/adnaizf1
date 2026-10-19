@@ -79,6 +79,62 @@ export const trackMaps: Record<string, string> = {
   "United States": usa, "USA": usa, "Austin": usa, "COTA": usa, "United States Grand Prix": usa,
 };
 
+/**
+ * Circuit-name → ISO 3166-1 alpha-2 country code. Keys mirror `trackMaps`
+ * (city, official GP name, country) so `getCountryCode` resolves a flag for
+ * the same aliases `getTrackMap` uses; the two utilities always agree.
+ */
+export const countryCodes: Record<string, string> = {
+  // Abu Dhabi
+  "Abu Dhabi": "AE", "Yas Island": "AE", "Yas Marina": "AE", "Abu Dhabi Grand Prix": "AE", "United Arab Emirates": "AE", "UAE": "AE",
+  // Australia
+  "Australia": "AU", "Melbourne": "AU", "Australian Grand Prix": "AU",
+  // Austria
+  "Austria": "AT", "Spielberg": "AT", "Austrian Grand Prix": "AT", "Red Bull Ring": "AT",
+  // Azerbaijan
+  "Azerbaijan": "AZ", "Baku": "AZ", "Azerbaijan Grand Prix": "AZ",
+  // Bahrain
+  "Bahrain": "BH", "Sakhir": "BH", "Bahrain Grand Prix": "BH",
+  // Belgium
+  "Belgium": "BE", "Spa-Francorchamps": "BE", "Spa": "BE", "Belgian Grand Prix": "BE",
+  // Brazil
+  "Brazil": "BR", "São Paulo": "BR", "Sao Paulo": "BR", "Interlagos": "BR", "São Paulo Grand Prix": "BR", "Brazilian Grand Prix": "BR",
+  // Canada
+  "Canada": "CA", "Montréal": "CA", "Montreal": "CA", "Canadian Grand Prix": "CA",
+  // China
+  "China": "CN", "Shanghai": "CN", "Chinese Grand Prix": "CN",
+  // Great Britain
+  "Great Britain": "GB", "Silverstone": "GB", "UK": "GB", "United Kingdom": "GB", "British Grand Prix": "GB",
+  // Hungary
+  "Hungary": "HU", "Budapest": "HU", "Hungaroring": "HU", "Hungarian Grand Prix": "HU",
+  // Imola (Emilia Romagna)
+  "Imola": "IT", "Emilia Romagna": "IT", "Emilia Romagna Grand Prix": "IT",
+  // Italy
+  "Italy": "IT", "Monza": "IT", "Italian Grand Prix": "IT",
+  // Japan
+  "Japan": "JP", "Suzuka": "JP", "Japanese Grand Prix": "JP",
+  // Las Vegas
+  "Las Vegas": "US", "Las Vegas Grand Prix": "US",
+  // Mexico
+  "Mexico": "MX", "Mexico City": "MX", "Mexico City Grand Prix": "MX", "Mexican Grand Prix": "MX",
+  // Miami
+  "Miami": "US", "Miami Gardens": "US", "Miami Grand Prix": "US",
+  // Monaco
+  "Monaco": "MC", "Monte Carlo": "MC", "Monaco Grand Prix": "MC",
+  // Netherlands
+  "Netherlands": "NL", "Zandvoort": "NL", "Dutch Grand Prix": "NL",
+  // Qatar
+  "Qatar": "QA", "Lusail": "QA", "Qatar Grand Prix": "QA",
+  // Saudi Arabia
+  "Saudi Arabia": "SA", "Jeddah": "SA", "Saudi Arabian Grand Prix": "SA",
+  // Singapore
+  "Singapore": "SG", "Marina Bay": "SG", "Singapore Grand Prix": "SG",
+  // Spain
+  "Spain": "ES", "Barcelona": "ES", "Madrid": "ES", "Catalunya": "ES", "Spanish Grand Prix": "ES", "Barcelona Grand Prix": "ES",
+  // United States
+  "United States": "US", "USA": "US", "Austin": "US", "COTA": "US", "United States Grand Prix": "US",
+};
+
 /** The race fields `getTrackMap` matches against; all optional and stringy. */
 export interface TrackMapLookup {
   location?: string;
@@ -103,6 +159,34 @@ export const getTrackMap = (raceInfo?: TrackMapLookup | null): string | null => 
     const kLower = key.toLowerCase();
     if (kLower.length > 3 && (locLower.includes(kLower) || nameLower.includes(kLower))) {
       return mapImg;
+    }
+  }
+  return null;
+};
+
+/**
+ * Country flag code (ISO 3166-1 alpha-2) for a race. Tries `country`, then
+ * `location`, then `name` — same matching strategy as `getTrackMap` (exact
+ * alias lookup, then a fuzzy "contains" pass over location/name) so the flag
+ * shown always matches the track map picked. Returns null when nothing matches.
+ */
+export const getCountryCode = (raceInfo?: TrackMapLookup | null): string | null => {
+  if (!raceInfo) return null;
+  const location = (raceInfo.location || '').trim();
+  const country = (raceInfo.country || '').trim();
+  const name = (raceInfo.name || '').trim();
+
+  if (countryCodes[country]) return countryCodes[country];
+  if (countryCodes[location]) return countryCodes[location];
+  if (countryCodes[name]) return countryCodes[name];
+
+  // Fuzzy check (mirrors getTrackMap: location and name only, keys > 3 chars)
+  const locLower = location.toLowerCase();
+  const nameLower = name.toLowerCase();
+  for (const [key, code] of Object.entries(countryCodes)) {
+    const kLower = key.toLowerCase();
+    if (kLower.length > 3 && (locLower.includes(kLower) || nameLower.includes(kLower))) {
+      return code;
     }
   }
   return null;

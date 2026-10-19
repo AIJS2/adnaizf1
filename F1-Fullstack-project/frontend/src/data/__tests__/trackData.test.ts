@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTrackMap, trackMaps, type TrackMapLookup } from '../trackData';
+import { getTrackMap, getCountryCode, trackMaps, countryCodes, type TrackMapLookup } from '../trackData';
 
 // Factory pattern for creating test race data
 const getMockRaceInfo = (overrides: Partial<TrackMapLookup> = {}): TrackMapLookup => {
@@ -77,6 +77,89 @@ describe('getTrackMap Data Utility', () => {
     it('returns null safely with falsy property values', () => {
       const safeRaceInfo: TrackMapLookup = { location: '', country: undefined, name: '' };
       expect(getTrackMap(safeRaceInfo)).toBeNull();
+    });
+  });
+});
+
+describe('getCountryCode Data Utility', () => {
+  describe('Happy Paths - Exact Matches', () => {
+    it('returns the ISO alpha-2 code when country matches exactly', () => {
+      expect(getCountryCode(getMockRaceInfo({ country: 'Netherlands' }))).toBe('NL');
+    });
+
+    it('returns the code when location matches exactly', () => {
+      expect(getCountryCode(getMockRaceInfo({ location: 'Silverstone' }))).toBe('GB');
+    });
+
+    it('returns the code when race name matches exactly', () => {
+      expect(getCountryCode(getMockRaceInfo({ name: 'Singapore Grand Prix' }))).toBe('SG');
+    });
+
+    it('prefers country over location and name', () => {
+      const raceInfo = getMockRaceInfo({ country: 'Japan', location: 'Melbourne', name: 'Australian Grand Prix' });
+      expect(getCountryCode(raceInfo)).toBe('JP');
+    });
+  });
+
+  describe('Alias Coverage', () => {
+    it.each([
+      ['UK', 'GB'],
+      ['United Kingdom', 'GB'],
+      ['Great Britain', 'GB'],
+      ['USA', 'US'],
+      ['United States', 'US'],
+      ['Las Vegas', 'US'],
+      ['Miami Gardens', 'US'],
+      ['COTA', 'US'],
+      ['Abu Dhabi', 'AE'],
+      ['UAE', 'AE'],
+      ['Emilia Romagna', 'IT'],
+      ['Imola', 'IT'],
+      ['São Paulo', 'BR'],
+      ['Montréal', 'CA'],
+    ])('maps "%s" to %s', (alias: string, code: string) => {
+      expect(getCountryCode(getMockRaceInfo({ country: alias }))).toBe(code);
+    });
+
+    it('covers every trackMaps alias with a well-formed alpha-2 code', () => {
+      for (const alias of Object.keys(trackMaps)) {
+        expect(countryCodes[alias], alias).toMatch(/^[A-Z]{2}$/);
+        expect(getCountryCode({ country: alias }), alias).toMatch(/^[A-Z]{2}$/);
+      }
+    });
+  });
+
+  describe('Happy Paths - Fuzzy Matches', () => {
+    it('matches a location containing a known key', () => {
+      expect(getCountryCode(getMockRaceInfo({ location: 'City of Melbourne' }))).toBe('AU');
+    });
+
+    it('matches a race name containing a known key', () => {
+      expect(getCountryCode(getMockRaceInfo({ name: 'Formula 1 Grand Prix de Monaco 2024' }))).toBe('MC');
+    });
+
+    it('matches "Yas Marina Circuit" via the "Yas Marina" alias', () => {
+      expect(getCountryCode(getMockRaceInfo({ location: 'Yas Marina Circuit' }))).toBe('AE');
+    });
+
+    it('ignores fuzzy matches that are 3 characters or shorter', () => {
+      expect(getCountryCode(getMockRaceInfo({ location: 'Location UAE XYZ' }))).toBeNull();
+    });
+  });
+
+  describe('Edge Cases & Error Handling', () => {
+    it('returns null when raceInfo is null or undefined', () => {
+      expect(getCountryCode(null)).toBeNull();
+      expect(getCountryCode(undefined)).toBeNull();
+    });
+
+    it('returns null when raceInfo is an empty object', () => {
+      expect(getCountryCode({})).toBeNull();
+    });
+
+    it('returns null when no alias matches', () => {
+      const raceInfo = getMockRaceInfo({ location: 'Mars', country: 'Space', name: 'Galactic Grand Prix' });
+      expect(getCountryCode(raceInfo)).toBeNull();
     });
   });
 });

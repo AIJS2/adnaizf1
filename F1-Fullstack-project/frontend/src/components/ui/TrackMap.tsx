@@ -1,13 +1,6 @@
 import { Flag, Thermometer } from 'lucide-react';
-import { getTrackMap } from '../../data/trackData';
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  australia: '🇦🇺', austria: '🇦🇹', azerbaijan: '🇦🇿', bahrain: '🇧🇭', belgium: '🇧🇪',
-  brazil: '🇧🇷', canada: '🇨🇦', china: '🇨🇳', france: '🇫🇷', germany: '🇩🇪',
-  'great britain': '🇬🇧', hungary: '🇭🇺', italy: '🇮🇹', japan: '🇯🇵', mexico: '🇲🇽',
-  monaco: '🇲🇨', netherlands: '🇳🇱', qatar: '🇶🇦', 'saudi arabia': '🇸🇦', singapore: '🇸🇬',
-  spain: '🇪🇸', 'united states': '🇺🇸', 'united arab emirates': '🇦🇪',
-};
+import WorldFlag from 'react-world-flags';
+import { getTrackMap, getCountryCode } from '../../data/trackData';
 
 interface TrackMapProps {
   raceInfo?: { location?: string; country?: string; name?: string } | null;
@@ -20,7 +13,7 @@ export function TrackMap({ raceInfo, laps, weatherInfo, className }: TrackMapPro
   const trackMapImg = getTrackMap(raceInfo);
   const country = raceInfo?.country;
   const name = raceInfo?.name || raceInfo?.location || 'Circuit';
-  const flagEmoji = country ? COUNTRY_FLAGS[country.toLowerCase()] : '';
+  const countryCode = getCountryCode(raceInfo);
 
   const latestWeather = weatherInfo?.[weatherInfo.length - 1] || {};
   const trackTemp = latestWeather.track_temp ?? latestWeather.TrackTemp;
@@ -28,12 +21,12 @@ export function TrackMap({ raceInfo, laps, weatherInfo, className }: TrackMapPro
 
   const sectionClasses = [
     'mb-10 flex flex-col items-center justify-center relative overflow-hidden',
-    'rounded-xl border border-neutral-800/80 bg-neutral-900/40 backdrop-blur-md shadow-2xl p-8 sm:p-10',
+    'rounded-xl border border-neutral-800/80 bg-neutral-900/40 backdrop-blur-md shadow-2xl p-6 sm:p-8',
     className,
   ].filter(Boolean).join(' ');
 
   const imgClasses = [
-    'h-32 md:h-72 lg:h-80', 'object-contain', 'brightness-100 contrast-125',
+    'h-40 md:h-80 lg:h-96', 'object-contain', 'brightness-100 contrast-125',
     'drop-shadow-[0_0_24px_rgba(239,68,68,0.45)]', 'grayscale-0', 'transition-all duration-500',
     'group-hover:drop-shadow-[0_0_40px_rgba(239,68,68,0.7)]', 'group-hover:scale-105',
   ].join(' ');
@@ -44,7 +37,8 @@ export function TrackMap({ raceInfo, laps, weatherInfo, className }: TrackMapPro
         <span className="text-neutral-500 font-black text-xs uppercase tracking-[0.25em]">Circuit Layout</span>
         {country && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
-            <span className="text-lg">{flagEmoji}</span> {country}
+            {countryCode && <WorldFlag code={countryCode} alt="" className="w-4 h-auto shrink-0 rounded-[2px]" />}
+            {country}
           </span>
         )}
       </div>

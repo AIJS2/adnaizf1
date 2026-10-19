@@ -28,6 +28,11 @@ Documented approximations (user-visible, hence called out here):
   shift a single lap's sample.
 - The gap chart uses the same `date_start` deltas (gap at the line) instead
   of FastF1's gap at lap end.
+- Non-starters never reach the lap-derived blocks. OpenF1 still emits a
+  placeholder stint, a lap-1 timing row and position samples for a DNS car;
+  those used to hand it P1 on the opening lap and a phantom tyre stint.
+- Placeholder stint rows (`lap_end` before `lap_start`) are dropped, so a
+  driver's stints always add up to the laps they actually ran.
 """
 
 from __future__ import annotations
@@ -286,12 +291,14 @@ def _tyre_strategy(
     roster: dict[int, dict[str, str]],
     position_by_number: dict[int, int],
     status_by_number: Optional[dict[int, str]] = None,
+    no_start: Optional[set[int]] = None,
 ) -> list[dict[str, Any]]:
     status_by_number = status_by_number or {}
+    no_start = no_start or set()
     by_driver: dict[int, list[dict[str, Any]]] = {}
     for row in stints:
         number = _as_int(row.get("driver_number"))
-        if number is None:
+        if number is None or number in no_start:
             continue
         by_driver.setdefault(number, []).append(row)
 
@@ -302,15 +309,25 @@ def _tyre_strategy(
         for row in ordered:
             start = _as_int(row.get("lap_start")) or 0
             end = _as_int(row.get("lap_end")) or 0
+            # OpenF1 emits a placeholder stint for some cars (lap_start=1,
+            # lap_end=0) next to the real one; it carries no laps and used to
+            # add a phantom lap to the sum.
+            if end < start:
+                continue
             stints_out.append({
                 "stint": _as_int(row.get("stint_number")) or 1,
                 "compound": str(row.get("compound") or "UNKNOWN").upper(),
                 "start_lap": start,
                 "end_lap": end,
-                "laps": max(1, end - start + 1),
+                "laps": end - start + 1,
             })
         if not stints_out:
             continue
+
+        # Renumber so dropping a placeholder cannot leave a one-stop race
+        # starting at "Stint 2".
+        for index, stint in enumerate(stints_out, start=1):
+            stint["stint"] = index
 
         full_name, team_name, abbr = _meta(roster, number)
         if not abbr:
@@ -349,7 +366,9 @@ def _speed_and_sectors(
     laps: list[dict[str, Any]],
     roster: dict[int, dict[str, str]],
     position_by_number: dict[int, int],
+    no_start: Optional[set[int]] = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    no_start = no_start or set()
     best_sectors: dict[int, list[Optional[float]]] = {}
     best_lap: dict[int, Optional[float]] = {}
     top_speed: dict[int, float] = {}
@@ -391,23 +410,32 @@ def _speed_and_sectors(
 
     speed_traps: list[dict[str, Any]] = []
     sector_matrix: list[dict[str, Any]] = []
-    for number in set(best_sectors) | set(top_speed):
+    # Only drivers with actual data appear: a placeholder lap row (a DNS car,
+    # a first-lap retirement) carries no sectors and no speed, and used to
+    # produce a "0.0 km/h" row and an all-dashes sector row.
+    for number, speed in top_speed.items():
+        if number in no_start or speed <= 0:
+            continue
         full_name, team_name, abbr = _meta(roster, number)
         if not abbr:
             continue
-        position = position_by_number.get(number, 0)
-        speed = round(top_speed.get(number, 0.0), 1)
-
         speed_traps.append({
             "driver": abbr,
             "full_name": full_name,
             "team_name": team_name,
             "driver_number": number,
-            "speed": speed,
-            "position": position,
+            "speed": round(speed, 1),
+            "position": position_by_number.get(number, 0),
         })
 
-        sectors = best_sectors.get(number, [None, None, None])
+    for number, sectors in best_sectors.items():
+        if number in no_start or all(value is None for value in sectors):
+            continue
+        full_name, team_name, abbr = _meta(roster, number)
+        if not abbr:
+            continue
+        position = position_by_number.get(number, 0)
+        speed = round(top_speed.get(number, 0.0), 1)
         ideal = sum(value for value in sectors if value is not None)
         actual = best_lap.get(number)
         potential_gain = 0.0
@@ -465,12 +493,30 @@ def _weather(weather_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _series_charts(
     laps: list[dict[str, Any]],
     roster: dict[int, dict[str, str]],
+    no_start: Optional[set[int]] = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    no_start = no_start or set()
+
+    # A driver needs at least one completed (timed) lap before any chart shows
+    # them: a non-starter still has a grid-slot lap row and a first-lap
+    # retirement has a start row with no duration. Neither ever completed a
+    # lap — the DNS car used to be handed P1 on the opening lap because its
+    # placeholder row started earliest — and FastF1's own charts never plot
+    # them either.
+    completed: set[int] = set()
+    for row in laps:
+        number = _as_int(row.get("driver_number"))
+        if number is None or number in no_start:
+            continue
+        duration = _as_float(row.get("lap_duration"))
+        if duration is not None and 0 < duration < _MAX_LAP_SECONDS:
+            completed.add(number)
+
     by_lap: dict[int, list[tuple[int, Optional[datetime], Optional[float]]]] = {}
     for row in laps:
         lap_number = _as_int(row.get("lap_number"))
         number = _as_int(row.get("driver_number"))
-        if lap_number is None or number is None:
+        if lap_number is None or number is None or number not in completed:
             continue
         by_lap.setdefault(lap_number, []).append((
             number,
@@ -509,12 +555,12 @@ def _series_charts(
                     gap_entry[abbr] = round(gap, 3)
 
         # Same guards as the FastF1 path: a lap needs more than one driver
-        # for a line to be meaningful.
-        if len(times_entry) > 1:
+        # for a line to be meaningful — and the `lap` key does not count.
+        if len(times_entry) > 2:
             lap_times_chart.append(times_entry)
-        if len(order_entry) > 1:
+        if len(order_entry) > 2:
             lap_chart.append(order_entry)
-        if len(gap_entry) > 1:
+        if len(gap_entry) > 2:
             gap_chart.append(gap_entry)
 
     return lap_chart, gap_chart, lap_times_chart
@@ -550,17 +596,28 @@ def build_race_blocks(
         logger.info("OpenF1 fallback: no laps for session %s", session_key)
         return {}
 
+    # A non-starter must not leak into lap-derived blocks: OpenF1 still emits
+    # a placeholder stint, a lap-1 row and position samples for a DNS car.
+    no_start = {
+        number for number, status in (status_by_number or {}).items()
+        if str(status or "").strip().upper() in ("DNS", "DID NOT START")
+    }
+
     blocks: dict[str, Any] = {}
 
     fastest = _fastest_lap(laps, roster)
     if fastest:
         blocks["fastest_lap"] = fastest
 
-    strategy = _tyre_strategy(stints, roster, position_by_number, status_by_number)
+    strategy = _tyre_strategy(
+        stints, roster, position_by_number, status_by_number, no_start,
+    )
     if strategy:
         blocks["tyre_strategy"] = strategy
 
-    speed_traps, sector_matrix = _speed_and_sectors(laps, roster, position_by_number)
+    speed_traps, sector_matrix = _speed_and_sectors(
+        laps, roster, position_by_number, no_start,
+    )
     if speed_traps:
         blocks["speed_traps"] = speed_traps
     if sector_matrix:
@@ -570,7 +627,7 @@ def build_race_blocks(
     if samples:
         blocks["weather_info"] = samples
 
-    lap_chart, gap_chart, lap_times_chart = _series_charts(laps, roster)
+    lap_chart, gap_chart, lap_times_chart = _series_charts(laps, roster, no_start)
     if lap_chart:
         blocks["lap_chart"] = lap_chart
     if gap_chart:

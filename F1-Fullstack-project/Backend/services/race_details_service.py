@@ -511,6 +511,20 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
         else:
             results_by_abbr = pd.DataFrame()  # empty fallback
 
+        # Non-starters must not reach the lap-derived blocks below: F1's timing
+        # feed still carries a placeholder lap row for a withdrawn car, which
+        # used to surface as a phantom one-lap stint, a 0.0 km/h speed row and
+        # a bogus point on the opening lap of the charts.
+        no_start_abbrs: set[str] = set()
+        if has_rows(race_session, 'results'):
+            for _, res in race_session.results.iterrows():
+                if _classified_status_label(
+                    res.get('ClassifiedPosition', ''), res.get('Status', ''),
+                ) == 'DNS':
+                    abbr = str(res.get('Abbreviation') or '')
+                    if abbr:
+                        no_start_abbrs.add(abbr)
+
         fastest = safe_getattr(race_session, 'laps')
         if fastest is not None and not fastest.empty:
             fastest = fastest.pick_fastest()
@@ -554,6 +568,9 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                     team_name = str(drv_row.get('TeamName', ''))
                     pos = int(drv_row.get('Position', 99)) if pd.notna(drv_row.get('Position')) else 99
                     dr_num = int(drv_row.get('DriverNumber', 0)) if pd.notna(drv_row.get('DriverNumber')) else 0
+
+                    if abbr in no_start_abbrs:
+                        continue
 
                     dr_laps = laps_by_driver.get(abbr)
                     if dr_laps is None or dr_laps.empty:
@@ -672,6 +689,9 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                     dr_num = int(drv_row.get('DriverNumber', 0)) if pd.notna(drv_row.get('DriverNumber')) else 0
                     pos = int(drv_row.get('Position', 99)) if pd.notna(drv_row.get('Position')) else 99
 
+                    if abbr in no_start_abbrs:
+                        continue
+
                     # A driver absent from the laps entirely is skipped,
                     # matching the old `if dr_laps.empty: continue`.
                     if best_sectors_by_driver is not None and abbr not in best_sectors_by_driver.index \
@@ -786,6 +806,8 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                     lap_cols = ['LapNumber', 'Driver', 'Position', 'Time', 'LapTime']
                     available_cols = [c for c in lap_cols if c in raw_laps.columns]
                     lap_df = raw_laps[available_cols].dropna(subset=['LapNumber', 'Driver']).copy()
+                    if no_start_abbrs:
+                        lap_df = lap_df[~lap_df['Driver'].isin(no_start_abbrs)].copy()
 
                     # Reconstruct cumulative session time per driver if Time is missing/NaN
                     if 'Time' in lap_df.columns and 'LapTime' in lap_df.columns and lap_df['Time'].isna().any():
@@ -852,11 +874,13 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                                 if 0 < lap_time_sec < 300:
                                     times_entry[drv] = round(lap_time_sec, 3)
 
-                        if len(lap_entry) > 1:
+                        # A lap needs at least two drivers for a line to be
+                        # meaningful (the "lap" key does not count).
+                        if len(lap_entry) > 2:
                             lap_chart.append(lap_entry)
-                        if len(gap_entry) > 1:
+                        if len(gap_entry) > 2:
                             gap_chart.append(gap_entry)
-                        if len(times_entry) > 1:
+                        if len(times_entry) > 2:
                             lap_times_chart.append(times_entry)
 
                     if lap_chart:

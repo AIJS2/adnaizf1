@@ -1,6 +1,6 @@
 // src/RaceDetailPage - FIXED: shared teamData & config, improved error state
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -65,8 +65,6 @@ function RaceDetailPage() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('Race');
-  const [stickyTabs, setStickyTabs] = useState(false);
-  const tabsRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading: loading, isFetching, error, refetch: fetchPageData } = useQuery({
     queryKey: ['raceDetail', year, round],
@@ -160,18 +158,6 @@ function RaceDetailPage() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [activeTab, availableTabs]);
-
-  // Sticky tabs on scroll
-  useEffect(() => {
-    const handler = () => {
-      if (tabsRef.current) {
-        const rect = tabsRef.current.getBoundingClientRect();
-        setStickyTabs(rect.top <= 0);
-      }
-    };
-    window.addEventListener('scroll', handler);
-    return () => window.removeEventListener('scroll', handler);
-  }, []);
 
   const SESSION_TAB_NAMES = [
     'Practice 1', 'Practice 2', 'Practice 3',
@@ -452,14 +438,7 @@ function RaceDetailPage() {
         />
 
         {/* Tab Navigation Bars: Official Sessions & Data & Telemetry (Above the Content Area) */}
-        <section
-          ref={tabsRef}
-          className={`mb-6 space-y-4 transition-all duration-300 ${
-            stickyTabs
-              ? 'sticky top-0 z-40 bg-neutral-950/95 backdrop-blur-xl border-b border-neutral-800/80 -mx-8 px-8 py-4 shadow-2xl'
-              : ''
-          }`}
-        >
+        <section className="mb-6 space-y-4">
           {/* Keyboard hint */}
           {availableTabs.length > 1 && (
             <div className="flex items-center justify-end gap-2 text-[10px] text-neutral-500 font-mono mb-2">
@@ -472,14 +451,14 @@ function RaceDetailPage() {
           {sessionTabs.length > 0 && (
             <div>
               <h3 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-2 ml-2">Official Sessions</h3>
-              <div className="flex items-center gap-2 p-2 bg-neutral-900/60 backdrop-blur-md border border-neutral-800/80 rounded-lg overflow-x-auto no-scrollbar shadow-xl">
+              <div className="flex items-center gap-2 py-1.5 overflow-x-auto no-scrollbar">
                 {sessionTabs.map(tab => {
                   const isActive = activeTab === tab;
                   return (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-ui duration-300 ${
+                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg ${
                         isActive
                           ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
                           : 'text-neutral-400 hover:bg-neutral-800/80 hover:text-white'
@@ -497,14 +476,14 @@ function RaceDetailPage() {
           {telemetryTabs.length > 0 && (
             <div>
               <h3 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-2 ml-2">Data & Telemetry</h3>
-              <div className="flex flex-wrap items-center gap-2 p-2 bg-neutral-900/60 backdrop-blur-md border border-neutral-800/80 rounded-lg shadow-xl">
+              <div className="flex flex-wrap items-center gap-2 py-1.5">
                 {telemetryTabs.map(tab => {
                   const isActive = activeTab === tab;
                   return (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-ui duration-300 ${
+                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg ${
                         isActive
                           ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
                           : 'text-neutral-400 hover:bg-neutral-800/80 hover:text-white'

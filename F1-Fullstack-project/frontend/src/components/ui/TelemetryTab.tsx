@@ -125,7 +125,7 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
   const visibleLaps = getVisibleLaps();
 
   return (
-    <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72">
+    <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72 shrink-0">
       <div className="absolute top-0 w-3/4 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent"></div>
       
       <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -362,7 +362,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl mb-8 flex flex-col xl:flex-row gap-6 items-stretch">
         
         {/* Drivers Box */}
-        <div className="flex-1 bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 relative overflow-hidden shadow-2xl flex flex-col">
+        <div className="flex-1 min-w-0 bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 relative overflow-hidden shadow-2xl flex flex-col">
           <div className="absolute top-0 w-3/4 left-0 h-1 bg-gradient-to-r from-transparent via-blue-600 to-transparent"></div>
           
           <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -401,26 +401,29 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
               );
             })}
           </div>
-        </div>
 
-        {/* Selection hint: warn when a selected driver has no telemetry (DNS) */}
-        {selectedDrivers.length > 0 && !telemetryData && (
-          <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-start gap-2 text-xs font-bold text-amber-400">
-            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <span className="block">{selectedDrivers.length} driver dipilih — klik <b>Run Analysis</b> untuk memuat telemetry.</span>
-              {selectedWithoutData.length > 0 && (
-                <span className="block text-amber-300/90">
-                  Tanpa data: {selectedWithoutData.join(', ')} — did not start (tidak ada lap telemetry).
-                </span>
-              )}
+          {/* Selection hint: warn when a selected driver has no telemetry (DNS).
+              Kept inside the drivers card — as a direct child of the
+              xl:flex-row section it became an auto-width column that squeezed
+              the driver grid into a sliver. */}
+          {selectedDrivers.length > 0 && !telemetryData && (
+            <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-start gap-2 text-xs font-bold text-amber-400">
+              <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="block">{selectedDrivers.length} driver dipilih — klik <b>Run Analysis</b> untuk memuat telemetry.</span>
+                {selectedWithoutData.length > 0 && (
+                  <span className="block text-amber-300/90">
+                    Tanpa data: {selectedWithoutData.join(', ')} — did not start (tidak ada lap telemetry).
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <LapRuler lap={lap} setLap={setLap} />
 
-        <div className="flex flex-col justify-end">
+        <div className="flex flex-col justify-end shrink-0">
           <button 
             onClick={fetchTelemetry}
             disabled={loading || selectedDrivers.length === 0}

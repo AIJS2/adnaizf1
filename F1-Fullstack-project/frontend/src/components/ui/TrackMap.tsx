@@ -1,6 +1,6 @@
 import { Flag, Thermometer } from 'lucide-react';
-import WorldFlag from 'react-world-flags';
 import { getTrackMap, getCountryCode } from '../../data/trackData';
+import { CountryFlag } from './CountryFlag';
 
 interface TrackMapProps {
   raceInfo?: { location?: string; country?: string; name?: string } | null;
@@ -37,7 +37,7 @@ export function TrackMap({ raceInfo, laps, weatherInfo, className }: TrackMapPro
         <span className="text-neutral-500 font-black text-xs uppercase tracking-[0.25em]">Circuit Layout</span>
         {country && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
-            {countryCode && <WorldFlag code={countryCode} alt="" className="w-4 h-auto shrink-0 rounded-[2px]" />}
+            <CountryFlag code={countryCode} alt="" className="w-4 h-auto shrink-0 rounded-[2px]" />
             {country}
           </span>
         )}
@@ -52,9 +52,9 @@ export function TrackMap({ raceInfo, laps, weatherInfo, className }: TrackMapPro
         {(trackTemp != null || airTemp != null) && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
             <Thermometer size={10} className="text-amber-500" />
-            {trackTemp != null && <span>Track {Math.round(trackTemp)}degC</span>}
-            {trackTemp != null && airTemp != null && <span className="text-neutral-500 mx-1">dot</span>}
-            {airTemp != null && <span>Air {Math.round(airTemp)}degC</span>}
+            {trackTemp != null && <span>Track {Math.round(trackTemp)}°C</span>}
+            {trackTemp != null && airTemp != null && <span className="text-neutral-500 mx-1">·</span>}
+            {airTemp != null && <span>Air {Math.round(airTemp)}°C</span>}
           </span>
         )}
       </div>

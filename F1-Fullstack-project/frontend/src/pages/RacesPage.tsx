@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
 import { Calendar, Trophy, Clock, Info, MapPin, ChevronDown, Zap, ArrowDown, CheckCircle2, Timer } from 'lucide-react';
-import WorldFlag from 'react-world-flags';
+import { CountryFlag } from '../components/ui/CountryFlag';
 import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { getTrackMap, getCountryCode } from '../data/trackData';
@@ -240,7 +240,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                 <div className="flex flex-wrap items-center gap-3 mb-2">
                   <div className=" rounded-sm overflow-hidden">
                     {flagCode ? (
-                      <WorldFlag
+                      <CountryFlag
                         code={flagCode}
                         alt={`${race.country || race.location || race.name} flag`}
                         className="w-8 h-auto"

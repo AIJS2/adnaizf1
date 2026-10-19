@@ -18,6 +18,24 @@ DETAIL_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=True, messages=Tru
 LIGHT_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=False, messages=False)
 
 
+def _classified_status_label(classified_position, status):
+    """FastF1's classification code -> the app's status vocabulary.
+
+    'W' is a withdrawal (did not start) and 'D'/'E' a disqualification, so they
+    must not be lumped into "DNF": a non-starter is not a retirement, and the
+    race table should say so.
+    """
+    status_text = str(status or "").strip().lower()
+    code = str(classified_position or "").strip().upper()
+    if code == "W" or "did not start" in status_text:
+        return "DNS"
+    if code in ("D", "E") or "disqualif" in status_text or "excluded" in status_text:
+        return "DSQ"
+    if code == "R":
+        return "DNF"
+    return None
+
+
 def _empty_race_payload(event: pd.Series, status: str, message: str) -> dict:
     """Shape every response shares, so the UI can rely on all keys existing."""
     return {
@@ -357,10 +375,12 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 time_display, gap_display, interval_display = res['Status'], "", ""
                 res_status = res['Status']
 
-                classified_pos = str(res.get('ClassifiedPosition', ''))
-                if classified_pos in ['R', 'D', 'E', 'W']:
-                    time_display = "DNF"
-                    res_status = "DNF"
+                classified_status = _classified_status_label(
+                    res.get('ClassifiedPosition', ''), res.get('Status', '')
+                )
+                if classified_status:
+                    time_display = classified_status
+                    res_status = classified_status
                 elif current_laps == max_laps and pd.notna(res.get('Time')):
                     total_time, gap, interval = None, None, None
                     if position == 1: total_time = res['Time']
@@ -421,10 +441,12 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 time_display, gap_display, interval_display = res['Status'], "", ""
                 res_status = res['Status']
 
-                classified_pos = str(res.get('ClassifiedPosition', ''))
-                if classified_pos in ['R', 'D', 'E', 'W']:
-                    time_display = "DNF"
-                    res_status = "DNF"
+                classified_status = _classified_status_label(
+                    res.get('ClassifiedPosition', ''), res.get('Status', '')
+                )
+                if classified_status:
+                    time_display = classified_status
+                    res_status = classified_status
                 elif current_laps == max_laps and pd.notna(res.get('Time')):
                     total_time, gap, interval = None, None, None
                     if position == 1: total_time = res['Time']

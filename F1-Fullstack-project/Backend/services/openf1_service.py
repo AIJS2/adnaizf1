@@ -309,12 +309,14 @@ def _classify_position(row: dict[str, Any]) -> int:
 
 def _status_for(row: dict[str, Any]) -> str:
     """Map OpenF1's retirement flags onto the frontend's status vocabulary."""
-    if row.get("dnf"):
-        return "DNF"
+    # DNS is the more specific answer when OpenF1 sets several flags: a driver
+    # who never took the start did not retire from the race.
     if row.get("dns"):
         return "DNS"
     if row.get("dsq"):
         return "DSQ"
+    if row.get("dnf"):
+        return "DNF"
     return ""
 
 

@@ -205,10 +205,13 @@ def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp
         elif race_date == today:
             status = "Ongoing"
 
+        # Use race_date (already a normalized, validated Timestamp) to build
+        # the ISO date string — avoids a second pd.to_datetime + strftime call
+        # that can raise OSError on Windows for certain Timestamp values.
         race_info = {
             "round": int(race["RoundNumber"]),
             "name": race["EventName"],
-            "date": pd.to_datetime(race["EventDate"], errors="coerce").strftime("%Y-%m-%d"),
+            "date": race_date.date().isoformat(),
             "location": race.get("Location", ""),
             "status": status,
             "winner": None,

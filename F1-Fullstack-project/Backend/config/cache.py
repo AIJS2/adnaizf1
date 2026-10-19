@@ -2,11 +2,25 @@ import logging
 import os
 import json
 import time
+import asyncio
 from datetime import timedelta
 from typing import Any, Optional, List
 
 import fastf1
 import redis
+
+# Lock untuk concurrent write protection
+_cache_locks: dict[str, asyncio.Lock] = {}
+_locks_lock = asyncio.Lock()
+
+
+async def _get_cache_lock(key: str) -> asyncio.Lock:
+    """Get or create an asyncio.Lock for a specific cache key."""
+    async with _locks_lock:
+        if key not in _cache_locks:
+            _cache_locks[key] = asyncio.Lock()
+        return _cache_locks[key]
+
 
 # Resolve the FastF1 on-disk cache relative to the package, not the process CWD.
 # A bare "cache" only works when uvicorn is launched from Backend/; under the
@@ -177,6 +191,38 @@ def get_advanced_cache_with_meta(key: str) -> Optional[dict]:
     }
 
 
+async def set_advanced_cache_async(
+    key: str, data: Any, hours: int = CACHE_DURATION_HOURS
+) -> None:
+    """Async version of set_advanced_cache with lock protection."""
+    lock = await _get_cache_lock(key)
+    async with lock:
+        client = _get_redis()
+        if client is not None:
+            try:
+                ttl_seconds = int(hours * 3600)
+                await asyncio.to_thread(
+                    client.setex, key, ttl_seconds, json.dumps(data)
+                )
+            except Exception as e:
+                logging.warning(f"Error writing to Redis cache for key '{key}': {e}")
+                _invalidate_redis()
+
+        # Always persist to disk cache so restarts or lack of Redis still retain fast SWR cache
+        try:
+            filepath = _get_file_cache_path(key)
+            tmp_filepath = filepath + f".tmp.{os.getpid()}"
+
+            def _write():
+                with open(tmp_filepath, "w", encoding="utf-8") as f:
+                    json.dump(data, f)
+                os.replace(tmp_filepath, filepath)
+
+            await asyncio.to_thread(_write)
+        except Exception as e:
+            logging.warning(f"Error writing to file cache for key '{key}': {e}")
+
+
 def set_advanced_cache(key: str, data: Any, hours: int = CACHE_DURATION_HOURS) -> None:
     """Store data in Redis cache with an expiration, and always persist to local disk cache."""
     client = _get_redis()
@@ -192,7 +238,7 @@ def set_advanced_cache(key: str, data: Any, hours: int = CACHE_DURATION_HOURS) -
     try:
         filepath = _get_file_cache_path(key)
         tmp_filepath = filepath + f".tmp.{os.getpid()}"
-        with open(tmp_filepath, 'w', encoding='utf-8') as f:
+        with open(tmp_filepath, "w", encoding="utf-8") as f:
             json.dump(data, f)
         os.replace(tmp_filepath, filepath)
     except Exception as e:

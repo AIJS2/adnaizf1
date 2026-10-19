@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Request
 import pandas as pd
 import fastf1
 import asyncio
@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from config.cache import get_advanced_cache, set_advanced_cache, clear_advanced_cache, CACHE_DURATION_HOURS
 from services.scraper import apply_f1_official_standings
 from config.limiter import limiter
+from utils.auth import require_api_key
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ def get_dashboard_cache_filename(year: int):
 def get_championship_cache_filename(year: int):
     return f"championship_cache_{year}.json"
 
-@router.get("/api/clear_cache/{year}")
+@router.get("/api/clear_cache/{year}", dependencies=[Depends(require_api_key)])
 @limiter.limit("50/minute")
 async def clear_cache(request: Request, year: int):
     championship_cache = get_championship_cache_filename(year)

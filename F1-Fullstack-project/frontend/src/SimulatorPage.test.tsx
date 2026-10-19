@@ -150,7 +150,8 @@ describe('SimulatorPage race-aware simulation', () => {
     await waitFor(() => {
       expect(screen.getByText('263')).toBeInTheDocument();
     });
-    expect(screen.getByText('+25')).toBeInTheDocument();
+    // The drivers table and the teams table both show a "+25" gain badge.
+    expect(screen.getAllByText('+25').length).toBeGreaterThan(0);
     expect(screen.getByText('Simulated')).toBeInTheDocument();
   });
 

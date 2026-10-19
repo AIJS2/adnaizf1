@@ -7,7 +7,7 @@ Git root is `adnaizf1/`; the app lives under `F1-Fullstack-project/`:
 - `docker-compose.yml` — Redis (6379), backend (8000), frontend (5173)
 - `prisma/` — schema + seed; the app reads FastF1/OpenF1, not the seeded SQL DB
 
-Root `package.json`/`package-lock.json` are vestigial — the real frontend manifest + lockfile are in `F1-Fullstack-project/frontend/`. Always install/run there.
+The only real frontend manifest + lockfile live in `F1-Fullstack-project/frontend/` — always install/run there. (The vestigial root `package.json`/`package-lock.json` were removed.)
 
 ## Prerequisites
 - Node.js 18/20 LTS + npm, Python 3.10+, Redis on `localhost:6379` (or `docker compose up -d redis` from `F1-Fullstack-project/`).
@@ -27,6 +27,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 - `GET /health` → `{"status": "ok", "cache": {"connected": true}}` or `degraded` when Redis is down; the app still works.
 - Every router in `routers/` is mounted in `main.py`, including `team_radio.py` → `GET /api/team_radio` works (not a 404).
 - SlowAPI rate limiting is active; FastF1 keeps an on-disk cache at `Backend/cache/` (~500 calls/hour — repeated uncached refreshes are rate-limited).
+- `GET /api/clear_cache/{year}` is the only destructive endpoint; it requires an `X-API-Key` header matching `API_KEY` (`utils/auth.py`). Public read endpoints stay open.
 - No pytest suite exists. Edge-case sweep: `python tests_chaos_probe.py` (standalone TestClient, not pytest; hits the network and FastF1 — 429s are notes, not failures).
 - `Backend/scripts/seed_standings.py` writes `f1_stats.db` (gitignored); not used by the running app.
 
@@ -63,4 +64,6 @@ npm run typecheck && npm run lint && npm run test   # same order as CI
 Backend: start uvicorn and check `GET /health`.
 
 ## CI
-`.github/workflows/ci.yml` exists (frontend only): Node 20 → `npm ci` → lint → typecheck → test → build, with `working-directory: ./frontend`, on push/PR to `main`. There is no backend CI job.
+`.github/workflows/ci.yml` lives at the repo root (`adnaizf1/.github/workflows/` — GitHub only reads workflows there) and runs on push/PR to `main`:
+- **frontend** job (`working-directory: ./F1-Fullstack-project/frontend`): Node 20 → `npm ci` → lint → typecheck → test → build
+- **backend** job (`working-directory: ./F1-Fullstack-project/Backend`): Python 3.11 → `ruff` → `compileall` (syntax) → `ruff check --select E9,F63,F7,F82`

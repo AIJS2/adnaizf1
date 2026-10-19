@@ -1,13 +1,13 @@
 // src/RaceDetailPage - FIXED: shared teamData & config, improved error state
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Trophy, Calendar, Activity, TrendingUp, Wrench, Route, Gauge, Sun, List, LayoutGrid, Timer, Flag, GitCommitVertical, Clock, ChevronDown, Thermometer } from 'lucide-react';
+import { Trophy, Calendar, Activity, TrendingUp, Wrench, Route, Gauge, Sun, List, LayoutGrid, Timer, Flag, Clock, ChevronDown } from 'lucide-react';
 import { API_URL } from '../config';
-import { getTrackMap } from '../data/trackData';
 import TelemetryTab from '../components/ui/TelemetryTab';
+import { TrackMap } from '../components/ui/TrackMap';
 
 // =======================================================================
 
@@ -16,7 +16,7 @@ import GapChartComponent from '../components/race/GapChart';
 import LapTimesChartComponent from '../components/race/LapTimesChart';
 import RaceControlMessages from '../components/race/RaceControlMessages';
 import { PracticeResultTable, QualifyingResultTable, SprintQualifyingResultTable, SprintResultTable, RaceResultTable, GridTable, TyreStrategyTable, SpeedSectorsTable, WeatherChart } from '../components/race/RaceTables';
-import { SummaryCard, type SummaryCardData } from '../components/race/RaceMiniComponents';
+import { type SummaryCardData } from '../components/race/RaceMiniComponents';
 import type { Race, SessionResultRow, SectorMatrixEntry } from '../types/f1';
 
 
@@ -65,6 +65,8 @@ function RaceDetailPage() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('Race');
+  const [stickyTabs, setStickyTabs] = useState(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading: loading, isFetching, error, refetch: fetchPageData } = useQuery({
     queryKey: ['raceDetail', year, round],
@@ -100,6 +102,25 @@ function RaceDetailPage() {
   const raceData = data?.raceData || null;
   const schedule = data?.schedule || [];
 
+  // Compute available tabs early so keyboard nav can reference them
+  const baseAvailableTabs = useMemo(() =>
+    ALL_POSSIBLE_TABS.filter(tab => raceData?.available_tabs?.includes(tab)),
+    [raceData?.available_tabs]
+  );
+
+  const availableTabs = useMemo(() => {
+    const tabs = [...baseAvailableTabs];
+    if (raceData?.lap_chart && !tabs.includes('Lap Chart')) tabs.push('Lap Chart');
+    if (raceData?.gap_chart && !tabs.includes('Race Progression')) tabs.push('Race Progression');
+    if (raceData?.lap_times_chart && !tabs.includes('Lap Times')) tabs.push('Lap Times');
+    if (raceData?.tyre_strategy && !tabs.includes('Tyre Strategy')) tabs.push('Tyre Strategy');
+    if ((raceData?.speed_traps || raceData?.sector_matrix) && !tabs.includes('Speed & Sectors')) tabs.push('Speed & Sectors');
+    if (raceData?.weather_info && raceData.weather_info.length > 0 && !tabs.includes('Weather Data')) tabs.push('Weather Data');
+    if (raceData?.race_control_messages && raceData.race_control_messages.length > 0 && !tabs.includes('Live Feed')) tabs.push('Live Feed');
+    if (!tabs.includes('Lap Telemetry')) tabs.push('Lap Telemetry');
+    return tabs;
+  }, [baseAvailableTabs, raceData]);
+
   useEffect(() => {
     if (raceData) {
       const available = raceData.available_tabs || [];
@@ -120,6 +141,51 @@ function RaceDetailPage() {
   const handleRaceChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     navigate(`/race/${year}/${event.target.value}`);
   };
+
+  // Keyboard navigation: arrow keys cycle through tabs
+  useEffect(() => {
+    const handler = (e: globalThis.KeyboardEvent) => {
+      if (!availableTabs || availableTabs.length === 0) return;
+      const currentIndex = availableTabs.indexOf(activeTab);
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const nextIndex = (currentIndex + 1) % availableTabs.length;
+        setActiveTab(availableTabs[nextIndex]);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const prevIndex = (currentIndex - 1 + availableTabs.length) % availableTabs.length;
+        setActiveTab(availableTabs[prevIndex]);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeTab, availableTabs]);
+
+  // Sticky tabs on scroll
+  useEffect(() => {
+    const handler = () => {
+      if (tabsRef.current) {
+        const rect = tabsRef.current.getBoundingClientRect();
+        setStickyTabs(rect.top <= 0);
+      }
+    };
+    window.addEventListener('scroll', handler);
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+
+  const SESSION_TAB_NAMES = [
+    'Practice 1', 'Practice 2', 'Practice 3',
+    'Sprint Qualifying', 'Sprint Grid', 'Sprint',
+    'Qualifying', 'Starting Grid', 'Race'
+  ];
+  const sessionTabs = useMemo(
+    () => availableTabs.filter(t => SESSION_TAB_NAMES.includes(t)),
+    [availableTabs]
+  );
+  const telemetryTabs = useMemo(
+    () => availableTabs.filter(t => !SESSION_TAB_NAMES.includes(t)),
+    [availableTabs]
+  );
 
   const SkeletonLoader = () => (
     <div className="bg-neutral-950 min-h-screen text-white font-sans motion-safe:animate-pulse">
@@ -220,23 +286,6 @@ function RaceDetailPage() {
 
     return null;
   })();
-  const trackMapImg = getTrackMap(raceData?.race_info);
-
-  // A completed race missing a summary highlight (e.g. a still-revalidating
-  // cache) must not claim the race "has not run yet".
-  const summaryFallbackText =
-    raceData?.status === 'Upcoming' ? 'Race not run yet.' : 'Data not available.';
-
-  const baseAvailableTabs = ALL_POSSIBLE_TABS.filter(tab => raceData?.available_tabs?.includes(tab));
-  const availableTabs = [...baseAvailableTabs];
-  if (raceData?.lap_chart && !availableTabs.includes('Lap Chart')) availableTabs.push('Lap Chart');
-  if (raceData?.gap_chart && !availableTabs.includes('Race Progression')) availableTabs.push('Race Progression');
-  if (raceData?.lap_times_chart && !availableTabs.includes('Lap Times')) availableTabs.push('Lap Times');
-  if (raceData?.tyre_strategy && !availableTabs.includes('Tyre Strategy')) availableTabs.push('Tyre Strategy');
-  if ((raceData?.speed_traps || raceData?.sector_matrix) && !availableTabs.includes('Speed & Sectors')) availableTabs.push('Speed & Sectors');
-  if (raceData?.weather_info && raceData.weather_info.length > 0 && !availableTabs.includes('Weather Data')) availableTabs.push('Weather Data');
-  if (raceData?.race_control_messages && raceData.race_control_messages.length > 0 && !availableTabs.includes('Live Feed')) availableTabs.push('Live Feed');
-  if (!availableTabs.includes('Lap Telemetry')) availableTabs.push('Lap Telemetry');
 
   const renderActiveContent = () => {
     if (availableTabs.length === 0 || raceData?.status === 'Upcoming') {
@@ -274,14 +323,6 @@ function RaceDetailPage() {
       default:                  return <div className="p-8 text-center text-neutral-500">Please select a session or telemetry view.</div>;
     }
   };
-
-  const SESSION_TAB_NAMES = [
-    'Practice 1', 'Practice 2', 'Practice 3',
-    'Sprint Qualifying', 'Sprint Grid', 'Sprint',
-    'Qualifying', 'Starting Grid', 'Race'
-  ];
-  const sessionTabs = availableTabs.filter(t => SESSION_TAB_NAMES.includes(t));
-  const telemetryTabs = availableTabs.filter(t => !SESSION_TAB_NAMES.includes(t));
 
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
@@ -332,63 +373,102 @@ function RaceDetailPage() {
           </div>
         </section>
 
-        {/* Track Map */}
-        <section className="mb-10 flex flex-col items-center justify-center bg-neutral-900/40 backdrop-blur-md border border-neutral-800/80 rounded-lg p-8 relative overflow-hidden shadow-2xl">
-          <div className="absolute top-5 left-6 flex items-center gap-2">
-            <span className="text-neutral-500 font-black text-xs uppercase tracking-[0.2em]">Circuit Layout</span>
-            {raceData?.race_info?.country && (
-              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
-                {raceData.race_info.country}
-              </span>
+        {/* Hero Stats Grid - Quick insights */}
+        {raceData?.race_info && (
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            {/* Winner Card */}
+            {raceWinnerData && (
+              <div className="bg-gradient-to-br from-amber-950/40 to-neutral-900/60 backdrop-blur border border-amber-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Trophy size={18} className="text-amber-500" />
+                    <span className="text-xs font-black text-amber-400 uppercase tracking-wider">Winner</span>
+                  </div>
+                  <div className="text-2xl font-black text-white mb-1 truncate">{raceWinnerData.full_name}</div>
+                  <div className="text-sm text-neutral-400 truncate">{raceWinnerData.team_name}</div>
+                </div>
+              </div>
             )}
-          </div>
 
-          <div className="absolute top-5 right-6 flex flex-wrap items-center gap-2">
-            {raceData?.results?.[0]?.laps && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-red-950/40 text-red-400 border border-red-800/40 uppercase tracking-wider">
-                <Flag size={10} />
-                <span>{raceData.results[0].laps} LAPS</span>
-              </span>
+            {/* Pole Position */}
+            {poleSitterData && (
+              <div className="bg-gradient-to-br from-red-950/40 to-neutral-900/60 backdrop-blur border border-red-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Flag size={18} className="text-red-500" />
+                    <span className="text-xs font-black text-red-400 uppercase tracking-wider">Pole Position</span>
+                  </div>
+                  <div className="text-2xl font-black text-white mb-1 truncate">{poleSitterData.full_name}</div>
+                  <div className="text-sm text-neutral-400 truncate">{poleSitterData.team_name}</div>
+                </div>
+              </div>
             )}
-            {raceData?.weather_info && raceData.weather_info.length > 0 && (() => {
-              const latestWeather = raceData.weather_info[raceData.weather_info.length - 1];
-              const trackTemp = latestWeather.track_temp ?? latestWeather.TrackTemp;
-              const airTemp = latestWeather.air_temp ?? latestWeather.AirTemp;
-              if (trackTemp == null && airTemp == null) return null;
-              return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
-                  <Thermometer size={10} className="text-amber-500" />
-                  {trackTemp != null && <span>Track {Math.round(trackTemp)}°C</span>}
-                  {trackTemp != null && airTemp != null && <span className="text-neutral-500">•</span>}
-                  {airTemp != null && <span>Air {Math.round(airTemp)}°C</span>}
-                </span>
-              );
-            })()}
-          </div>
 
-          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-[80px] rounded-full pointer-events-none"></div>
-          {trackMapImg ? (
-            <img 
-              src={trackMapImg} 
-              alt={`Track map for ${raceData?.race_info?.name || raceData?.race_info?.location}`}
-              className="h-32 md:h-64 object-contain brightness-0 invert opacity-70 transition-ui duration-500 hover:opacity-100 mt-4 sm:mt-2"
-            />
-          ) : (
-            <div className="text-neutral-600 italic py-10 font-bold">
-              Track map not available for {raceData?.race_info?.location || raceData?.race_info?.name}.
+            {/* Fastest Lap */}
+            {fastestLapData && (
+              <div className="bg-gradient-to-br from-purple-950/40 to-neutral-900/60 backdrop-blur border border-purple-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock size={18} className="text-purple-500" />
+                    <span className="text-xs font-black text-purple-400 uppercase tracking-wider">Fastest Lap</span>
+                  </div>
+                  <div className="text-2xl font-black text-white mb-1 truncate">{fastestLapData.full_name}</div>
+                  <div className="text-sm text-neutral-400 font-mono truncate">{fastestLapData.time}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Race Status */}
+            <div className="bg-gradient-to-br from-neutral-900/60 to-neutral-900/80 backdrop-blur border border-neutral-700/50 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar size={18} className="text-neutral-400" />
+                  <span className="text-xs font-black text-neutral-400 uppercase tracking-wider">Round</span>
+                </div>
+                <div className="text-2xl font-black text-white mb-1">
+                  R{String(round ?? '—').padStart(2, '0')}
+                </div>
+                <div className="text-sm text-neutral-400">
+                  <span className={
+                    raceData.status === 'Finished' ? 'text-green-400' :
+                    raceData.status === 'Upcoming' ? 'text-amber-400' : 'text-red-400'
+                  }>
+                    {raceData.status?.toUpperCase()}
+                  </span>
+                </div>
+              </div>
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
-        {/* Summary Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 mb-10">
-          <SummaryCard title="Race Winner"  icon={<Trophy size={20} />}          data={raceWinnerData} fallbackText={summaryFallbackText} />
-          <SummaryCard title="Pole Position" icon={<GitCommitVertical size={20} />} data={poleSitterData} fallbackText={summaryFallbackText} />
-          <SummaryCard title="Fastest Lap"  icon={<Clock size={20} />}           data={fastestLapData} fallbackText={summaryFallbackText} />
-        </section>
+        {/* Track Map */}
+        <TrackMap
+          raceInfo={raceData?.race_info || null}
+          laps={raceData?.results?.[0]?.laps ?? null}
+          weatherInfo={raceData?.weather_info || null}
+        />
 
         {/* Tab Navigation Bars: Official Sessions & Data & Telemetry (Above the Content Area) */}
-        <section className="mb-6 space-y-4">
+        <section
+          ref={tabsRef}
+          className={`mb-6 space-y-4 transition-all duration-300 ${
+            stickyTabs
+              ? 'sticky top-0 z-40 bg-neutral-950/95 backdrop-blur-xl border-b border-neutral-800/80 -mx-8 px-8 py-4 shadow-2xl'
+              : ''
+          }`}
+        >
+          {/* Keyboard hint */}
+          {availableTabs.length > 1 && (
+            <div className="flex items-center justify-end gap-2 text-[10px] text-neutral-500 font-mono mb-2">
+              <span>Navigate:</span>
+              <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded text-neutral-400">←</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded text-neutral-400">→</kbd>
+            </div>
+          )}
+
           {sessionTabs.length > 0 && (
             <div>
               <h3 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-2 ml-2">Official Sessions</h3>

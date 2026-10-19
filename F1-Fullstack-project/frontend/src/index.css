@@ -163,3 +163,151 @@ textarea:focus-visible {
     animation: none;
   }
 }
+
+/* ===== Simulator Visual Upgrades ===== */
+/* Refined input fields with focus glow */
+select[aria-label="Grand Prix"],
+select[aria-label="P1 Winner"],
+select[aria-label="P2 Runner-up"],
+select[aria-label="P3 Podium"],
+select[aria-label="Fastest Lap"],
+select[aria-label="Sprint Winner"] {
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25em 1.25em;
+  padding-right: 2.5rem;
+}
+
+select[aria-label="Grand Prix"]:focus {
+  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.15), 0 0 20px rgba(230, 57, 70, 0.2);
+}
+
+select[aria-label="P1 Winner"]:focus {
+  box-shadow: 0 0 0 4px rgba(254, 215, 71, 0.15), 0 0 20px rgba(254, 215, 71, 0.2);
+}
+
+select[aria-label="P2 Runner-up"]:focus {
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.15), 0 0 20px rgba(148, 163, 184, 0.2);
+}
+
+select[aria-label="P3 Podium"]:focus {
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.15), 0 0 20px rgba(251, 191, 36, 0.2);
+}
+
+select[aria-label="Fastest Lap"]:focus {
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15), 0 0 20px rgba(168, 85, 247, 0.2);
+}
+
+select[aria-label="Sprint Winner"]:focus {
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15), 0 0 20px rgba(56, 189, 248, 0.2);
+}
+
+/* Pill buttons with refined hovers */
+button:has(> svg) {
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+button:has(> svg):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+button:has(> svg):active {
+  transform: translateY(0);
+}
+
+/* Elevated cards with micro-shadows */
+.bg-neutral-900\/60 {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Standing rows with refined depth */
+.group.relative.bg-neutral-950\/80 {
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.group.relative.bg-neutral-950\/80:hover {
+  transform: translateX(4px);
+  box-shadow: -4px 0 16px rgba(230, 57, 70, 0.08), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Position badges with subtle glow */
+.text-xl.font-black.italic,
+.text-3xl.font-black.italic {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Points gained badge breathe animation */
+.motion-safe\:animate-pulse {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.98); }
+}
+
+/* Refined toggle switch */
+button[class*="flex-1"].text-xs {
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+button[class*="bg-neutral-800"].text-white {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Title fight contender cards with accent border glow */
+.space-y-2 > div[class*="bg-neutral-950"] {
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.space-y-2 > div[class*="bg-neutral-950"]:hover {
+  background-color: rgba(15, 23, 42, 0.9);
+  border-color: rgba(230, 57, 70, 0.2);
+}
+
+/* Fluid typography for main heading */
+h1.text-5xl {
+  font-size: clamp(2.5rem, 5vw + 1rem, 4rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* Refined label styling */
+label.block.text-\[11px\] {
+  letter-spacing: 0.08em;
+}
+
+/* Sprint badge glow */
+span[class*="text-orange-400"] {
+  text-shadow: 0 0 8px rgba(251, 146, 60, 0.4);
+}
+
+/* Enhanced compute button */
+button[class*="from-red-600"] {
+  position: relative;
+  overflow: hidden;
+}
+
+button[class*="from-red-600"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+button[class*="from-red-600"]:hover::before {
+  left: 100%;
+}
+
+/* Refined status badges */
+span[class*="px-3"][class*="py-1"][class*="rounded-full"] {
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}

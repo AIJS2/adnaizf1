@@ -1,10 +1,39 @@
 import { DriverProfile, Race, TeamProfile } from '../types/f1';
 import { useState, useMemo, useEffect, useRef } from 'react';
+import type { KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { teamColors, teamLogos } from '../data/teamData';
 import { Calculator, Trophy, ArrowUp, ArrowDown, Minus, RefreshCw, Zap, Flag, FlaskConical, Activity, Crosshair, Users, Timer, CalendarDays, Crown } from 'lucide-react';
 import { fetchAllRaces, fetchChampionship } from '../services/api';
 import type { ChampionshipPayload, RacesPayload } from '../services/api';
+
+// Design tokens — spacing, color surfaces, radius
+const tokens = `
+  :root {
+    --surface-0: #050709;
+    --surface-1: #0A0D11;
+    --surface-2: #0F1419;
+    --surface-3: #151B23;
+    --surface-4: #1C232E;
+    --surface-5: #242D3A;
+
+    --accent-primary: #E63946;
+    --accent-primary-dim: #B8303B;
+    --accent-cyan: #38BDF8;
+    --accent-purple: #A855F7;
+    --accent-amber: #FBBF24;
+    --accent-yellow: #FDE047;
+
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-pill: 999px;
+
+    --gap-section: 2rem;
+    --gap-card: 1.5rem;
+    --gap-item: 1rem;
+  }
+`;
 
 const SimulatorPage = () => {
   const [originalDrivers, setOriginalDrivers] = useState<DriverProfile[]>([]);
@@ -93,6 +122,24 @@ const SimulatorPage = () => {
     setDrivers(JSON.parse(JSON.stringify(standings)));
   }, [standings]);
 
+  // Live what-if: any change to the picks immediately re-runs the maths, so the
+  // standings are always in sync with the form. `simulate` is declared below,
+  // so this effect lives with the other effects and just mirrors the state.
+  const computeSignature = `${p1}|${p2}|${p3}|${fastestLap}|${sprintWinner}|${isSprintWeekend}|${selectedRound}`;
+  const lastSignatureRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (originalDrivers.length === 0) return;
+    // Skip the very first run after seeding: nothing was picked yet, so the
+    // working copy already equals the real standings.
+    if (lastSignatureRef.current === null) {
+      lastSignatureRef.current = computeSignature;
+      return;
+    }
+    if (lastSignatureRef.current === computeSignature) return;
+    lastSignatureRef.current = computeSignature;
+    runSimulation();
+  }, [computeSignature, originalDrivers]);
+
   // --- Title fight maths ----------------------------------------------------
   // Max points a driver can still score: a race win is 25, the fastest lap 1,
   // and a Sprint win 8. Sprint weekends are counted per round from the real
@@ -140,7 +187,7 @@ const SimulatorPage = () => {
     };
   }, [originalDrivers, remainingRaces]);
 
-  const simulate = () => {
+  const runSimulation = () => {
     const simulated: DriverProfile[] = JSON.parse(JSON.stringify(originalDrivers));
 
     // Apply predictions
@@ -178,6 +225,58 @@ const SimulatorPage = () => {
   const reset = () => {
     setP1(''); setP2(''); setP3(''); setFastestLap(''); setSprintWinner('');
     setDrivers(JSON.parse(JSON.stringify(originalDrivers)));
+  };
+
+  // --- Derived UI state -----------------------------------------------------
+  // Points injected by the current picks. Drives the "scenario summary" so the
+  // user always sees the total impact of a scenario at a glance.
+  const appliedPoints = useMemo(() => {
+    let total = 0;
+    if (p1) total += 25;
+    if (p2) total += 18;
+    if (p3) total += 15;
+    if (fastestLap) total += 1;
+    if (sprintWinner && isSprintWeekend) total += 8;
+    return total;
+  }, [p1, p2, p3, fastestLap, sprintWinner, isSprintWeekend]);
+
+  const hasPicks = Boolean(p1 || p2 || p3 || fastestLap || (isSprintWeekend && sprintWinner));
+
+  // A driver can only be picked once per slot — flag conflicts instead of
+  // silently double-awarding points (e.g. same driver as P1 and fastest lap is
+  // legal in F1, but P1+P2 is not).
+  const conflicts = useMemo(() => {
+    const found: string[] = [];
+    const seen = new Map<string, string>();
+    ([['P1', p1], ['P2', p2], ['P3', p3]] as [string, string][]).forEach(([slot, id]) => {
+      if (!id) return;
+      if (seen.has(id)) found.push(seen.get(id) as string);
+      else seen.set(id, slot);
+    });
+    return found;
+  }, [p1, p2, p3]);
+
+  const hasConflict = conflicts.length > 0;
+
+  // Preset scenarios — the most common "what if" a user wants in one click.
+  const applyStandingOrder = () => {
+    const top = originalDrivers.slice(0, 3).map(driverKey);
+    setP1(top[0] ?? ''); setP2(top[1] ?? ''); setP3(top[2] ?? '');
+  };
+  const applyChaos = () => {
+    const top = originalDrivers.slice(0, 3).map(driverKey);
+    setP1(top[2] ?? top[0] ?? ''); setP2(top[0] ?? ''); setP3(top[1] ?? '');
+  };
+  const clearPodium = () => { setP1(''); setP2(''); setP3(''); };
+
+  // Enter anywhere on the page recomputes — keyboard users should not have to
+  // hunt for the button after changing a dropdown.
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== 'Enter') return;
+    const tag = (e.target as HTMLElement | null)?.tagName;
+    if (tag === 'BUTTON' || tag === 'SELECT') return; // let the control handle it
+    e.preventDefault();
+    if (!loading && !error && originalDrivers.length > 0) runSimulation();
   };
 
   // Calculate Constructors Standings dynamically
@@ -221,33 +320,40 @@ const SimulatorPage = () => {
   }
 
   return (
-    <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
-      {/* Dynamic F1 Background Image */}
-      <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.10] pointer-events-none mix-blend-luminosity"></div>
-      
-      {/* Background Grid & Gradients */}
-      <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay"></div>
-      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-900/20 via-neutral-950/80 to-neutral-950 pointer-events-none"></div>
+    <>
+      <style>{tokens}</style>
+      <div className="min-h-screen text-white font-sans relative" style={{ backgroundColor: 'var(--surface-0)' }} onKeyDown={onKeyDown}>
+        {/* Layered backgrounds */}
+        <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none mix-blend-luminosity"></div>
+        <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.08] pointer-events-none mix-blend-overlay"></div>
+        <div className="fixed inset-0 xl:left-72 pointer-events-none" style={{ background: 'radial-gradient(circle at 20% 10%, rgba(230,57,70,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 90%, rgba(56,189,248,0.08) 0%, transparent 50%)' }}></div>
 
-      
-      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
-        
-        {/* Header */}
-        <div className="mb-10 relative">
-          <div className="absolute -left-10 -top-10 w-32 h-32 bg-red-500/20 blur-[60px] rounded-full pointer-events-none"></div>
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight flex items-center gap-3 italic ">
-            <Calculator className="text-red-500 " size={46} />
-            Championship <span className=" text-chalk">Simulator</span>
-          </h1>
-          <p className="text-neutral-400 mt-2 text-lg font-medium max-w-2xl">
-            Test "What-If" scenarios on the remaining rounds{remainingRaces.length > 0 && <> (R{remainingRaces[0].round}–R{remainingRaces[remainingRaces.length - 1].round})</>}. Pick a Grand Prix, predict the podium, fastest lap, and Sprint winner, and watch the championship standings recalculate.
-          </p>
-        </div>
+        <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-8 md:py-12 xl:py-16 relative z-10">
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left Panel: Inputs + Title Fight */}
-          <div className="lg:col-span-4 space-y-6">
+          {/* Header */}
+          <div className="mb-12 relative">
+            <div className="absolute -left-12 -top-12 w-40 h-40 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(230,57,70,0.25) 0%, transparent 70%)', filter: 'blur(60px)' }}></div>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight flex items-center gap-4 italic relative" style={{ letterSpacing: '-0.02em' }}>
+              <Calculator style={{ color: 'var(--accent-primary)' }} size={52} />
+              <span style={{
+                background: 'linear-gradient(135deg, #fff 0%, #d1d5db 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Championship Simulator
+              </span>
+            </h1>
+            <p className="text-neutral-400 mt-4 text-base md:text-lg font-medium max-w-3xl leading-relaxed">
+              Test "What-If" scenarios on the remaining rounds{remainingRaces.length > 0 && <> (R{remainingRaces[0].round}–R{remainingRaces[remainingRaces.length - 1].round})</>}. Pick a Grand Prix, predict the podium, fastest lap, and Sprint winner, then watch the championship standings recalculate in real time.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            {/* Left Panel: Inputs + Title Fight */}
+            <div className="lg:col-span-4 space-y-8">
+
           <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-lg p-6 md:p-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-[100px] rounded-full pointer-events-none"></div>
             
@@ -257,7 +363,41 @@ const SimulatorPage = () => {
             </h3>
             
             <div className="space-y-4 relative z-10">
-              
+
+              {/* Quick presets — one-click common scenarios */}
+              <div className="flex flex-wrap gap-2">
+                <span className="w-full text-[11px] uppercase font-black text-neutral-500 tracking-widest mb-1">Quick Scenarios</span>
+                <button
+                  onClick={applyStandingOrder}
+                  disabled={originalDrivers.length < 3}
+                  className="px-3 py-1.5 text-[11px] font-black uppercase tracking-wider bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 rounded-full transition-ui disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Current Order
+                </button>
+                <button
+                  onClick={applyChaos}
+                  disabled={originalDrivers.length < 3}
+                  className="px-3 py-1.5 text-[11px] font-black uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 rounded-full transition-ui disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Podium Chaos
+                </button>
+                <button
+                  onClick={clearPodium}
+                  disabled={!p1 && !p2 && !p3}
+                  className="px-3 py-1.5 text-[11px] font-black uppercase tracking-wider bg-neutral-800/60 hover:bg-neutral-700/60 border border-white/10 text-neutral-300 rounded-full transition-ui disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Clear Podium
+                </button>
+              </div>
+
+              {/* Conflict warning — same driver cannot occupy two podium slots */}
+              {hasConflict && (
+                <div role="alert" className="flex items-start gap-2 bg-orange-500/10 border border-orange-500/40 text-orange-300 text-xs font-bold px-3 py-2 rounded-md">
+                  <Crosshair size={14} className="mt-0.5 shrink-0" />
+                  <span>A driver can't hold two podium spots — adjust the duplicate selection ({conflicts.join(', ')}).</span>
+                </div>
+              )}
+
               {/* Grand Prix selector — only the remaining rounds are simulatable */}
               <div className="relative group">
                 <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
@@ -357,19 +497,51 @@ const SimulatorPage = () => {
                 )}
               </div>
 
-              <div className="pt-4 flex flex-col sm:flex-row gap-3">
-                <button 
-                  onClick={simulate} 
-                  className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-red-400/30"
-                >
-                  <Calculator size={18} /> Compute
-                </button>
-                <button 
-                  onClick={reset} 
-                  className="sm:w-1/3 bg-neutral-900/80 hover:bg-neutral-800 text-white font-bold py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-white/10 hover:border-white/30 backdrop-blur-sm"
-                >
-                  <RefreshCw size={16} /> Reset
-                </button>
+              {/* Scenario summary + actions */}
+              <div className="pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between mb-3 text-[11px] font-black uppercase tracking-widest">
+                  <span className="text-neutral-500">Scenario Impact</span>
+                  <span className={hasPicks ? 'text-purple-400' : 'text-neutral-600'}>
+                    {hasPicks ? `+${appliedPoints} pts awarded` : 'No picks yet'}
+                  </span>
+                </div>
+
+                {/* Point distribution preview */}
+                {hasPicks && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {([[p1, 25, 'P1'], [p2, 18, 'P2'], [p3, 15, 'P3'], [fastestLap, 1, 'FL'], [sprintWinner && isSprintWeekend ? sprintWinner : '', 8, 'SPR']] as [string, number, string][])
+                      .filter(([id]) => Boolean(id))
+                      .map(([id, pts, tag]) => {
+                        const d = originalDrivers.find((x) => driverKey(x) === id);
+                        return (
+                          <span key={tag} className="inline-flex items-center gap-1.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 rounded-full pl-1.5 pr-2.5 py-0.5 text-[11px] font-black">
+                            <span className="bg-purple-500/30 rounded-full px-1.5 py-0.5 text-[10px]">{tag}</span>
+                            <span className="truncate max-w-[7rem] normal-case tracking-normal">{d?.name ?? '—'}</span>
+                            <span className="text-purple-200">+{pts}</span>
+                          </span>
+                        );
+                      })}
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={runSimulation}
+                    disabled={hasConflict || loading}
+                    title="Recalculate the standings (or press Enter)"
+                    className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-red-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-red-600 disabled:hover:to-red-500"
+                  >
+                    <Calculator size={18} /> Compute
+                    <kbd className="hidden sm:inline text-[10px] font-black opacity-70 border border-white/25 rounded px-1.5 py-0.5">ENTER</kbd>
+                  </button>
+                  <button
+                    onClick={reset}
+                    disabled={!hasPicks && drivers.length === originalDrivers.length}
+                    className="sm:w-1/3 bg-neutral-900/80 hover:bg-neutral-800 text-white font-bold py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-white/10 hover:border-white/30 backdrop-blur-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-neutral-900/80"
+                  >
+                    <RefreshCw size={16} /> Reset
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -408,26 +580,39 @@ const SimulatorPage = () => {
                   </p>
 
                   <div className="space-y-2">
-                    {maxPointsInfo.contenders.map((c, i) => (
-                      <div key={c.id} className="flex items-center gap-3 bg-neutral-950/70 border border-white/5 rounded-md px-3 py-2">
-                        <span className="w-5 text-center text-xs font-black text-neutral-500">{i + 1}</span>
-                        <span className="w-1 h-6 rounded-full" style={{ backgroundColor: teamColors[c.team] || '#666' }}></span>
-                        <div className="flex-1 min-w-0">
-                          <span className="block text-xs font-black uppercase italic truncate text-white">{c.name}</span>
-                          <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest truncate">{c.team}</span>
+                    {maxPointsInfo.contenders.map((c, i) => {
+                      const progress = maxPointsInfo.leaderPoints > 0 ? (c.maxPossible / maxPointsInfo.leaderPoints) * 100 : 0;
+                      return (
+                        <div key={c.id} className="flex items-center gap-3 bg-neutral-950/70 border border-white/5 rounded-md px-3 py-2.5">
+                          <span className="w-5 text-center text-xs font-black text-neutral-500">{i + 1}</span>
+                          <span className="w-1 h-6 rounded-full" style={{ backgroundColor: teamColors[c.team] || '#666' }}></span>
+                          <div className="flex-1 min-w-0">
+                            <span className="block text-xs font-black uppercase italic truncate text-white">{c.name}</span>
+                            <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest truncate">{c.team}</span>
+                            {/* Max possible progress bar */}
+                            <div className="mt-1.5 h-1 bg-neutral-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(progress, 100)}%`,
+                                  backgroundColor: c.eliminated ? '#525252' : teamColors[c.team] || '#666'
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-sm font-black font-mono text-white">{c.points}</span>
+                            <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest">max {c.maxPossible}</span>
+                          </div>
+                          <span
+                            title={c.eliminated ? 'Eliminated from title contention' : 'Still mathematically in title contention'}
+                            className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${c.eliminated ? 'text-neutral-500 border-neutral-700 bg-neutral-900' : 'text-green-400 border-green-500/40 bg-green-500/10'}`}
+                          >
+                            {c.eliminated ? 'OUT' : 'IN'}
+                          </span>
                         </div>
-                        <div className="text-right">
-                          <span className="block text-sm font-black font-mono text-white">{c.points}</span>
-                          <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest">max {c.maxPossible}</span>
-                        </div>
-                        <span
-                          title={c.eliminated ? 'Eliminated from title contention' : 'Still mathematically in title contention'}
-                          className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${c.eliminated ? 'text-neutral-500 border-neutral-700 bg-neutral-900' : 'text-green-400 border-green-500/40 bg-green-500/10'}`}
-                        >
-                          {c.eliminated ? 'OUT' : 'IN'}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -486,23 +671,30 @@ const SimulatorPage = () => {
                     <div key={i} className="h-20 bg-neutral-800/50 rounded-lg w-full border border-white/5"></div>
                   ))}
                 </div>
+              ) : drivers.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
+                  <Activity size={48} className="text-neutral-700 mb-4" />
+                  <h4 className="text-xl font-black text-neutral-500 mb-2">No standings data yet</h4>
+                  <p className="text-sm text-neutral-600 max-w-sm">Waiting for championship data to load. Check your connection or refresh the page.</p>
+                </div>
               ) : (
-                <div className="space-y-3 flex-1">
-                  
+                <div className="space-y-3 flex-1" role="region" aria-live="polite" aria-label="Simulated championship standings">
+
                   {/* Drivers View */}
                   {viewMode === 'drivers' && drivers.slice(0, 10).map((d) => {
                     const original = originalDrivers.find(o => driverKey(o) === driverKey(d));
                     const posChange = (original?.position || 0) - (d.position || 0);
                     const ptsGained = (d.points || 0) - (original?.points || 0);
                     const teamColor = teamColors[d.team] || '#666';
-                    
+                    const teamLogo = teamLogos[d.team];
+
                     return (
-                      <div 
-                        key={driverKey(d)} 
+                      <div
+                        key={driverKey(d)}
                         className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-lg p-4 flex items-center gap-4 md:gap-6 transition-ui duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
                       >
                         <div className="absolute left-0 top-0 bottom-0 w-1.5 " style={{ backgroundColor: teamColor, color: teamColor }}></div>
-                        
+
                         <div className="flex flex-col items-center justify-center w-12 md:w-16 ml-2">
                           <span className="text-xl md:text-3xl font-black italic text-white ">{d.position}</span>
                           <div className="flex items-center justify-center mt-0.5">
@@ -517,10 +709,15 @@ const SimulatorPage = () => {
                         </div>
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-sm group-hover:text-red-400 transition-colors">
+                          <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-sm group-hover:text-red-400 transition-colors flex items-center gap-2">
                             {d.name}
+                            {teamLogo && <img src={teamLogo} alt={d.team} className="h-4 md:h-5 object-contain opacity-70" />}
                           </h4>
-                          <span className="text-xs md:text-sm font-bold text-neutral-400 tracking-normal truncate">{d.team}</span>
+                          <div className="flex items-center gap-2 text-xs md:text-sm font-bold text-neutral-400 tracking-normal">
+                            <span className="truncate">{d.team}</span>
+                            {d.wins ? <span className="text-yellow-500/80">• {d.wins}W</span> : null}
+                            {d.podiums ? <span className="text-neutral-500">• {d.podiums}P</span> : null}
+                          </div>
                         </div>
 
                         <div className="text-right flex items-center gap-4">
@@ -613,10 +810,11 @@ const SimulatorPage = () => {
               )}
             </div>
           </div>
-          
-        </div>
-      </main>
-    </div>
+
+          </div> {/* Close grid container */}
+        </main>
+      </div>
+    </>
   );
 };
 

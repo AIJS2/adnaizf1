@@ -12,6 +12,7 @@ from services.fastf1_safe import (
     safe_getattr,
 )
 from services import openf1_service
+from services import openf1_lap_fallback
 
 DETAIL_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=True, messages=True)
 LIGHT_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=False, messages=False)
@@ -74,23 +75,27 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
     # strategy, speed traps, sectors, charts) is untouched.
     _openf1_key_cache: dict[str, int] = {}
 
-    def openf1_rows_for(session_name: str, session_code: str) -> list:
-        """Classification rows from OpenF1, or [] when it has nothing.
+    def openf1_session_key(session_name: str, session_code: str):
+        """Cached OpenF1 `session_key` lookup; None when OpenF1 has no match.
 
         `session_name` is the app's label ('Sprint', 'Race', ...); the cache is
         keyed on it because a race weekend has at most one of each.
         """
-        try:
-            key = _openf1_key_cache.get(session_name)
-            if key is None:
-                # The circuit disambiguates a season's 20+ sessions named
-                # "Race"; without it session_key_for refuses to guess.
-                key = openf1_service.session_key_for(
-                    year, round_number, session_code,
-                    circuit=event.get("Location"),
-                )
-                _openf1_key_cache[session_name] = key if key is not None else 0
+        key = _openf1_key_cache.get(session_name)
+        if key is None:
+            # The circuit disambiguates a season's 20+ sessions named
+            # "Race"; without it session_key_for refuses to guess.
+            key = openf1_service.session_key_for(
+                year, round_number, session_code,
+                circuit=event.get("Location"),
+            )
+            _openf1_key_cache[session_name] = key if key is not None else 0
+        return key or None
 
+    def openf1_rows_for(session_name: str, session_code: str) -> list:
+        """Classification rows from OpenF1, or [] when it has nothing."""
+        try:
+            key = openf1_session_key(session_name, session_code)
             rows = openf1_service.fetch_classification(
                 key, year, round_number, session_code,
             )
@@ -821,7 +826,109 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                         available_tabs.append("Lap Times")
             except Exception as e:
                 logging.error(f"Gagal memproses chart: {e}")
-    
+
+    # --- OpenF1 enrichment: lap-derived blocks FastF1 cannot serve --------
+    # For many 2026 rounds F1's timing archive carries no session data at
+    # all ("No data for this session!"): FastF1 still reports the
+    # classification (backfilled from Ergast/Jolpica) while every
+    # lap-derived block above stays empty. OpenF1 publishes its own
+    # laps/stints/weather for those sessions, so every *empty* block is
+    # rebuilt from it below. FastF1 output is never replaced, only filled
+    # in — rounds its archive can serve stay exactly as they were.
+    race_session_obj = available_sessions.get('Race')
+    if race_session_obj is None or not has_rows(race_session_obj, 'laps'):
+        try:
+            position_by_number = {
+                int(row['driver_number']): int(row['position'])
+                for row in results
+                if row.get('driver_number') is not None and row.get('position') is not None
+            } if results else {}
+            race_blocks = openf1_lap_fallback.build_race_blocks(
+                openf1_session_key('Race', 'R'), position_by_number,
+            )
+
+            filled = []
+            if race_blocks:
+                if fastest_lap_info is None and race_blocks.get('fastest_lap'):
+                    fastest_lap_info = race_blocks['fastest_lap']
+                    filled.append('fastest lap')
+                if not tyre_strategy and race_blocks.get('tyre_strategy'):
+                    tyre_strategy = race_blocks['tyre_strategy']
+                    if 'Tyre Strategy' not in available_tabs:
+                        available_tabs.append('Tyre Strategy')
+                    filled.append('tyre strategy')
+                if not speed_traps and race_blocks.get('speed_traps'):
+                    speed_traps = race_blocks['speed_traps']
+                    filled.append('speed traps')
+                if not sector_matrix and race_blocks.get('sector_matrix'):
+                    sector_matrix = race_blocks['sector_matrix']
+                    if 'Speed & Sectors' not in available_tabs:
+                        available_tabs.append('Speed & Sectors')
+                    filled.append('sectors')
+                if not weather_info and race_blocks.get('weather_info'):
+                    weather_info = race_blocks['weather_info']
+                    filled.append('weather')
+                if not lap_chart and race_blocks.get('lap_chart'):
+                    lap_chart = race_blocks['lap_chart']
+                    if 'Lap Chart' not in available_tabs:
+                        available_tabs.append('Lap Chart')
+                    filled.append('lap chart')
+                if not gap_chart and race_blocks.get('gap_chart'):
+                    gap_chart = race_blocks['gap_chart']
+                    if 'Race Progression' not in available_tabs:
+                        available_tabs.append('Race Progression')
+                    filled.append('race progression')
+                if not lap_times_chart and race_blocks.get('lap_times_chart'):
+                    lap_times_chart = race_blocks['lap_times_chart']
+                    if 'Lap Times' not in available_tabs:
+                        available_tabs.append('Lap Times')
+                    filled.append('lap times')
+
+            # Sessions without a FastF1 classification (practices, sprint
+            # qualifying) get their fastest-lap tables from OpenF1 too.
+            practice_targets = [
+                ('Practice 1', 'FP1', practice1_results),
+                ('Practice 2', 'FP2', practice2_results),
+                ('Practice 3', 'FP3', practice3_results),
+            ]
+            for tab_name, session_code, current in practice_targets:
+                if current:
+                    continue
+                rows = openf1_lap_fallback.build_fastest_lap_rows(
+                    openf1_session_key(tab_name, session_code),
+                )
+                if not rows:
+                    continue
+                if tab_name == 'Practice 1':
+                    practice1_results = rows
+                elif tab_name == 'Practice 2':
+                    practice2_results = rows
+                else:
+                    practice3_results = rows
+                if tab_name not in available_tabs:
+                    available_tabs.append(tab_name)
+                filled.append(tab_name)
+
+            if not sprint_qualifying_results:
+                rows = openf1_lap_fallback.build_fastest_lap_rows(
+                    openf1_session_key('Sprint Qualifying', 'SQ'),
+                )
+                if rows:
+                    sprint_qualifying_results = rows
+                    if 'Sprint Qualifying' not in available_tabs:
+                        available_tabs.append('Sprint Qualifying')
+                    filled.append('Sprint Qualifying')
+
+            if filled:
+                print(f"  -> OpenF1 fallback mengisi: {', '.join(filled)}.")
+            else:
+                print("  -> OpenF1 fallback: tidak ada data tambahan untuk race ini.")
+        except Exception as e:  # noqa: BLE001 - enrichment must never break the page
+            logging.warning(
+                "OpenF1 enrichment failed for %s/%s: %s: %s",
+                year, round_number, type(e).__name__, e,
+            )
+
     race_status = "Completed" if results else ("Ongoing" if available_tabs else "Upcoming")
 
     final_data = {

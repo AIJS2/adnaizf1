@@ -30,6 +30,8 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 - `GET /api/clear_cache/{year}` is the only destructive endpoint; it requires an `X-API-Key` header matching `API_KEY` (`utils/auth.py`). Public read endpoints stay open.
 - No pytest suite exists. Edge-case sweep: `python tests_chaos_probe.py` (standalone TestClient, not pytest; hits the network and FastF1 — 429s are notes, not failures).
 - `Backend/scripts/seed_standings.py` writes `f1_stats.db` (gitignored); not used by the running app.
+- Race details are two-sourced: FastF1 first, then `services/openf1_lap_fallback.py` fills every lap-derived block FastF1 left empty (fastest lap, tyre strategy, speed/sectors, weather, lap/position/gap charts, practice + sprint-qualifying tables) when its timing archive has no laps for the session ("No data for this session!"). FastF1 output is never replaced, and the fallback only runs in that gap.
+- `services/fastf1_safe.py` also bounds FastF1's HTTP calls (10s connect / 30s read). FastF1 passes no timeout of its own, so one stalled upstream read otherwise hangs `session.load()` — and the request that triggered it — forever.
 
 ## Frontend — run from `F1-Fullstack-project/frontend/`
 ```bash

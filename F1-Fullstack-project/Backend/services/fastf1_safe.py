@@ -13,6 +13,10 @@ envelope, so they are handled once here:
    event") or for an out-of-range round ("Invalid round: 9999").
 3. `fastf1.get_event_schedule()` raises `ValueError` for a year it has no
    data for at all ("Failed to load any schedule data.").
+4. FastF1's HTTP layer calls `requests` with no timeout at all, so a stalled
+   livetiming.formula1.com connection leaves `session.load()` reading
+   forever — the worker thread and the request that triggered it never
+   finish. `_patch_fastf1_http_timeouts` bounds that once per process.
 
 `safe_getattr` turns (1) into "attribute absent", and the loaders below turn
 (2) into `None`. Callers decide whether that means "empty payload" or
@@ -20,6 +24,7 @@ envelope, so they are handled once here:
 """
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Any, Optional
 
@@ -128,6 +133,40 @@ def sanitize_event_schedule(schedule: Any) -> Any:
 
 _CACHE_ENSURE_DONE = False
 
+# FastF1's request wrappers take no timeout; inject a bounded (connect, read)
+# one wherever FastF1 set none of its own. The read timeout applies to each
+# read of the response body, so large-but-alive downloads are unaffected.
+_FASTF1_HTTP_TIMEOUT = (10, 30)
+_HTTP_TIMEOUTS_PATCHED = False
+
+
+def _patch_fastf1_http_timeouts() -> None:
+    """Give FastF1's `requests_get`/`requests_post` a default HTTP timeout.
+
+    Without one, a single stalled upstream connection hangs `session.load()`
+    indefinitely (observed live: a cold race-details compute was stuck in a
+    chunked read for 10+ minutes until the server was restarted). With the
+    timeout a stall fails like any other missing endpoint — data the app is
+    already built to tolerate. Idempotent; runs once per process.
+    """
+    global _HTTP_TIMEOUTS_PATCHED
+    if _HTTP_TIMEOUTS_PATCHED:
+        return
+    try:
+        import fastf1.req
+        for name in ("requests_get", "requests_post"):
+            original = fastf1.req.Cache.__dict__[name].__func__
+
+            @functools.wraps(original)
+            def patched(cls, url, _original=original, **kwargs):
+                kwargs.setdefault("timeout", _FASTF1_HTTP_TIMEOUT)
+                return _original(cls, url, **kwargs)
+
+            setattr(fastf1.req.Cache, name, classmethod(patched))
+    except Exception as e:  # noqa: BLE001 - a missing knob must never break loads
+        logger.warning(f"Could not add FastF1 HTTP timeouts: {type(e).__name__}: {e}")
+    _HTTP_TIMEOUTS_PATCHED = True
+
 
 def _ensure_fastf1_cache() -> None:
     """Point FastF1 at the app's cache dir even in scripts that never import
@@ -137,6 +176,7 @@ def _ensure_fastf1_cache() -> None:
     req.py opens directories with `os.makedirs` (no exist_ok) — raising
     FileExistsError on Windows and hanging every request.
     """
+    _patch_fastf1_http_timeouts()
     global _CACHE_ENSURE_DONE
     if _CACHE_ENSURE_DONE:
         return

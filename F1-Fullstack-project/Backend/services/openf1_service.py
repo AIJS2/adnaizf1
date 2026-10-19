@@ -237,6 +237,26 @@ def get_drivers(session_key: int) -> Optional[list[dict[str, Any]]]:
     return _get("/drivers", params={"session_key": session_key})
 
 
+def get_laps(session_key: int) -> Optional[list[dict[str, Any]]]:
+    """Every recorded lap of `session_key`, one row per driver per lap.
+
+    Rows carry `lap_duration`, `duration_sector_1..3`, `st_speed`/`i1_speed`/
+    `i2_speed` and `date_start`, which is everything the lap-derived blocks
+    in `openf1_lap_fallback` need.
+    """
+    return _get("/laps", params={"session_key": session_key})
+
+
+def get_stints(session_key: int) -> Optional[list[dict[str, Any]]]:
+    """Tyre stints of `session_key` (compound + lap range per stint), or None."""
+    return _get("/stints", params={"session_key": session_key})
+
+
+def get_weather(session_key: int) -> Optional[list[dict[str, Any]]]:
+    """Weather samples of `session_key` (track/air temp, humidity, rain), or None."""
+    return _get("/weather", params={"session_key": session_key})
+
+
 def openf1_status() -> dict[str, Any]:
     """Connection probe for the /health endpoint.
 
@@ -461,6 +481,9 @@ __all__ = [
     "get_positions",
     "get_session_result",
     "get_drivers",
+    "get_laps",
+    "get_stints",
+    "get_weather",
     "openf1_status",
     "fetch_classification",
     "session_key_for",

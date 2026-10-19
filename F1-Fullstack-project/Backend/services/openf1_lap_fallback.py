@@ -15,7 +15,8 @@ rebuilds the exact block shapes `race_details_service` derives from
     weather_info, lap_chart, gap_chart, lap_times_chart
 
 plus the fastest-lap tables used by sessions without a FastF1 classification
-(practices and sprint qualifying).
+(practices and sprint qualifying) and the starting grid, rebuilt from the
+opening samples of OpenF1's position stream.
 
 The caller runs this only for blocks that stayed empty, so FastF1 output is
 never replaced — rounds its archive can serve keep their original data.
@@ -51,6 +52,12 @@ _REQUEST_PAUSE_SECONDS = 0.35
 # loops, red flags), not values the charts should plot.
 _MAX_GAP_SECONDS = 180.0
 _MAX_LAP_SECONDS = 300.0
+
+# A driver's first /position sample lands inside the same second as the
+# session's first (all 22 drivers at +0.0s in both probed races). The window
+# tolerates a slow feed without ever admitting a mid-race sample, which would
+# move a driver who pitted or retired early out of their starting slot.
+_GRID_WINDOW_SECONDS = 8.0
 
 
 def _pause() -> None:
@@ -176,6 +183,74 @@ def build_fastest_lap_rows(session_key: Optional[int]) -> list[dict[str, Any]]:
     return rows
 
 
+def build_starting_grid(session_key: Optional[int]) -> list[dict[str, Any]]:
+    """Starting grid from OpenF1's opening `/position` samples.
+
+    OpenF1 has no `/starting_grid` endpoint — every 2026 session answers 404 —
+    but its position stream opens on the grid itself: in both probed races all
+    22 drivers reported their slot within the first second, matching the
+    qualifying order plus any penalties. Each driver's first sample therefore
+    is their starting position. Rows come back in the same shape
+    `race_details_service` builds from FastF1's `GridPosition`.
+    """
+    if session_key is None:
+        return []
+
+    roster = _build_roster(openf1_service.get_drivers(session_key))
+    if not roster:
+        return []
+    _pause()
+    rows = openf1_service.get_positions(session_key)
+    if not rows:
+        return []
+
+    samples: dict[int, list[tuple[datetime, int]]] = {}
+    opening_moment: Optional[datetime] = None
+    for row in rows:
+        number = _as_int(row.get("driver_number"))
+        moment = _parse_dt(row.get("date"))
+        position = _as_int(row.get("position"))
+        if number is None or moment is None or position is None:
+            continue
+        samples.setdefault(number, []).append((moment, position))
+        if opening_moment is None or moment < opening_moment:
+            opening_moment = moment
+    if not samples or opening_moment is None:
+        return []
+
+    chosen_samples: list[tuple[int, datetime, int]] = []
+    for number, driver_samples in samples.items():
+        driver_samples.sort(key=lambda sample: sample[0])
+        in_window = next(
+            (
+                sample for sample in driver_samples
+                if (sample[0] - opening_moment).total_seconds() <= _GRID_WINDOW_SECONDS
+            ),
+            None,
+        )
+        # A driver with no sample inside the window (a late feed, a pit-lane
+        # start) still gets a slot from their own first sample.
+        moment, position = in_window or driver_samples[0]
+        chosen_samples.append((number, moment, position))
+
+    # Sort by the position read at the start, breaking ties on sample time, and
+    # renumber so a duplicate from a late sample cannot produce two "P7"s.
+    chosen_samples.sort(key=lambda sample: (sample[2], sample[1]))
+    grid: list[dict[str, Any]] = []
+    for index, (number, _moment, _position) in enumerate(chosen_samples, start=1):
+        full_name, team_name, abbreviation = _meta(roster, number)
+        if not full_name:
+            continue
+        grid.append({
+            "grid_position": index,
+            "driver_number": number,
+            "full_name": full_name,
+            "team_name": team_name,
+            "abbreviation": abbreviation,
+        })
+    return grid
+
+
 # --- race blocks -------------------------------------------------------------
 
 
@@ -210,7 +285,9 @@ def _tyre_strategy(
     stints: list[dict[str, Any]],
     roster: dict[int, dict[str, str]],
     position_by_number: dict[int, int],
+    status_by_number: Optional[dict[int, str]] = None,
 ) -> list[dict[str, Any]]:
+    status_by_number = status_by_number or {}
     by_driver: dict[int, list[dict[str, Any]]] = {}
     for row in stints:
         number = _as_int(row.get("driver_number"))
@@ -248,13 +325,23 @@ def _tyre_strategy(
             "full_name": full_name,
             "team_name": team_name,
             "driver_number": number,
-            "position": position_by_number.get(number, 99),
+            "position": position_by_number.get(number, 0),
+            "status": status_by_number.get(number, ""),
             "total_laps": max(s["end_lap"] for s in stints_out),
             "stints": stints_out,
             "pit_laps": pit_laps,
         })
 
-    entries.sort(key=lambda entry: entry["position"])
+    # Finishers first in classification order; unclassified cars (position 0,
+    # status DNF/DNS/DSQ) last, the one that completed the most laps first. A
+    # plain position sort put every retirement on the top row as "P0".
+    def _strategy_order(entry: dict[str, Any]) -> tuple[int, int, int, str]:
+        position = entry["position"]
+        if position > 0:
+            return (0, position, 0, entry["driver"])
+        return (1, 0, -entry["total_laps"], entry["driver"])
+
+    entries.sort(key=_strategy_order)
     return entries
 
 
@@ -308,7 +395,7 @@ def _speed_and_sectors(
         full_name, team_name, abbr = _meta(roster, number)
         if not abbr:
             continue
-        position = position_by_number.get(number, 99)
+        position = position_by_number.get(number, 0)
         speed = round(top_speed.get(number, 0.0), 1)
 
         speed_traps.append({
@@ -348,7 +435,7 @@ def _speed_and_sectors(
     speed_traps.sort(key=lambda entry: entry["speed"], reverse=True)
     for rank, entry in enumerate(speed_traps):
         entry["rank"] = rank + 1
-    sector_matrix.sort(key=lambda entry: entry["position"])
+    sector_matrix.sort(key=lambda entry: (entry["position"] <= 0, entry["position"]))
     return speed_traps, sector_matrix
 
 
@@ -436,6 +523,7 @@ def _series_charts(
 def build_race_blocks(
     session_key: Optional[int],
     position_by_number: dict[int, int],
+    status_by_number: Optional[dict[int, str]] = None,
 ) -> dict[str, Any]:
     """Fetch OpenF1 data for a race session and build every lap-derived block.
 
@@ -468,7 +556,7 @@ def build_race_blocks(
     if fastest:
         blocks["fastest_lap"] = fastest
 
-    strategy = _tyre_strategy(stints, roster, position_by_number)
+    strategy = _tyre_strategy(stints, roster, position_by_number, status_by_number)
     if strategy:
         blocks["tyre_strategy"] = strategy
 
@@ -493,4 +581,4 @@ def build_race_blocks(
     return blocks
 
 
-__all__ = ["build_fastest_lap_rows", "build_race_blocks"]
+__all__ = ["build_fastest_lap_rows", "build_starting_grid", "build_race_blocks"]

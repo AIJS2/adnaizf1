@@ -407,9 +407,28 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
             # table only — the lap-derived data above is unaffected either way.
             fallback_rows = openf1_rows_for('Sprint', 'S')
             if fallback_rows:
-                available_tabs.extend(['Sprint Grid', 'Sprint'])
+                available_tabs.append('Sprint')
                 sprint_results = fallback_rows
                 print(f"  -> OpenF1 fallback menyediakan {len(fallback_rows)} baris klasifikasi Sprint.")
+
+        # OpenF1's opening position samples carry the actual sprint grid when
+        # FastF1 has none (the same derivation the race uses below). Only
+        # advertise the tab when rows actually come back.
+        if sprint_results and not sprint_grid_results:
+            try:
+                grid_rows = openf1_lap_fallback.build_starting_grid(
+                    openf1_session_key('Sprint', 'S'),
+                )
+                if grid_rows:
+                    sprint_grid_results = grid_rows
+                    if 'Sprint Grid' not in available_tabs:
+                        available_tabs.append('Sprint Grid')
+                    print(f"  -> OpenF1 mengisi sprint grid ({len(grid_rows)} baris).")
+            except Exception as e:  # noqa: BLE001 - enrichment must never break the page
+                logging.warning(
+                    "OpenF1 sprint grid failed for %s/%s: %s: %s",
+                    year, round_number, type(e).__name__, e,
+                )
     
     if 'Race' in available_sessions:
         race_session = available_sessions['Race']
@@ -473,7 +492,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
             # data above stays empty rather than being guessed from it.
             fallback_rows = openf1_rows_for('Race', 'R')
             if fallback_rows:
-                available_tabs.extend(['Starting Grid', 'Race'])
+                available_tabs.append('Race')
                 results = fallback_rows
                 print(f"  -> OpenF1 fallback menyediakan {len(fallback_rows)} baris klasifikasi Race.")
 
@@ -849,6 +868,26 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
             except Exception as e:
                 logging.error(f"Gagal memproses chart: {e}")
 
+    # --- Starting grid from OpenF1 when FastF1 has none --------------------
+    # FastF1's GridPosition is NaN until F1 finalises the race; OpenF1's
+    # opening position samples already carry the actual grid. Only advertise
+    # the tab when rows exist, so an empty "Starting Grid" is never shown.
+    if results and not starting_grid:
+        try:
+            grid_rows = openf1_lap_fallback.build_starting_grid(
+                openf1_session_key('Race', 'R'),
+            )
+            if grid_rows:
+                starting_grid = grid_rows
+                if 'Starting Grid' not in available_tabs:
+                    available_tabs.append('Starting Grid')
+                print(f"  -> OpenF1 mengisi starting grid ({len(grid_rows)} baris).")
+        except Exception as e:  # noqa: BLE001 - enrichment must never break the page
+            logging.warning(
+                "OpenF1 starting grid failed for %s/%s: %s: %s",
+                year, round_number, type(e).__name__, e,
+            )
+
     # --- OpenF1 enrichment: lap-derived blocks FastF1 cannot serve --------
     # For many 2026 rounds F1's timing archive carries no session data at
     # all ("No data for this session!"): FastF1 still reports the
@@ -865,8 +904,13 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 for row in results
                 if row.get('driver_number') is not None and row.get('position') is not None
             } if results else {}
+            status_by_number = {
+                int(row['driver_number']): str(row.get('status') or '')
+                for row in results
+                if row.get('driver_number') is not None
+            } if results else {}
             race_blocks = openf1_lap_fallback.build_race_blocks(
-                openf1_session_key('Race', 'R'), position_by_number,
+                openf1_session_key('Race', 'R'), position_by_number, status_by_number,
             )
 
             filled = []

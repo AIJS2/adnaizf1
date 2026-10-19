@@ -135,6 +135,20 @@ const PendingAwareCells: React.FC<{ row: SessionResultRow }> = ({ row }) => {
   );
 };
 
+/**
+ * POS cell for classification tables. OpenF1's classification reports retired
+ * cars with `position: 0` (it never classifies them), which used to render as
+ * a confident "0" above every finisher. Show the reason instead.
+ */
+const PositionCell: React.FC<{ row: SessionResultRow }> = ({ row }) => {
+  const position = toNumber(row.position);
+  return (
+    <td className="p-3 font-bold text-center text-base">
+      {position > 0 ? position : (row.status || '—')}
+    </td>
+  );
+};
+
 // =======================================================================
 
 const PracticeResultTable: React.FC<RaceTableProps> = ({ data }) => (
@@ -153,7 +167,7 @@ const PracticeResultTable: React.FC<RaceTableProps> = ({ data }) => (
       <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
-            <td className="p-3 font-bold text-center text-base">{d.position}</td>
+            <PositionCell row={d} />
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
@@ -189,7 +203,7 @@ const QualifyingResultTable: React.FC<RaceTableProps> = ({ data }) => (
       <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
-            <td className="p-3 font-bold text-center text-base">{d.position}</td>
+            <PositionCell row={d} />
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
@@ -231,7 +245,7 @@ const SprintResultTable: React.FC<RaceTableProps> = ({ data }) => (
       <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
-            <td className="p-3 font-bold text-center text-base">{d.position}</td>
+            <PositionCell row={d} />
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
@@ -266,7 +280,7 @@ const RaceResultTable: React.FC<RaceTableProps> = ({ data }) => (
       <TableBody data={data}>
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
-            <td className="p-3 font-bold text-center text-base">{d.position}</td>
+            <PositionCell row={d} />
             <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
@@ -369,7 +383,9 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
         {Array.isArray(tyreData) ? tyreData.map((data: TyreStrategyEntry) => (
           <div key={data.driver} className="flex items-center gap-4 group">
             <div className="w-16 font-bold text-lg text-neutral-400 group-hover:text-white transition-colors flex items-center justify-between">
-              <span className="text-xs opacity-50 font-mono">P{data.position}</span>
+              <span className="text-xs opacity-50 font-mono">
+                {toNumber(data.position) > 0 ? `P${data.position}` : (data.status || '—')}
+              </span>
               <span>{data.driver}</span>
             </div>
             <div className="flex-1 flex gap-1 h-9 rounded-lg overflow-hidden bg-neutral-900/80 shadow-inner border border-neutral-800/80 p-1 backdrop-blur-sm relative">
@@ -515,7 +531,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800/50">
-                {sectorMatrix && [...sectorMatrix].sort((a, b) => Number(a.position) - Number(b.position)).map((d: SectorMatrixEntry) => (
+                {sectorMatrix && [...sectorMatrix].sort((a, b) => (Number(a.position) || 999) - (Number(b.position) || 999)).map((d: SectorMatrixEntry) => (
                   <tr key={d.driver} className="hover:bg-neutral-800/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-2 font-bold text-white">

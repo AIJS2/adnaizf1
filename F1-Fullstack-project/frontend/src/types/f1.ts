@@ -230,6 +230,8 @@ export interface TyreStrategyEntry {
   team_name: string;
   driver_number?: NumericString;
   position: NumericString;
+  /** "DNF" / "DNS" / "DSQ" for a car with no classification position. */
+  status?: string;
   total_laps?: NumericString;
   stints?: TyreStint[];
   pit_laps?: NumericString[];

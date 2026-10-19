@@ -146,13 +146,13 @@ const DriverSelector = ({
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      <span className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5 font-bold">
+      <span className="block text-[11px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5 font-bold">
         {label}
       </span>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-neutral-900/90 hover:bg-neutral-850 border border-neutral-800 rounded-xl text-left transition-all shadow-lg group focus:outline-none focus:border-neutral-600"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-neutral-900/90 hover:bg-neutral-850 border border-neutral-800 rounded-md text-left transition-ui shadow-lg group focus:outline-none focus:border-neutral-600"
         style={{ borderLeftColor: accentColor, borderLeftWidth: '4px' }}
       >
         {selectedDriver ? (
@@ -167,7 +167,7 @@ const DriverSelector = ({
                 <span className="text-white font-black text-sm uppercase italic truncate">
                   {selectedDriver.name}
                 </span>
-                <span className="text-[10px] font-mono font-bold text-neutral-500">
+                <span className="text-[11px] font-mono font-bold text-neutral-500">
                   {selectedDriver.abbreviation}
                 </span>
               </div>
@@ -177,12 +177,12 @@ const DriverSelector = ({
             </div>
           </div>
         ) : (
-          <span className="text-neutral-500 text-sm font-mono">Select driver...</span>
+          <span className="text-neutral-500 text-sm font-mono">Select driver…</span>
         )}
         <div className="flex items-center gap-2 flex-shrink-0">
           {selectedDriver && (
             <span
-              className="text-[10px] font-mono font-black px-2 py-0.5 rounded"
+              className="text-[11px] font-mono font-black px-2 py-0.5 rounded"
               style={{
                 backgroundColor: `${accentColor}20`,
                 color: accentColor,
@@ -200,15 +200,19 @@ const DriverSelector = ({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-2 max-h-72 flex flex-col">
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-lg shadow-2xl p-2 max-h-72 flex flex-col">
           <div className="relative mb-2">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
             />
             <input
-              type="text"
-              placeholder="Search driver, team, or #..."
+              type="search"
+              aria-label="Filter drivers"
+              name="driver-filter"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Search driver, team, or #…"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-red-500"
@@ -231,7 +235,7 @@ const DriverSelector = ({
                     setIsOpen(false);
                     setFilter('');
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-ui ${
                     isSelected
                       ? 'bg-neutral-800/90 text-white border border-neutral-700'
                       : 'hover:bg-neutral-900/80 text-neutral-300'
@@ -243,7 +247,7 @@ const DriverSelector = ({
                       style={{ backgroundColor: teamCol }}
                     />
                     {driver.driverNumber && (
-                      <span className="font-mono text-[10px] text-neutral-400 w-6">
+                      <span className="font-mono text-[11px] text-neutral-400 w-6">
                         #{driver.driverNumber}
                       </span>
                     )}
@@ -251,7 +255,7 @@ const DriverSelector = ({
                       <span className="text-xs font-bold truncate block text-white">
                         {driver.name}
                       </span>
-                      <span className="text-[10px] text-neutral-500 truncate block">
+                      <span className="text-[11px] text-neutral-500 truncate block">
                         {driver.team}
                       </span>
                     </div>
@@ -259,14 +263,14 @@ const DriverSelector = ({
 
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {isOther && (
-                      <span className="text-[9px] font-mono text-neutral-500 uppercase bg-neutral-900 px-1.5 py-0.5 rounded">
+                      <span className="text-[11px] font-mono text-neutral-500 uppercase bg-neutral-900 px-1.5 py-0.5 rounded">
                         Rival
                       </span>
                     )}
-                    <span className="text-[10px] font-mono font-bold text-neutral-400">
+                    <span className="text-[11px] font-mono font-bold text-neutral-400">
                       P{driver.position}
                     </span>
-                    <span className="text-[10px] font-mono font-black text-white w-12 text-right">
+                    <span className="text-[11px] font-mono font-black text-white w-12 text-right">
                       {driver.points} pts
                     </span>
                   </div>
@@ -335,7 +339,7 @@ const ComparativeMetricBar = ({ metric, driver1, driver2 }: ComparativeMetricBar
   }
 
   return (
-    <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-4 shadow-sm hover:border-neutral-700 transition-colors">
+    <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-4 shadow-sm hover:border-neutral-700 transition-colors">
       <div className="flex justify-between items-center text-xs mb-2">
         <span className={`font-black text-sm font-mono ${winner === 1 ? 'text-white' : 'text-neutral-500'}`}>
           {display1}
@@ -351,10 +355,10 @@ const ComparativeMetricBar = ({ metric, driver1, driver2 }: ComparativeMetricBar
         </span>
       </div>
       <div className="w-full bg-neutral-800 rounded-full h-2.5 overflow-hidden flex">
-        <div className="h-full transition-all duration-700 rounded-l-full" style={{ width: `${p1Width}%`, backgroundColor: driver1.color }} />
-        <div className="h-full transition-all duration-700 rounded-r-full" style={{ width: `${p2Width}%`, backgroundColor: driver2.color }} />
+        <div className="h-full transition-[width] duration-700 rounded-l-full" style={{ width: `${p1Width}%`, backgroundColor: driver1.color }} />
+        <div className="h-full transition-[width] duration-700 rounded-r-full" style={{ width: `${p2Width}%`, backgroundColor: driver2.color }} />
       </div>
-      <div className="flex justify-between items-center mt-2 text-[10px] font-mono text-neutral-500 font-medium">
+      <div className="flex justify-between items-center mt-2 text-[11px] font-mono text-neutral-500 font-medium">
         <span>{driver1.abbreviation}</span>
         <span>{invert ? 'Lower is better' : 'Higher is better'}</span>
         <span>{driver2.abbreviation}</span>
@@ -699,19 +703,19 @@ const ComparePage = () => {
   ];
 
   return (
-    <div className="bg-[#0a0a0a] min-h-screen text-white font-sans relative selection:bg-red-500 selection:text-white">
+    <div className="bg-tarmac min-h-screen text-white font-sans relative selection:bg-red-500 selection:text-white">
       <div className="fixed inset-0 xl:left-72 bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
       <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-950/20 via-neutral-950/95 to-neutral-950 pointer-events-none" />
 
       {driver1 && (
         <div
-          className="fixed top-20 left-10 xl:left-80 w-96 h-96 blur-[150px] opacity-25 rounded-full pointer-events-none transition-all duration-700"
+          className="fixed top-20 left-10 xl:left-80 w-96 h-96 blur-[150px] opacity-25 rounded-full pointer-events-none transition-ui duration-700"
           style={{ backgroundColor: d1Color }}
         />
       )}
       {driver2 && (
         <div
-          className="fixed top-20 right-10 w-96 h-96 blur-[150px] opacity-25 rounded-full pointer-events-none transition-all duration-700"
+          className="fixed top-20 right-10 w-96 h-96 blur-[150px] opacity-25 rounded-full pointer-events-none transition-ui duration-700"
           style={{ backgroundColor: d2Color }}
         />
       )}
@@ -726,13 +730,13 @@ const ComparePage = () => {
                   SQLITE TELEMETRY COMPARATOR
                 </span>
                 <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-neutral-900/60 border border-neutral-800/80 text-cyan-400">
-                  <Zap size={12} className="animate-pulse" />
+                  <Zap size={12} className="" />
                   HEAD-TO-HEAD DUEL
                 </span>
               </div>
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight uppercase italic flex items-center gap-3">
-                <Swords className="text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" size={38} />
-                Driver <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Comparison</span>
+              <h1 className="text-3xl md:text-5xl font-black tracking-tight italic flex items-center gap-3">
+                <Swords className="text-red-500 " size={38} />
+                Driver <span className=" text-chalk">Comparison</span>
               </h1>
               <p className="text-neutral-400 mt-1 text-xs md:text-sm font-medium">
                 Direct head-to-head performance telemetry & championship statistics comparison.
@@ -743,14 +747,14 @@ const ComparePage = () => {
               <button
                 type="button"
                 onClick={handleSwapDrivers}
-                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-800 hover:border-neutral-700 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all shadow-lg hover:-translate-y-0.5"
+                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-800 hover:border-neutral-700 rounded-md text-xs font-mono font-bold uppercase tracking-wider transition-ui shadow-lg"
                 title="Swap Drivers"
               >
                 <ArrowLeftRight size={14} className="text-red-400" /> Swap Positions
               </button>
               <Link
                 to="/stats"
-                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 rounded-md text-xs font-mono font-bold uppercase tracking-wider transition-ui"
               >
                 <Trophy size={14} className="text-yellow-500" /> Full Standings
               </Link>
@@ -759,17 +763,17 @@ const ComparePage = () => {
         </header>
 
         {isLoading && (
-          <div className="space-y-6 animate-pulse">
+          <div className="space-y-6 motion-safe:animate-pulse">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="h-64 bg-neutral-900/40 border border-neutral-800 rounded-2xl" />
-              <div className="h-64 bg-neutral-900/40 border border-neutral-800 rounded-2xl" />
+              <div className="h-64 bg-neutral-900/40 border border-neutral-800 rounded-lg" />
+              <div className="h-64 bg-neutral-900/40 border border-neutral-800 rounded-lg" />
             </div>
-            <div className="h-48 bg-neutral-900/40 border border-neutral-800 rounded-2xl" />
+            <div className="h-48 bg-neutral-900/40 border border-neutral-800 rounded-lg" />
           </div>
         )}
 
         {error && (
-          <div className="bg-red-950/40 border border-red-500/50 rounded-2xl p-8 text-center max-w-lg mx-auto mb-8 shadow-xl">
+          <div className="bg-red-950/40 border border-red-500/50 rounded-lg p-8 text-center max-w-lg mx-auto mb-8 shadow-xl">
             <AlertTriangle className="text-red-500 mx-auto mb-4" size={36} />
             <h3 className="font-bold text-red-400 text-lg uppercase tracking-wider">
               Failed to load comparison data
@@ -780,7 +784,7 @@ const ComparePage = () => {
 
         {!isLoading && driver1 && driver2 && (
           <div className="space-y-8">
-            <div className="relative z-30 bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-5 md:p-6 shadow-2xl mb-8">
+            <div className="relative z-30 bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-5 md:p-6 shadow-2xl mb-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="w-full md:w-5/12">
                   <DriverSelector
@@ -795,8 +799,10 @@ const ComparePage = () => {
 
                 <button
                   onClick={handleSwapDrivers}
+                  type="button"
+                  aria-label="Swap drivers"
                   title="Swap Drivers"
-                  className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0 shadow-lg hover:shadow-xl group"
+                  className="w-12 h-12 rounded-lg bg-gradient-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-ui active:scale-95 flex-shrink-0 shadow-lg hover:shadow-xl group"
                 >
                   <ArrowLeftRight size={20} className="group-hover:rotate-180 transition-transform duration-300" />
                 </button>
@@ -814,7 +820,7 @@ const ComparePage = () => {
               </div>
 
               {driver1.team === driver2.team && (
-                <div className="mt-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl">
+                <div className="mt-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-md">
                   <Users size={14} /> Teammate battle! Both drivers race for <span className="font-bold">{driver1.team}</span>
                 </div>
               )}
@@ -822,7 +828,7 @@ const ComparePage = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-11 gap-4 items-stretch">
               <div
-                className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
+                className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
                 style={{ borderLeftWidth: '6px', borderLeftColor: d1Color }}
               >
                 <div className="absolute right-4 -bottom-6 text-[8rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none" style={{ color: d1Color }}>
@@ -841,16 +847,16 @@ const ComparePage = () => {
                   <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">{driver1.name}</h2>
                 </Link>
                 <div className="mt-5 flex flex-wrap items-center gap-3">
-                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
+                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                    <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
                     <span className="text-2xl font-black font-mono text-white">P{driver1.position}</span>
                   </div>
-                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
+                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                    <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
                     <span className="text-2xl font-black font-mono" style={{ color: d1Color }}>{driver1.points}</span>
                   </div>
-                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
+                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                    <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
                     <span className="text-2xl font-black font-mono text-white">{driver1.wins}</span>
                   </div>
                 </div>
@@ -859,10 +865,10 @@ const ComparePage = () => {
               <div className="xl:col-span-1 flex flex-col items-center justify-center text-center py-2">
                 <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-red-600 to-orange-500 font-black text-white flex items-center justify-center shadow-lg shadow-red-600/30 text-base font-mono tracking-tighter relative">
                   <Swords size={22} />
-                  <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                  <div className="absolute inset-0 rounded-full bg-red-500/20 motion-safe:animate-ping" />
                 </div>
                 <div className="mt-3 text-center">
-                  <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider block">Race H2H</span>
+                  <span className="text-[11px] uppercase font-bold text-neutral-500 tracking-wider block">Race H2H</span>
                   <div
                     className="font-mono font-black text-base mt-0.5 flex items-center gap-1 justify-center"
                     aria-label={`Race H2H ${h2hScore.score1} - ${h2hScore.score2}`}
@@ -875,7 +881,7 @@ const ComparePage = () => {
               </div>
 
               <div
-                className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
+                className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
                 style={{ borderRightWidth: '6px', borderRightColor: d2Color }}
               >
                 <div className="absolute left-4 -bottom-6 text-[8rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none" style={{ color: d2Color }}>
@@ -894,16 +900,16 @@ const ComparePage = () => {
                   <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">{driver2.name}</h2>
                 </Link>
                 <div className="mt-5 flex flex-wrap items-center gap-3 justify-end xl:justify-start">
-                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
+                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                    <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
                     <span className="text-2xl font-black font-mono text-white">P{driver2.position}</span>
                   </div>
-                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
+                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                    <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
                     <span className="text-2xl font-black font-mono" style={{ color: d2Color }}>{driver2.points}</span>
                   </div>
-                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
+                  <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                    <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
                     <span className="text-2xl font-black font-mono text-white">{driver2.wins}</span>
                   </div>
                 </div>
@@ -916,7 +922,7 @@ const ComparePage = () => {
                   <button
                     key={t.key}
                     onClick={() => setActiveTab(t.key)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-ui duration-200 ${
                       activeTab === t.key
                         ? 'bg-red-600/90 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-red-500'
                         : 'bg-neutral-900/60 text-neutral-400 hover:text-white hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600'
@@ -929,15 +935,15 @@ const ComparePage = () => {
               </div>
               <button
                 onClick={handleExportPNG}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all shadow-md hover:shadow-lg border border-neutral-700 hover:border-neutral-600 uppercase tracking-wider"
+                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold py-2.5 px-4 rounded-md transition-ui shadow-md hover:shadow-lg border border-neutral-700 hover:border-neutral-600 uppercase tracking-wider"
               >
                 <Download size={14} /> Export PNG
               </button>
             </div>
 
-            <div id="h2h-card" className="space-y-6 p-4 md:p-6 bg-neutral-950/90 rounded-3xl">
+            <div id="h2h-card" className="space-y-6 p-4 md:p-6 bg-neutral-950/90 rounded-lg">
               {activeTab === 'overview' && (
-                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                     <h3 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
                       <Scale size={20} className="text-cyan-400" />
@@ -989,7 +995,7 @@ const ComparePage = () => {
               )}
 
               {activeTab === 'chart' && (
-                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                     <div>
                       <h3 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
@@ -1036,7 +1042,7 @@ const ComparePage = () => {
               )}
 
               {activeTab === 'h2h' && (
-                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl">
+                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg overflow-hidden shadow-2xl">
                   <div className="p-6 border-b border-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
@@ -1061,7 +1067,7 @@ const ComparePage = () => {
                           return (
                             <div
                               key={race.round}
-                              className="bg-neutral-950/80 border border-neutral-800/60 rounded-xl p-4 hover:border-neutral-700 transition-colors"
+                              className="bg-neutral-950/80 border border-neutral-800/60 rounded-md p-4 hover:border-neutral-700 transition-colors"
                             >
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-3">
@@ -1104,11 +1110,11 @@ const ComparePage = () => {
                                         <div className="text-white text-xs font-bold">
                                           {driver1?.name.split(' ').pop()}
                                         </div>
-                                        <div className="text-neutral-500 text-[10px] font-mono">
+                                        <div className="text-neutral-500 text-[11px] font-mono">
                                           +{race.d1_points} pts
                                         </div>
                                         {race.d1_sprint_pos != null && (
-                                          <div className="text-orange-400 text-[9px] font-mono font-bold mt-0.5">
+                                          <div className="text-orange-400 text-[11px] font-mono font-bold mt-0.5">
                                             SPRINT {typeof race.d1_sprint_pos === 'number' ? `P${race.d1_sprint_pos}` : race.d1_sprint_pos}
                                             {race.d1_sprint_points > 0 ? ` (+${race.d1_sprint_points})` : ''}
                                           </div>
@@ -1144,11 +1150,11 @@ const ComparePage = () => {
                                         <div className="text-white text-xs font-bold">
                                           {driver2?.name.split(' ').pop()}
                                         </div>
-                                        <div className="text-neutral-500 text-[10px] font-mono">
+                                        <div className="text-neutral-500 text-[11px] font-mono">
                                           +{race.d2_points} pts
                                         </div>
                                         {race.d2_sprint_pos != null && (
-                                          <div className="text-orange-400 text-[9px] font-mono font-bold mt-0.5">
+                                          <div className="text-orange-400 text-[11px] font-mono font-bold mt-0.5">
                                             SPRINT {typeof race.d2_sprint_pos === 'number' ? `P${race.d2_sprint_pos}` : race.d2_sprint_pos}
                                             {race.d2_sprint_points > 0 ? ` (+${race.d2_sprint_points})` : ''}
                                           </div>

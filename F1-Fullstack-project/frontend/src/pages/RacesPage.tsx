@@ -62,8 +62,8 @@ const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; pha
   if (phase === 'live' || isPastStart) {
     return (
       <div className="flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-        <span className="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
+        <span className="w-2 h-2 rounded-full bg-red-500 motion-safe:animate-pulse" />
+        <span className="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-widest">
           LIVE NOW
         </span>
       </div>
@@ -74,12 +74,12 @@ const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; pha
   if (phase === 'race_day') {
     return (
       <div className="flex flex-col gap-1">
-        <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest w-fit">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> TODAY
+        <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-widest w-fit">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 motion-safe:animate-pulse" /> TODAY
         </span>
         <div className="flex items-center gap-1.5">
           <Timer size={12} className="text-amber-400" />
-          <div className="flex gap-1 text-[10px] font-mono font-bold tracking-wider">
+          <div className="flex gap-1 text-[11px] font-mono font-bold tracking-wider">
             {timeLeft.days > 0 && (
               <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">{timeLeft.days}d</span>
             )}
@@ -94,7 +94,7 @@ const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; pha
   return (
     <div className="flex items-center gap-1.5">
       <Timer size={12} className="text-red-400" />
-      <div className="flex gap-1 text-[10px] font-mono font-bold tracking-wider">
+      <div className="flex gap-1 text-[11px] font-mono font-bold tracking-wider">
         {timeLeft.days > 0 && (
           <span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">{timeLeft.days}d</span>
         )}
@@ -112,10 +112,10 @@ const SeasonProgress = ({ completed, total }: { completed: number; total: number
     <div className="flex items-center gap-4 w-full max-w-md">
       <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden relative">
         <div
-          className="h-full bg-gradient-to-r from-red-600 via-red-500 to-orange-400 rounded-full transition-all duration-1000 ease-out relative"
+          className="h-full bg-gradient-to-r from-red-600 via-red-500 to-orange-400 rounded-full transition-ui duration-1000 ease-out relative"
           style={{ width: `${pct}%` }}
         >
-          <div className="absolute inset-0 bg-white/10 animate-pulse rounded-full" />
+          <div className="absolute inset-0 bg-white/10 rounded-full" />
         </div>
       </div>
       <span className="text-xs font-mono font-bold text-neutral-400 whitespace-nowrap">
@@ -143,14 +143,14 @@ const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (k
     <div className="flex flex-wrap gap-2">
       {tabs.map(t => (
         <button key={t.key} onClick={() => onChange(t.key)}
-          className={`group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200
+          className={`group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-ui duration-200
             ${active === t.key
               ? 'bg-red-600/90 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] border border-red-500'
               : 'bg-neutral-900/60 text-neutral-400 hover:text-white hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600'
             }`}>
           <t.icon size={14} className={active === t.key ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'} />
           {t.label}
-          <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-mono ${active === t.key ? 'bg-white/20 text-white' : 'bg-neutral-800 text-neutral-500'}`}>
+          <span className={`ml-1 px-1.5 py-0.5 rounded text-[11px] font-mono ${active === t.key ? 'bg-white/20 text-white' : 'bg-neutral-800 text-neutral-500'}`}>
             {t.count}
           </span>
         </button>
@@ -163,12 +163,12 @@ const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (k
 const MonthDivider = ({ month, year, raceCount }: { month: string; year: number; raceCount: number }) => (
   <div className="col-span-full flex items-center gap-4 py-4">
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600/20 to-red-900/20 border border-red-500/20 flex items-center justify-center">
+      <div className="w-10 h-10 rounded-md bg-gradient-to-br from-red-600/20 to-red-900/20 border border-red-500/20 flex items-center justify-center">
         <Calendar size={18} className="text-red-500" />
       </div>
       <div>
         <h3 className="text-xl font-black text-white uppercase tracking-tight italic">{month}</h3>
-        <span className="text-[10px] font-mono text-neutral-500 tracking-widest">{raceCount} RACE{raceCount > 1 ? 'S' : ''} · {year}</span>
+        <span className="text-[11px] font-mono text-neutral-500 tracking-widest">{raceCount} RACE{raceCount > 1 ? 'S' : ''} · {year}</span>
       </div>
     </div>
     <div className="flex-1 h-px bg-gradient-to-r from-neutral-800 via-neutral-800 to-transparent" />
@@ -194,8 +194,8 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Finished': return { classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', label: 'COMPLETED', dot: 'bg-emerald-400' };
-      case 'Race Day':  return { classes: 'bg-amber-500/20 text-amber-300 border-amber-500/50', label: 'TODAY', dot: 'bg-amber-400 animate-pulse' };
-      case 'Ongoing':  return { classes: 'bg-red-500/20 text-red-400 border-red-500/50', label: 'LIVE', dot: 'bg-red-500 animate-pulse' };
+      case 'Race Day':  return { classes: 'bg-amber-500/20 text-amber-300 border-amber-500/50', label: 'TODAY', dot: 'bg-amber-400 motion-safe:animate-pulse' };
+      case 'Ongoing':  return { classes: 'bg-red-500/20 text-red-400 border-red-500/50', label: 'LIVE', dot: 'bg-red-500 motion-safe:animate-pulse' };
       case 'Upcoming': return { classes: 'bg-neutral-800/60 text-neutral-500 border-neutral-700', label: 'UPCOMING', dot: 'bg-neutral-500' };
       default:         return { classes: 'bg-neutral-800/60 text-neutral-500 border-neutral-700', label: status, dot: 'bg-neutral-500' };
     }
@@ -205,7 +205,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
 
   return (
     <Link to={`/race/${CURRENT_YEAR}/${race.round}`} className="block h-full group" data-race-round={race.round}>
-      <div className={`relative bg-neutral-900/40 backdrop-blur-md border rounded-3xl p-6 flex flex-col justify-between h-full transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-[0_15px_40px_rgba(220,38,38,0.15)] overflow-hidden
+      <div className={`relative bg-neutral-900/40 backdrop-blur-md border rounded-3xl p-6 flex flex-col justify-between h-full transition-ui duration-300 transform group-hover:shadow-[0_15px_40px_rgba(220,38,38,0.15)] overflow-hidden
         ${isNextRace
           ? 'border-red-500/50 ring-1 ring-red-500/20 shadow-[0_0_30px_rgba(220,38,38,0.12)]'
           : race.status === 'Ongoing'
@@ -217,8 +217,8 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
         {/* Next Race Badge */}
         {isNextRace && (
           <div className="absolute top-0 right-0">
-            <div className="bg-red-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl rounded-tr-3xl flex items-center gap-1.5 shadow-[0_2px_10px_rgba(220,38,38,0.5)]">
-              <Zap size={10} className="animate-pulse" /> NEXT RACE
+            <div className="bg-red-600 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-md rounded-tr-lg flex items-center gap-1.5 shadow-[0_2px_10px_rgba(220,38,38,0.5)]">
+              <Zap size={10} className="" /> NEXT RACE
             </div>
           </div>
         )}
@@ -226,7 +226,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
         {/* Track Outline Watermark */}
         {trackImage && (
           <img src={trackImage} alt={`${race.location} track layout`}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-auto opacity-[0.03] group-hover:opacity-10 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] pointer-events-none transition-all duration-500 invert" 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-auto opacity-[0.03] group-hover:opacity-10 pointer-events-none transition-ui duration-500 invert" 
           />
         )}
         
@@ -237,7 +237,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
 
         {/* Next race glow */}
         {isNextRace && (
-          <div className="absolute -left-5 -top-5 w-32 h-32 rounded-full blur-[60px] opacity-20 pointer-events-none bg-red-500 animate-pulse" />
+          <div className="absolute -left-5 -top-5 w-32 h-32 rounded-full blur-[60px] opacity-20 pointer-events-none bg-red-500" />
         )}
 
         <div className="relative z-10 flex flex-col justify-between h-full">
@@ -246,7 +246,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
             <div className="flex justify-between items-start mb-5">
               <div className="max-w-[70%]">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <div className="shadow-[0_0_10px_rgba(255,255,255,0.1)] rounded-sm overflow-hidden">
+                  <div className=" rounded-sm overflow-hidden">
                     {flagCode ? (
                       <img
                         src={`https://flagcdn.com/w40/${flagCode.toLowerCase()}.png`}
@@ -262,14 +262,14 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                     {race.name}
                   </h3>
                 </div>
-                <div className="flex items-center gap-1.5 text-neutral-400 text-xs font-bold uppercase tracking-widest">
+                <div className="flex items-center gap-1.5 text-neutral-400 text-xs font-bold tracking-normal">
                   <MapPin size={12} /> {race.location}
                 </div>
               </div>
               
               {/* Skewed Round Badge */}
-              <div className="flex-shrink-0 bg-red-600 transform -skew-x-12 px-3 py-1.5 shadow-[0_0_15px_rgba(220,38,38,0.4)] border border-red-500">
-                <div className="transform skew-x-12 text-white font-black text-xs uppercase tracking-widest">
+              <div className="flex-shrink-0 bg-red-600 transform -skew-x-12 px-3 py-1.5 border border-red-500">
+                <div className="transform skew-x-12 text-white font-black text-xs tracking-normal">
                   R{String(race.round).padStart(2, '0')}
                 </div>
               </div>
@@ -281,7 +281,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                 <Calendar size={14} className="text-red-500" />
                 {formattedDate}
               </div>
-              <div className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg border flex items-center gap-1.5 tracking-widest ${statusConfig.classes}`}>
+              <div className={`px-3 py-1 text-[11px] font-black uppercase rounded-lg border flex items-center gap-1.5 tracking-widest ${statusConfig.classes}`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
                 <span>{statusConfig.label}</span>
               </div>
@@ -291,16 +291,16 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
           <div className="flex flex-col gap-2 relative">
             {/* Small track icon right side */}
             {trackImage && (
-              <img src={trackImage} alt="track" className="absolute -right-2 top-0 w-16 opacity-30 drop-shadow-md group-hover:opacity-50 transition-all invert" />
+              <img src={trackImage} alt="track" className="absolute -right-2 top-0 w-16 opacity-30 drop-shadow-md group-hover:opacity-50 transition-ui invert" />
             )}
              
             {race.status === 'Finished' ? (
               race.winner ? (
                 <>
-                  <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Race Winner</div>
+                  <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Race Winner</div>
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-500/20 to-yellow-700/20 border border-yellow-500/30 flex items-center justify-center">
-                      <Trophy size={16} className="text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" />
+                    <div className="w-9 h-9 rounded-md bg-gradient-to-br from-yellow-500/20 to-yellow-700/20 border border-yellow-500/30 flex items-center justify-center">
+                      <Trophy size={16} className="text-yellow-500 " />
                     </div>
                     <div className="flex flex-col">
                       <span className="font-black text-white text-base md:text-lg uppercase italic leading-none">{race.winner}</span>
@@ -312,11 +312,11 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                   </div>
                 </>
               ) : (
-                <div className="text-neutral-500 text-sm font-bold uppercase italic mt-2">Results Pending...</div>
+                <div className="text-neutral-500 text-sm font-bold uppercase italic mt-2">Results Pending…</div>
               )
             ) : isNextRace ? (
               <div className="mt-1">
-                <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">
+                <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest mb-2">
                   {nextRacePhase === 'race_day'
                     ? 'Race Day — Starts Soon'
                     : nextRacePhase === 'live'
@@ -329,7 +329,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                 />
               </div>
             ) : (
-              <div className="text-neutral-600 text-xs font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
+              <div className="text-neutral-600 text-xs font-bold tracking-normal mt-2 flex items-center gap-2">
                 <Clock size={12} /> Awaiting Race Day
               </div>
             )}
@@ -348,18 +348,18 @@ const LoadingSkeleton = () => (
   <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
     
     <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
-      <div className="animate-pulse space-y-8">
+      <div className="motion-safe:animate-pulse space-y-8">
         <div className="flex flex-col gap-4">
-          <div className="h-16 w-96 bg-neutral-900/60 border border-neutral-800 rounded-2xl" />
+          <div className="h-16 w-96 bg-neutral-900/60 border border-neutral-800 rounded-lg" />
           <div className="flex gap-3">
-            <div className="h-10 w-28 bg-neutral-900/40 rounded-xl" />
-            <div className="h-10 w-28 bg-neutral-900/40 rounded-xl" />
-            <div className="h-10 w-28 bg-neutral-900/40 rounded-xl" />
+            <div className="h-10 w-28 bg-neutral-900/40 rounded-md" />
+            <div className="h-10 w-28 bg-neutral-900/40 rounded-md" />
+            <div className="h-10 w-28 bg-neutral-900/40 rounded-md" />
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="h-72 bg-neutral-900/40 border border-neutral-800/50 rounded-3xl" />
+            <div key={i} className="h-72 bg-neutral-900/40 border border-neutral-800/50 rounded-lg" />
           ))}
         </div>
       </div>
@@ -469,9 +469,9 @@ const RacesPage = () => {
           
           <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
             <div>
-              <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter flex items-center gap-4 italic transform -skew-x-6 text-white">
-                <Calendar className="text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.6)] shrink-0" size={56} />
-                <span>Race <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Calendar</span></span>
+              <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight flex items-center gap-4 italic text-white">
+                <Calendar className="text-red-500 shrink-0" size={56} />
+                <span>Race <span className=" text-chalk">Calendar</span></span>
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <span className="bg-neutral-900 border border-neutral-700 text-white font-mono font-bold px-4 py-1.5 rounded-lg shadow-inner">
@@ -484,8 +484,8 @@ const RacesPage = () => {
             {/* Jump to Next Race button */}
             {nextRace && filter === 'all' && (
               <button onClick={scrollToNextRace}
-                className="flex items-center gap-2 px-5 py-2.5 bg-red-600/90 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-xl border border-red-500 transition-all duration-200 hover:-translate-y-0.5 shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_25px_rgba(220,38,38,0.5)] whitespace-nowrap self-start xl:self-auto shrink-0">
-                <ArrowDown size={16} className="animate-bounce" />
+                className="flex items-center gap-2 px-5 py-2.5 bg-red-600/90 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-md border border-red-500 transition-ui duration-200 whitespace-nowrap self-start xl:self-auto shrink-0">
+                <ArrowDown size={16} className="" />
                 Jump to Next Race
               </button>
             )}
@@ -500,7 +500,7 @@ const RacesPage = () => {
         {/* Next Race Hero Banner (only in "all" view) */}
         {nextRace && filter === 'all' && (
           <section className="mb-10" ref={nextRaceRef}>
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-950/50 via-neutral-900/80 to-neutral-950/80 backdrop-blur-xl border border-red-500/20 p-6 md:p-8">
+            <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-red-950/50 via-neutral-900/80 to-neutral-950/80 backdrop-blur-xl border border-red-500/20 p-6 md:p-8">
               {/* Track bg */}
               {nextRaceTrackImg && (
                 <img src={nextRaceTrackImg} alt="" className="absolute right-4 top-1/2 -translate-y-1/2 w-48 md:w-64 opacity-[0.07] invert pointer-events-none" />
@@ -509,11 +509,11 @@ const RacesPage = () => {
               
               <div className="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
                 <div className="flex items-center gap-5 min-w-0">
-                  <div className="w-14 h-14 rounded-2xl bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
-                    <Zap size={24} className="text-red-500 animate-pulse" />
+                  <div className="w-14 h-14 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
+                    <Zap size={24} className="text-red-500" />
                   </div>
                   <div className="min-w-0">
-                    <div className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1 ${nextRace.phase === 'live' ? 'text-red-400' : nextRace.phase === 'race_day' ? 'text-amber-400' : 'text-red-400'}`}>
+                    <div className={`text-[11px] font-bold uppercase tracking-[0.2em] mb-1 ${nextRace.phase === 'live' ? 'text-red-400' : nextRace.phase === 'race_day' ? 'text-amber-400' : 'text-red-400'}`}>
                       {nextRace.phase === 'live' ? 'Live Now' : nextRace.phase === 'race_day' ? 'Race Day · Today' : 'Next Up'} · Round {nextRace.round}
                     </div>
                     <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight truncate">{nextRace.name}</h2>
@@ -536,7 +536,7 @@ const RacesPage = () => {
                     phase={nextRace.phase}
                   />
                   <Link to={`/race/${CURRENT_YEAR}/${nextRace.round}`}
-                    className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-xl border border-red-500 transition-all hover:-translate-y-0.5 shadow-[0_0_15px_rgba(220,38,38,0.4)] whitespace-nowrap">
+                    className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-md border border-red-500 transition-ui whitespace-nowrap">
                     View Details →
                   </Link>
                 </div>
@@ -566,8 +566,8 @@ const RacesPage = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-16 text-center flex flex-col items-center mt-8 shadow-2xl">
-            <Info size={48} className="text-blue-500 mb-6 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+          <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-16 text-center flex flex-col items-center mt-8 shadow-2xl">
+            <Info size={48} className="text-blue-500 mb-6 " />
             <h3 className="text-3xl font-black text-white mb-3 tracking-tight italic uppercase">
               {filter === 'all' ? 'Schedule Not Available' : `No ${filter === 'completed' ? 'Completed' : 'Upcoming'} Races`}
             </h3>
@@ -578,7 +578,7 @@ const RacesPage = () => {
               }
             </p>
             {filter !== 'all' && (
-              <button onClick={() => setFilter('all')} className="mt-6 px-6 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold rounded-xl transition-all border border-neutral-700">
+              <button onClick={() => setFilter('all')} className="mt-6 px-6 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold rounded-md transition-ui border border-neutral-700">
                 Show All Races
               </button>
             )}
@@ -588,7 +588,7 @@ const RacesPage = () => {
         {/* Back to Top */}
         <div className="flex justify-center mt-16">
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-400 text-xs font-bold uppercase tracking-widest transition-colors">
+            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-400 text-xs font-bold tracking-normal transition-colors">
             <ChevronDown size={14} className="rotate-180" /> Back to Top
           </button>
         </div>

@@ -219,7 +219,7 @@ const DriverComparePage = () => {
     const pct1 = total > 0 ? (num1 / total) * 100 : 50;
 
     return (
-      <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-4 shadow-sm hover:border-neutral-700 transition-colors">
+      <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-4 shadow-sm hover:border-neutral-700 transition-colors">
         <div className="flex justify-between items-center text-xs mb-2">
           <span className={`font-black text-sm font-mono ${d1IsBetter ? 'text-white' : 'text-neutral-500'}`}>
             {displayVal1}{!format && unit}
@@ -235,8 +235,8 @@ const DriverComparePage = () => {
           </span>
         </div>
         <div className="w-full bg-neutral-800 rounded-full h-2.5 overflow-hidden flex">
-          <div className="h-full transition-all duration-700 rounded-l-full" style={{ width: `${pct1}%`, backgroundColor: d1Color }} />
-          <div className="h-full transition-all duration-700 rounded-r-full" style={{ width: `${100 - pct1}%`, backgroundColor: d2Color }} />
+          <div className="h-full transition-[width] duration-700 rounded-l-full" style={{ width: `${pct1}%`, backgroundColor: d1Color }} />
+          <div className="h-full transition-[width] duration-700 rounded-r-full" style={{ width: `${100 - pct1}%`, backgroundColor: d2Color }} />
         </div>
       </div>
     );
@@ -264,9 +264,9 @@ const DriverComparePage = () => {
           <div className="inline-flex items-center gap-2 bg-red-600/10 border border-red-500/20 text-red-500 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-3">
             <Swords size={14} /> Head-to-Head Battle &bull; Season {currentYear}
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white flex items-center gap-3 italic transform -skew-x-3">
-            <GitCompareArrows className="text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" size={48} />
-            Driver <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 pr-2">Duel</span>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white flex items-center gap-3 italic ">
+            <GitCompareArrows className="text-red-500 " size={48} />
+            Driver <span className=" pr-2 text-chalk">Duel</span>
           </h1>
           <p className="text-neutral-400 mt-2 text-sm md:text-base max-w-xl">
             Pit any two F1 drivers against each other. Compare season stats, race-by-race finishes, and points trajectory.
@@ -274,7 +274,7 @@ const DriverComparePage = () => {
         </section>
 
         {/* Controls: Pick 2 Drivers */}
-        <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-5 md:p-6 shadow-2xl mb-8">
+        <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-5 md:p-6 shadow-2xl mb-8">
           <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
             {/* Driver 1 Selector */}
             <div className="w-full xl:w-5/12">
@@ -282,9 +282,10 @@ const DriverComparePage = () => {
                 <User size={12} className="text-red-400" /> Driver 1
               </label>
               <select
+                aria-label="Driver 1"
                 value={driver1Id}
                 onChange={(e) => setDriver1Id(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none transition-all hover:border-neutral-600 cursor-pointer"
+                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-md p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 focus:outline-none transition-ui hover:border-neutral-600 cursor-pointer"
                 style={{ borderLeftWidth: '5px', borderLeftColor: d1Color }}
               >
                 {driversList.map(d => (
@@ -298,8 +299,10 @@ const DriverComparePage = () => {
             {/* Swap Button */}
             <button
               onClick={handleSwap}
+              type="button"
+              aria-label="Swap drivers"
               title="Swap Drivers"
-              className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0 shadow-lg hover:shadow-xl group"
+              className="w-12 h-12 rounded-lg bg-gradient-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-ui active:scale-95 flex-shrink-0 shadow-lg hover:shadow-xl group"
             >
               <ArrowLeftRight size={20} className="group-hover:rotate-180 transition-transform duration-300" />
             </button>
@@ -310,9 +313,10 @@ const DriverComparePage = () => {
                 <User size={12} className="text-blue-400" /> Driver 2
               </label>
               <select
+                aria-label="Driver 2"
                 value={driver2Id}
                 onChange={(e) => setDriver2Id(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none transition-all hover:border-neutral-600 cursor-pointer"
+                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-md p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 focus:outline-none transition-ui hover:border-neutral-600 cursor-pointer"
                 style={{ borderLeftWidth: '5px', borderLeftColor: d2Color }}
               >
                 {driversList.map(d => (
@@ -326,24 +330,24 @@ const DriverComparePage = () => {
 
           {/* Quick same-team toggle hint */}
           {profile1 && profile2 && profile1.team === profile2.team && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl">
+            <div className="mt-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-md">
               <Users size={14} /> Teammate battle! Both drivers race for <span className="font-bold">{profile1.team}</span>
             </div>
           )}
         </section>
 
         {error && (
-          <div className="bg-red-950/40 border border-red-500/50 text-red-400 p-5 rounded-2xl mb-8 flex items-center gap-3">
+          <div className="bg-red-950/40 border border-red-500/50 text-red-400 p-5 rounded-lg mb-8 flex items-center gap-3">
             <AlertTriangle size={24} className="flex-shrink-0" />
             <span className="font-semibold text-sm">{error}</span>
           </div>
         )}
 
         {loading && (
-          <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-16 flex flex-col items-center justify-center min-h-[40vh] mb-8">
+          <div className="bg-neutral-900/40 border border-neutral-800 rounded-lg p-16 flex flex-col items-center justify-center min-h-[40vh] mb-8">
             <Loader2 className="animate-spin text-red-500 mb-4" size={48} />
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Swords size={20} className="text-red-400" /> Analyzing Battle Data...
+              <Swords size={20} className="text-red-400" /> Analyzing Battle Data…
             </h3>
             <p className="text-xs text-neutral-500 mt-2">Computing race finish battles & season trajectories</p>
           </div>
@@ -358,7 +362,7 @@ const DriverComparePage = () => {
               <div className="flex flex-wrap gap-2">
                 {tabs.map(t => (
                   <button key={t.key} onClick={() => setActiveTab(t.key)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-ui duration-200
                       ${activeTab === t.key
                         ? 'bg-red-600/90 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-red-500'
                         : 'bg-neutral-900/60 text-neutral-400 hover:text-white hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600'
@@ -370,19 +374,19 @@ const DriverComparePage = () => {
               </div>
               <button
                 onClick={handleExportPNG}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all shadow-md hover:shadow-lg border border-neutral-700 hover:border-neutral-600 uppercase tracking-wider"
+                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold py-2.5 px-4 rounded-md transition-ui shadow-md hover:shadow-lg border border-neutral-700 hover:border-neutral-600 uppercase tracking-wider"
               >
                 <Download size={14} /> Export PNG
               </button>
             </div>
 
-            <div id="h2h-card" className="space-y-6 p-4 md:p-6 bg-neutral-950/90 rounded-3xl">
+            <div id="h2h-card" className="space-y-6 p-4 md:p-6 bg-neutral-950/90 rounded-lg">
 
               <div className="grid grid-cols-1 xl:grid-cols-11 gap-4 items-stretch">
                 
                 {/* Driver 1 Card */}
                 <div
-                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
+                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
                   style={{ borderLeftWidth: '6px', borderLeftColor: d1Color }}
                 >
                   {/* Big number watermark */}
@@ -403,16 +407,16 @@ const DriverComparePage = () => {
                     <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">{profile1.name}</h2>
                   </Link>
                   <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                      <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
+                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                      <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
                       <span className="text-2xl font-black font-mono text-white">P{profile1.position}</span>
                     </div>
-                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                      <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
+                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                      <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
                       <span className="text-2xl font-black font-mono" style={{ color: d1Color }}>{Math.round(Number(profile1.points) || 0)}</span>
                     </div>
-                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                      <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
+                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                      <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
                       <span className="text-2xl font-black font-mono text-white">{profile1.wins || 0}</span>
                     </div>
                   </div>
@@ -422,10 +426,10 @@ const DriverComparePage = () => {
                 <div className="xl:col-span-1 flex flex-col items-center justify-center text-center py-2">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-red-600 to-orange-500 font-black text-white flex items-center justify-center shadow-lg shadow-red-600/30 text-base font-mono tracking-tighter relative">
                     <Swords size={22} />
-                    <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                    <div className="absolute inset-0 rounded-full bg-red-500/20 motion-safe:animate-ping" />
                   </div>
                   <div className="mt-3 text-center">
-                    <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider block">Race H2H</span>
+                    <span className="text-[11px] uppercase font-bold text-neutral-500 tracking-wider block">Race H2H</span>
                     <div className="font-mono font-black text-base mt-0.5 flex items-center gap-1 justify-center">
                       <span style={{ color: d1Color }}>{d1Ahead}</span>
                       <Minus size={12} className="text-neutral-600" />
@@ -436,7 +440,7 @@ const DriverComparePage = () => {
 
                 {/* Driver 2 Card */}
                 <div
-                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
+                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
                   style={{ borderRightWidth: '6px', borderRightColor: d2Color }}
                 >
                   <div className="absolute left-4 -bottom-6 text-[8rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none" style={{ color: d2Color }}>
@@ -455,16 +459,16 @@ const DriverComparePage = () => {
                     <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">{profile2.name}</h2>
                   </Link>
                   <div className="mt-5 flex flex-wrap items-center gap-3 justify-end xl:justify-start">
-                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                      <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
+                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                      <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Shield size={10} /> Championship</span>
                       <span className="text-2xl font-black font-mono text-white">P{profile2.position}</span>
                     </div>
-                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                      <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
+                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                      <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Star size={10} /> Points</span>
                       <span className="text-2xl font-black font-mono" style={{ color: d2Color }}>{Math.round(Number(profile2.points) || 0)}</span>
                     </div>
-                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-2xl">
-                      <span className="text-[10px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
+                    <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2.5 rounded-lg">
+                      <span className="text-[11px] text-neutral-500 uppercase font-bold flex items-center gap-1"><Trophy size={10} /> Wins</span>
                       <span className="text-2xl font-black font-mono text-white">{profile2.wins || 0}</span>
                     </div>
                   </div>
@@ -474,7 +478,7 @@ const DriverComparePage = () => {
 
               {/* 2. OVERVIEW TAB - STATISTICAL BENCHMARK BARS */}
               {activeTab === 'overview' && (
-                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                     <h3 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
                       <Scale size={20} className="text-cyan-400" />
@@ -501,11 +505,11 @@ const DriverComparePage = () => {
                   </div>
 
                   {/* H2H Summary Scoreboard */}
-                  <div className="mt-6 bg-neutral-950/70 border border-neutral-800 rounded-2xl p-5">
+                  <div className="mt-6 bg-neutral-950/70 border border-neutral-800 rounded-lg p-5">
                     <div className="flex items-center justify-between">
                       <div className="text-center flex-1">
                         <div className="text-3xl font-black font-mono" style={{ color: d1Color }}>{d1Ahead}</div>
-                        <div className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider mt-1">
+                        <div className="text-[11px] text-neutral-500 uppercase font-bold tracking-wider mt-1">
                           {profile1.name.split(' ').pop()} Wins
                         </div>
                       </div>
@@ -518,15 +522,15 @@ const DriverComparePage = () => {
                       </div>
                       <div className="text-center flex-1">
                         <div className="text-3xl font-black font-mono" style={{ color: d2Color }}>{d2Ahead}</div>
-                        <div className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider mt-1">
+                        <div className="text-[11px] text-neutral-500 uppercase font-bold tracking-wider mt-1">
                           {profile2.name.split(' ').pop()} Wins
                         </div>
                       </div>
                     </div>
                     {/* H2H visual bar */}
                     <div className="mt-4 w-full h-3 bg-neutral-800 rounded-full overflow-hidden flex">
-                      <div className="h-full rounded-l-full transition-all duration-700" style={{ width: `${sharedRaces > 0 ? (d1Ahead / sharedRaces) * 100 : 50}%`, backgroundColor: d1Color }} />
-                      <div className="h-full rounded-r-full transition-all duration-700" style={{ width: `${sharedRaces > 0 ? (d2Ahead / sharedRaces) * 100 : 50}%`, backgroundColor: d2Color }} />
+                      <div className="h-full rounded-l-full transition-[width] duration-700" style={{ width: `${sharedRaces > 0 ? (d1Ahead / sharedRaces) * 100 : 50}%`, backgroundColor: d1Color }} />
+                      <div className="h-full rounded-r-full transition-[width] duration-700" style={{ width: `${sharedRaces > 0 ? (d2Ahead / sharedRaces) * 100 : 50}%`, backgroundColor: d2Color }} />
                     </div>
                   </div>
                 </section>
@@ -534,7 +538,7 @@ const DriverComparePage = () => {
 
               {/* 3. CHART TAB - DUAL POINTS PROGRESSION */}
               {activeTab === 'chart' && (
-                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                     <div>
                       <h3 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
@@ -585,7 +589,7 @@ const DriverComparePage = () => {
 
               {/* 4. H2H TAB - RACE BY RACE CLASH TABLE */}
               {activeTab === 'h2h' && (
-                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl">
+                <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg overflow-hidden shadow-2xl">
                   <div className="p-6 border-b border-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-xl font-black tracking-tight text-white flex items-center gap-2">

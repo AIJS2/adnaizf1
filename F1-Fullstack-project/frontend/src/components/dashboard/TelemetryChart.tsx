@@ -35,7 +35,7 @@ interface CustomTooltipProps {
 const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, driverStyles }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-neutral-955/95 backdrop-blur-md border border-neutral-700 p-4 rounded-xl shadow-2xl min-w-[200px]">
+      <div className="bg-neutral-955/95 backdrop-blur-md border border-neutral-700 p-4 rounded-md shadow-2xl min-w-[200px]">
         <p className="text-neutral-400 text-xs font-bold mb-3 border-b border-neutral-800 pb-2">Distance: {label}m</p>
         {payload.map((entry, index: number) => {
           const drv = entry.name;
@@ -72,14 +72,14 @@ const TelemetryChart: React.FC<TelemetryChartProps> = ({
   activeDistance
 }) => {
   return (
-    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl">
+    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-white flex items-center gap-2">
           {icon} {title}
         </h3>
         {activeDistance !== null && activeDistance !== undefined && (
           <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-red-950/50 text-red-400 border border-red-500/30 flex items-center gap-1.5 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 motion-safe:animate-pulse" />
             TRACK {activeDistance.toLocaleString()} m
           </span>
         )}

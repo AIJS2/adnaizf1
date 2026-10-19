@@ -29,13 +29,13 @@ const RaceControlMessagesComponent: React.FC<RaceControlFeed> = ({ messages, sta
   };
 
   return (
-    <div className="p-6 h-[500px] flex flex-col bg-neutral-950/80 rounded-xl border border-neutral-800">
+    <div className="p-6 h-[500px] flex flex-col bg-neutral-950/80 rounded-md border border-neutral-800">
       <div className="mb-4 flex items-center justify-between border-b border-neutral-800 pb-4">
         <div className="flex items-center gap-3">
-          <Activity className={`text-red-500 ${isLive ? 'animate-pulse' : ''}`} size={24} />
+          <Activity className={`text-red-500 ${isLive ? '' : ''}`} size={24} />
           <div>
-            <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 tracking-wider">FIA RACE CONTROL</h3>
-            <p className="text-[10px] text-neutral-400 font-mono tracking-widest uppercase">
+            <h3 className="text-xl font-black tracking-wider text-chalk">FIA RACE CONTROL</h3>
+            <p className="text-[11px] text-neutral-400 font-mono tracking-widest uppercase">
               {isLive ? 'Live Communication Feed' : 'Session Communication Log'}
             </p>
           </div>
@@ -43,13 +43,13 @@ const RaceControlMessagesComponent: React.FC<RaceControlFeed> = ({ messages, sta
         <div className="flex items-center gap-2">
           {isLive ? (
             <>
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-              <span className="text-xs font-mono font-bold text-red-500 uppercase tracking-widest">LIVE</span>
+              <span className="w-2 h-2 rounded-full bg-red-500 motion-safe:animate-ping"></span>
+              <span className="text-xs font-mono font-bold text-red-500 tracking-normal">LIVE</span>
             </>
           ) : (
             <>
               <span className="w-2 h-2 rounded-full bg-neutral-500"></span>
-              <span className="text-xs font-mono font-bold text-neutral-500 uppercase tracking-widest">ARCHIVED</span>
+              <span className="text-xs font-mono font-bold text-neutral-500 tracking-normal">ARCHIVED</span>
             </>
           )}
         </div>
@@ -62,18 +62,18 @@ const RaceControlMessagesComponent: React.FC<RaceControlFeed> = ({ messages, sta
               <span className="text-xs font-mono font-bold text-neutral-500 group-hover:text-neutral-300 transition-colors">{msg.time}</span>
             </div>
             
-            <div className="relative flex-1 bg-neutral-900/50 hover:bg-neutral-800/80 transition-all border border-neutral-800/50 hover:border-neutral-700 rounded-lg p-3 group-hover:-translate-y-0.5">
+            <div className="relative flex-1 bg-neutral-900/50 hover:bg-neutral-800/80 transition-ui border border-neutral-800/50 hover:border-neutral-700 rounded-lg p-3">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-neutral-800 group-hover:bg-red-500/50 rounded-l-lg transition-colors"></div>
               
               <div className="flex flex-col gap-2 pl-2">
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-neutral-400 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
+                  <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-400 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
                     {getCategoryIcon(msg.category)}
                     {msg.category}
                   </span>
                   
                   {msg.flag && (
-                    <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border border-black/20 ${getFlagColor(msg.flag)}`}>
+                    <span className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider rounded border border-black/20 ${getFlagColor(msg.flag)}`}>
                       {msg.flag} FLAG
                     </span>
                   )}

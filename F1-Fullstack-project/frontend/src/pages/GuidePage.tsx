@@ -58,15 +58,15 @@ const GuideSection: React.FC<GuideSectionProps> = ({ id, title, icon, colorClass
 
   return (
     <section id={id} ref={ref} className="scroll-mt-32 group">
-      <div className={`bg-neutral-900/30 hover:bg-neutral-900/60 transition-all duration-500 backdrop-blur-xl border border-neutral-800/50 ${currentStyle.border} rounded-3xl p-8 shadow-2xl relative overflow-hidden`}>
+      <div className={`bg-neutral-900/30 hover:bg-neutral-900/60 transition-ui duration-500 backdrop-blur-xl border border-neutral-800/50 ${currentStyle.border} rounded-lg p-8 shadow-2xl relative overflow-hidden`}>
         {/* Subtle background glow on hover */}
-        <div className={`absolute -top-24 -right-24 w-48 h-48 ${currentStyle.glow} blur-[80px] transition-all duration-700 pointer-events-none rounded-full`} />
+        <div className={`absolute -top-24 -right-24 w-48 h-48 ${currentStyle.glow} blur-[80px] transition-ui duration-700 pointer-events-none rounded-full`} />
         
         <div className="flex flex-col xl:flex-row xl:items-center gap-5 mb-8 relative z-10">
-          <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0)] group-hover:shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all ${currentStyle.iconBg}`}>
+          <div className={`w-14 h-14 rounded-lg border flex items-center justify-center transition-ui ${currentStyle.iconBg}`}>
             {icon}
           </div>
-          <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-neutral-400 transition-all">
+          <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r transition-ui text-chalk text-chalk">
             {title}
           </h2>
         </div>
@@ -90,17 +90,17 @@ const GuidePage = () => {
   ];
 
   return (
-    <div className="bg-[#050505] min-h-screen text-white font-sans selection:bg-red-600">
+    <div className="bg-tarmac min-h-screen text-white font-sans selection:bg-red-600">
       
       {/* Header */}
       <div className="relative py-8 md:py-12 xl:py-14 overflow-hidden border-b border-neutral-900/50">
         <div className="absolute inset-0 xl:left-72 bg-gradient-to-b from-red-600/10 to-transparent blur-[100px] rounded-full pointer-events-none" />
         <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold uppercase tracking-wider mb-6 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold uppercase tracking-wider mb-6 ">
             <BookOpen size={16} /> Official Documentation
           </div>
-          <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6">
-            Platform <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">Guide</span>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6">
+            Platform <span className=" text-chalk">Guide</span>
           </h1>
           <p className="text-neutral-400 max-w-2xl text-xl leading-relaxed font-medium">
             Master the paddock. Here is a complete breakdown of every tool, chart, and feature available in our F1 Analytics Platform.
@@ -113,7 +113,7 @@ const GuidePage = () => {
           
           {/* Table of Contents / Quick Links */}
           <div className="lg:col-span-1 sticky top-6 xl:top-8">
-            <div className="bg-neutral-900/40 border border-neutral-800/60 rounded-3xl p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+            <div className="bg-neutral-900/40 border border-neutral-800/60 rounded-lg p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-[50px]" />
               <h3 className="text-sm font-black uppercase tracking-widest text-neutral-500 mb-6 flex items-center gap-2">
                 <BarChart2 className="text-red-500" /> Features Menu
@@ -125,7 +125,7 @@ const GuidePage = () => {
                     <li key={item.id}>
                       <a 
                         href={`#${item.id}`}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-all duration-300 ${
+                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-ui duration-300 ${
                           isActive 
                             ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] border border-red-500/50' 
                             : 'text-neutral-400 hover:text-white hover:bg-neutral-800/80 border border-transparent'
@@ -158,7 +158,7 @@ const GuidePage = () => {
               <p className="text-lg">
                 Found in the <strong>Race Details</strong> page, the Race Progression chart is arguably the most powerful tool for analyzing race pace and strategy. Instead of just showing positions, it plots the <strong>time gap (in seconds)</strong> between every driver and the race leader across all laps.
               </p>
-              <div className="bg-neutral-950/80 border border-neutral-800/80 p-6 rounded-2xl my-8 shadow-inner">
+              <div className="bg-neutral-950/80 border border-neutral-800/80 p-6 rounded-lg my-8 shadow-inner">
                 <h4 className="text-white font-bold mb-4 flex items-center gap-2 text-xl">
                   <Zap size={20} className="text-yellow-500"/> How to read it:
                 </h4>
@@ -169,7 +169,7 @@ const GuidePage = () => {
                   <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded">Sudden Sharp Spike Up:</strong> The driver made a Pit Stop (losing ~20-25 seconds).</span></li>
                 </ul>
               </div>
-              <p className="border-l-4 border-red-500 pl-4 py-2 bg-red-500/5 rounded-r-xl italic text-neutral-400">
+              <p className="border-l-4 border-red-500 pl-4 py-2 bg-red-500/5 rounded-r-md italic text-neutral-400">
                 <strong className="text-white not-italic">Pro Tip:</strong> Look for the "Undercut". If a driver pits early, their line spikes up. But if their line then starts dropping rapidly (because of fresh tyres) while their rival stays out on old tyres (line going up), you can visually see the undercut working!
               </p>
             </GuideSection>
@@ -186,19 +186,19 @@ const GuidePage = () => {
                 Access the <strong>Telemetry</strong> tab to compare the fastest laps of any two drivers overlaid on top of each other. This is exactly what engineers look at to see <em>where</em> a driver is losing time.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800">
+                <div className="bg-neutral-900/50 p-5 rounded-lg border border-neutral-800">
                   <h5 className="font-bold text-white mb-2 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500"/> Delta Time</h5>
                   <p className="text-sm text-neutral-400">A yellow line showing the exact time gap at every meter of the track.</p>
                 </div>
-                <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800">
+                <div className="bg-neutral-900/50 p-5 rounded-lg border border-neutral-800">
                   <h5 className="font-bold text-white mb-2 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500"/> Speed Trace</h5>
                   <p className="text-sm text-neutral-400">See who breaks later and who carries more speed through the apex.</p>
                 </div>
-                <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800">
+                <div className="bg-neutral-900/50 p-5 rounded-lg border border-neutral-800">
                   <h5 className="font-bold text-white mb-2 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-500"/> Throttle & Brake</h5>
                   <p className="text-sm text-neutral-400">Analyze driving styles (e.g., trail braking vs sudden braking).</p>
                 </div>
-                <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800">
+                <div className="bg-neutral-900/50 p-5 rounded-lg border border-neutral-800">
                   <h5 className="font-bold text-white mb-2 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-purple-500"/> Gear Selection</h5>
                   <p className="text-sm text-neutral-400">See if a driver takes a corner in 3rd vs 4th gear to minimize wheelspin.</p>
                 </div>
@@ -216,7 +216,7 @@ const GuidePage = () => {
               <p className="text-lg">
                 In the Race Details page, the <strong>Speed & Sectors</strong> tab reveals the ultimate potential of the car. It tracks the <strong>Speed Trap (Top Speed)</strong> to show who has the most aerodynamic efficiency or engine power on the straights.
               </p>
-              <div className="mt-8 p-6 bg-purple-500/5 border border-purple-500/20 rounded-2xl">
+              <div className="mt-8 p-6 bg-purple-500/5 border border-purple-500/20 rounded-lg">
                 <p className="text-lg leading-relaxed">
                   The <strong>Sector Matrix</strong> combines each driver's absolute best Sector 1, Sector 2, and Sector 3 times into an "Ideal Lap". You can compare this Ideal Lap against their Actual Fastest Lap to see how much time they left on the table due to mistakes or traffic. 
                 </p>
@@ -239,20 +239,20 @@ const GuidePage = () => {
                 A visual timeline of every driver's tyre choices. See exactly which compound they started on, how many laps they pushed it, and when they pitted.
               </p>
               <div className="flex flex-wrap gap-3 mt-8">
-                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-xl">
-                  <span className="w-4 h-4 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"/> <span className="font-bold text-sm">Soft</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-md">
+                  <span className="w-4 h-4 rounded-full bg-red-500 "/> <span className="font-bold text-sm">Soft</span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-xl">
-                  <span className="w-4 h-4 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]"/> <span className="font-bold text-sm">Medium</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-md">
+                  <span className="w-4 h-4 rounded-full bg-yellow-400 "/> <span className="font-bold text-sm">Medium</span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-xl">
-                  <span className="w-4 h-4 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)]"/> <span className="font-bold text-sm text-neutral-300">Hard</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-md">
+                  <span className="w-4 h-4 rounded-full bg-white "/> <span className="font-bold text-sm text-neutral-300">Hard</span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-xl">
-                  <span className="w-4 h-4 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"/> <span className="font-bold text-sm">Inter</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-md">
+                  <span className="w-4 h-4 rounded-full bg-green-500 "/> <span className="font-bold text-sm">Inter</span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-xl">
-                  <span className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"/> <span className="font-bold text-sm">Wet</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-md">
+                  <span className="w-4 h-4 rounded-full bg-blue-500 "/> <span className="font-bold text-sm">Wet</span>
                 </div>
               </div>
             </GuideSection>
@@ -268,7 +268,7 @@ const GuidePage = () => {
               <p className="text-lg">
                 Want to know if a driver can mathematically win the championship? Go to the <strong>Simulator</strong>. We fetch the live points standings and remaining races, and let you input custom race results (P1, P2, P3, Fastest Lap, etc.) for upcoming rounds.
               </p>
-              <div className="mt-8 p-6 bg-gradient-to-br from-emerald-900/20 to-neutral-900 border border-emerald-500/20 rounded-2xl">
+              <div className="mt-8 p-6 bg-gradient-to-br from-emerald-900/20 to-neutral-900 border border-emerald-500/20 rounded-lg">
                 <div className="flex items-start gap-4">
                   <Calculator className="text-emerald-500 mt-1 flex-shrink-0" size={24} />
                   <p className="text-emerald-100/70 text-lg leading-relaxed">
@@ -283,7 +283,7 @@ const GuidePage = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-neutral-900 bg-[#020202] py-12 px-6 text-center mt-12 relative overflow-hidden">
+      <footer className="border-t border-neutral-900 bg-tarmac py-12 px-6 text-center mt-12 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent" />
         <p className="text-neutral-500 text-sm font-bold uppercase tracking-wider mb-2">
           Formula 1 Analytics Hub &copy; {new Date().getFullYear()}

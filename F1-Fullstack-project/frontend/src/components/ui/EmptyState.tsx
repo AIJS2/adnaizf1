@@ -45,7 +45,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       role="status"
     >
       {Icon && (
-        <div className="mb-4 flex items-center justify-center w-14 h-14 rounded-2xl bg-neutral-900/80 border border-neutral-800">
+        <div className="mb-4 flex items-center justify-center w-14 h-14 rounded-lg bg-neutral-900/80 border border-neutral-800">
           <Icon className="w-7 h-7 text-neutral-600" aria-hidden="true" />
         </div>
       )}

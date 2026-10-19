@@ -337,14 +337,14 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500 tracking-tight">Tyre Strategy & Pit Stops</h3>
+          <h3 className="text-2xl font-black tracking-tight text-chalk">Tyre Strategy & Pit Stops</h3>
           <p className="text-xs text-neutral-400 mt-1">
             Visual breakdown of tyre choices and stint lengths
           </p>
         </div>
         
         {/* Tyre Legend */}
-        <div className="flex flex-wrap items-center gap-3 bg-neutral-900/50 p-2.5 rounded-xl border border-neutral-800">
+        <div className="flex flex-wrap items-center gap-3 bg-neutral-900/50 p-2.5 rounded-md border border-neutral-800">
           {[
             { label: 'Soft', id: 'S', color: '#FF3333', text: '#FFFFFF' },
             { label: 'Medium', id: 'M', color: '#EAEA00', text: '#000000' },
@@ -354,7 +354,7 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
           ].map(t => (
             <div key={t.id} className="flex items-center gap-1.5 px-2">
               <span 
-                className="w-5 h-5 flex items-center justify-center rounded text-[10px] font-black border border-black/10 shadow-sm" 
+                className="w-5 h-5 flex items-center justify-center rounded text-[11px] font-black border border-black/10 shadow-sm" 
                 style={{ backgroundColor: t.color, color: t.text }}
               >
                 {t.id}
@@ -378,7 +378,7 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
                 return (
                 <div 
                   key={idx} 
-                  className="h-full flex items-center justify-center rounded shadow-sm transition-all duration-300 hover:scale-[1.02] hover:brightness-110 hover:z-10 cursor-crosshair relative group/stint border border-black/10 overflow-hidden"
+                  className="h-full flex items-center justify-center rounded shadow-sm transition-ui duration-300 hover:brightness-110 hover:z-10 cursor-crosshair relative group/stint border border-black/10 overflow-hidden"
                   style={{ 
                     flexGrow: stintLaps > 0 ? stintLaps : 1, 
                     backgroundColor: getCompoundColor(stint.compound),
@@ -388,7 +388,7 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
                   {stintLaps > 0 ? (
                     <div className="flex items-center gap-1.5 px-1 truncate">
                       <span 
-                        className="w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-black"
+                        className="w-4 h-4 flex items-center justify-center rounded-full text-[11px] font-black"
                         style={{ 
                           backgroundColor: getCompoundTextColor(stint.compound) === '#000000' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.25)',
                           border: '1px solid currentColor',
@@ -425,7 +425,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500 tracking-tight">Speed & Sectors</h3>
+        <h3 className="text-2xl font-black tracking-tight text-chalk">Speed & Sectors</h3>
         <p className="text-xs text-neutral-400 mt-1">
           Analyze straight-line performance and theoretical best laps (Ideal vs Actual)
         </p>
@@ -438,7 +438,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
             <Gauge className="w-5 h-5 text-red-500" />
             <h4 className="text-lg font-bold text-neutral-200">Top Speeds</h4>
           </div>
-          <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-xl overflow-hidden p-2">
+          <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-md overflow-hidden p-2">
             <div className="space-y-1">
               {speedTraps && [...speedTraps].sort((a, b) => b.speed - a.speed).slice(0, 10).map((d, i) => {
                 const percentage = (d.speed / maxSpeed) * 100;
@@ -446,7 +446,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                   <div key={d.driver} className="relative flex items-center justify-between p-2 rounded-lg hover:bg-neutral-800/50 transition-colors group z-0">
                     {/* Background Bar */}
                     <div 
-                      className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-neutral-800/30 to-red-500/10 rounded-lg -z-10 transition-all duration-500"
+                      className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-neutral-800/30 to-red-500/10 rounded-lg -z-10 transition-ui duration-500"
                       style={{ width: `${percentage}%` }}
                     />
                     
@@ -459,7 +459,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                     </div>
                     
                     <span className="font-mono text-sm font-black text-red-400 group-hover:text-red-300 transition-colors">
-                      {d.speed} <span className="text-[10px] text-neutral-500 font-normal">km/h</span>
+                      {d.speed} <span className="text-[11px] text-neutral-500 font-normal">km/h</span>
                     </span>
                   </div>
                 );
@@ -473,7 +473,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
               <Trophy className="w-5 h-5 text-yellow-500" />
               <h4 className="text-lg font-bold text-neutral-200">Session Bests</h4>
             </div>
-            <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-xl overflow-hidden p-4 space-y-4">
+            <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-md overflow-hidden p-4 space-y-4">
               {['s1', 's2', 's3'].map((sector, idx) => {
                 const best = sectorMatrix?.find(d => d[`${sector}_purple`] === true);
                 return (
@@ -487,7 +487,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                         </div>
                       ) : <span className="text-sm text-neutral-500">-</span>}
                     </div>
-                    {best && <span className="font-mono text-sm font-black text-purple-400 bg-purple-900/20 px-2 py-1 rounded border border-purple-500/30 shadow-[0_0_8px_rgba(168,85,247,0.15)]">{String(best[sector] ?? '-')}</span>}
+                    {best && <span className="font-mono text-sm font-black text-purple-400 bg-purple-900/20 px-2 py-1 rounded border border-purple-500/30 ">{String(best[sector] ?? '-')}</span>}
                   </div>
                 );
               })}
@@ -501,9 +501,9 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
             <Timer className="w-5 h-5 text-purple-500" />
             <h4 className="text-lg font-bold text-neutral-200">Sector Matrix</h4>
           </div>
-          <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-xl overflow-hidden">
+          <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-md overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-800/50 text-neutral-400 text-[10px] tracking-wider uppercase text-left border-b border-neutral-800/80">
+              <thead className="bg-neutral-800/50 text-neutral-400 text-[11px] tracking-wider uppercase text-left border-b border-neutral-800/80">
                 <tr>
                   <th className="p-4 font-bold">Driver</th>
                   <th className="p-4 text-center font-bold">Sector 1</th>
@@ -526,17 +526,17 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                     
                     {/* Sectors with Pills */}
                     <td className="p-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s1_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s1_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
                         {d.s1}
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s2_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s2_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
                         {d.s2}
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s3_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s3_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
                         {d.s3}
                       </span>
                     </td>
@@ -577,30 +577,30 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weatherData }) => {
 
   return (
     <div className="p-6">
-      <h3 className="text-2xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500 tracking-tight">Track Conditions Dashboard</h3>
+      <h3 className="text-2xl font-black mb-6 tracking-tight text-chalk">Track Conditions Dashboard</h3>
       
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-lg">
+        <div className="bg-neutral-900/50 border border-neutral-800 rounded-md p-4 flex flex-col items-center justify-center text-center shadow-lg">
           <span className="text-neutral-400 text-xs uppercase font-bold mb-1">Max Track Temp</span>
           <span className="text-2xl font-black text-orange-500">{maxTrackTemp.toFixed(1)}°C</span>
         </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-lg">
+        <div className="bg-neutral-900/50 border border-neutral-800 rounded-md p-4 flex flex-col items-center justify-center text-center shadow-lg">
           <span className="text-neutral-400 text-xs uppercase font-bold mb-1">Max Air Temp</span>
           <span className="text-2xl font-black text-green-500">{maxAirTemp.toFixed(1)}°C</span>
         </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-lg">
+        <div className="bg-neutral-900/50 border border-neutral-800 rounded-md p-4 flex flex-col items-center justify-center text-center shadow-lg">
           <span className="text-neutral-400 text-xs uppercase font-bold mb-1">Avg Humidity</span>
           <span className="text-2xl font-black text-[#00AEEF]">{avgHumidity}%</span>
         </div>
-        <div className={`border rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-lg ${hasRain ? 'bg-blue-900/20 border-blue-800/50' : 'bg-neutral-900/50 border-neutral-800'}`}>
+        <div className={`border rounded-md p-4 flex flex-col items-center justify-center text-center shadow-lg ${hasRain ? 'bg-blue-900/20 border-blue-800/50' : 'bg-neutral-900/50 border-neutral-800'}`}>
           <span className="text-neutral-400 text-xs uppercase font-bold mb-1">Rainfall Status</span>
           <span className={`text-2xl font-black ${hasRain ? 'text-blue-400' : 'text-neutral-500'}`}>{hasRain ? 'RAIN DETECTED' : 'CLEAR'}</span>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="h-[380px] bg-neutral-900/20 rounded-xl p-4 border border-neutral-800/50">
+      <div className="h-[380px] bg-neutral-900/20 rounded-md p-4 border border-neutral-800/50">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={weatherData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
             <defs>

@@ -1,75 +1,165 @@
 /* src/index.css */
+@import '@fontsource/titillium-web/latin-300.css';
+@import '@fontsource/titillium-web/latin-400.css';
+@import '@fontsource/titillium-web/latin-600.css';
+@import '@fontsource/titillium-web/latin-700.css';
+@import '@fontsource/titillium-web/latin-900.css';
+@import '@fontsource/titillium-web/latin-400-italic.css';
+@import '@fontsource/titillium-web/latin-700-italic.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  /* Warna background utama aplikasimu */
-  background-color: #0a0a0a; 
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-tarmac text-chalk font-sans;
+    /* Every number in this product is a lap time, gap, position or points
+       total; tabular figures keep columns aligned and stop timers jittering. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a, button, [role='button'], input, select, textarea, label, summary {
+    touch-action: manipulation;
+  }
+
+  /* Native selects on Windows dark mode ignore the page background. */
+  select, option {
+    background-color: theme('colors.neutral.950');
+    color: theme('colors.chalk');
+  }
+
+  ::selection {
+    background-color: theme('colors.red.600');
+    color: #fff;
+  }
+
+  [id] {
+    scroll-margin-top: 5rem;
+  }
 }
 
-/* ===== HIDE NATIVE SCROLLBARS (app-like chrome-free look) ===== */
-/* Scroll still works (wheel/trackpad/touch/keys) — only the scrollbar track
-   and thumb are hidden. Set on html, body and every scroll container so nested
-   panels (race-control log, timing table) also drop their bars. */
+/* Visible keyboard focus everywhere. Declared after the utilities so it wins
+   over `outline-none` / `focus:outline-none`, which only ever meant
+   "no ring on mouse click"; :focus-visible keeps that behaviour. */
+*:focus-visible {
+  outline: 2px solid theme('colors.red.500');
+  outline-offset: 2px;
+}
+/* Programmatic focus targets (route change moves focus to <main>). */
+[tabindex='-1']:focus-visible {
+  outline: none;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+}
 
-/* WebKit / Blink (Chrome, Edge, Brave, Safari) */
+/* Rubber-band suppression on desktop only; touch keeps pull-to-refresh. */
+@media (pointer: fine) {
+  html {
+    overscroll-behavior: none;
+  }
+}
+
+/* ===== Scrollbars =====
+   Slim graphite bars instead of hidden ones: the timing tables and the
+   race-control log scroll horizontally, and a hidden bar gave no hint that
+   more columns existed. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.neutral.700') transparent;
+}
 ::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
-  background: transparent;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: transparent;
+  background-color: theme('colors.neutral.700');
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: theme('colors.neutral.500');
 }
 
-/* Firefox */
-html {
-  scrollbar-width: none;
-  scrollbar-color: transparent transparent;
-}
-
-/* Standards-mode (Firefox newer, Edge) */
-* {
-  scrollbar-width: none;
-}
-*::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-/* ... (kode animasimu tidak berubah) ... */
-@keyframes gradient-slow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.animate-gradient-slow {
-  background-size: 400% 400%;
-  animation: gradient-slow 20s ease infinite;
-}
-
-
-/* ===== STYLE SCROLLBAR SEPERTI GOOGLE AI STUDIO ===== */
-/* (Superseded by the global hidden-scrollbar rules at the top of this file.) */
-
+/* ===== Motion ===== */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 .animate-fade-in-up {
-  animation-name: fadeInUp;
-  animation-duration: 0.6s;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeInUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Landing hero: the five start lights. Each pod lights in turn, then all
+   go out together; that moment is the page's one orchestrated animation. */
+@keyframes lightOn {
+  0%, 99.9% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* `forwards` (not `both`): the pod stays dark during its delay, lights for
+   the duration, then holds the dark 100% frame. Delay and duration are set
+   inline per pod so all five go out on the same frame. */
+.start-light {
+  opacity: 0;
+  animation-name: lightOn;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes heroRise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hero-rise {
+  animation: heroRise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .start-light {
+    animation: none;
+  }
 }

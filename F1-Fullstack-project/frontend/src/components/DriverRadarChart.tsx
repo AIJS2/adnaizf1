@@ -106,7 +106,7 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2,
 
   if (!profile1 || !profile2) {
     return (
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6">
+      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-6">
         <EmptyState
           icon={RadarIcon}
           title="No driver comparison available"
@@ -121,11 +121,11 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2,
   const color2 = customColor2 || teamColors[profile2.team] || '#3B82F6';
 
   return (
-    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
+    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
       <div className="absolute inset-0 bg-gradient-to-br from-neutral-800/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
       
       <div className="flex flex-col items-center justify-center mb-4 relative z-10">
-        <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-400 uppercase tracking-widest mb-1">
+        <h3 className="text-xl font-black uppercase tracking-widest mb-1 text-chalk">
           Driver Attributes Radar
         </h3>
         <p className="text-xs text-neutral-500 text-center max-w-sm">

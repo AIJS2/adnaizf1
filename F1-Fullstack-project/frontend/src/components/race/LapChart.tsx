@@ -47,7 +47,7 @@ const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
           icon={LineChartIcon}
           title={EMPTY_TABLE_MESSAGES.charts.title}
           description="Position data is recorded lap by lap and becomes available once the race has run."
-          className="min-h-[400px] rounded-2xl border border-neutral-800 bg-neutral-900/30"
+          className="min-h-[400px] rounded-lg border border-neutral-800 bg-neutral-900/30"
         />
       </div>
     );
@@ -71,7 +71,7 @@ const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500 tracking-tight">
+          <h3 className="text-2xl font-black tracking-tight text-chalk">
             Lap-by-Lap Position Chart
           </h3>
           <p className="text-xs text-neutral-400 mt-1">
@@ -102,7 +102,7 @@ const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
       </div>
 
       {/* Driver Toggle Pills */}
-      <div className="flex flex-wrap gap-2 mb-6 max-h-28 overflow-y-auto p-2 bg-neutral-950/60 rounded-xl border border-neutral-800">
+      <div className="flex flex-wrap gap-2 mb-6 max-h-28 overflow-y-auto p-2 bg-neutral-950/60 rounded-md border border-neutral-800">
         {activeKeys.map(drv => {
           const isSelected = selectedDrivers.includes(drv);
           const meta = driverMeta[drv];
@@ -111,7 +111,7 @@ const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
             <button
               key={drv}
               onClick={() => toggleDriver(drv)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 border ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-ui flex items-center gap-1.5 border ${
                 isSelected 
                   ? 'bg-neutral-900 text-white border-neutral-600 shadow' 
                   : 'bg-transparent text-neutral-500 border-neutral-800 opacity-50 hover:opacity-100'

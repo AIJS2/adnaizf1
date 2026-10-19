@@ -70,13 +70,13 @@ const formatAudioTime = (seconds: number) => {
 
 // Inline Error State
 const InlineErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
-  <div className="flex flex-col items-center justify-center p-8 bg-neutral-900/50 border border-red-900/30 rounded-xl">
+  <div className="flex flex-col items-center justify-center p-8 bg-neutral-900/50 border border-red-900/30 rounded-md">
     <AlertCircle className="text-red-500 mb-3" size={32} />
     <h3 className="text-lg font-bold text-white mb-2">Gagal Memuat Radio Tim</h3>
     <p className="text-neutral-400 text-sm mb-4 text-center">{error}</p>
     <button
       onClick={onRetry}
-      className="flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 rounded-lg transition-all"
+      className="flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 rounded-lg transition-ui"
     >
       <RefreshCw size={16} /> Coba Lagi
     </button>
@@ -85,7 +85,7 @@ const InlineErrorState = ({ error, onRetry }: { error: string; onRetry: () => vo
 
 // Empty State
 const EmptyState = ({ title, description }: { title: string; description: string }) => (
-  <div className="flex flex-col items-center justify-center p-12 bg-neutral-900/30 border border-neutral-800 rounded-xl text-center">
+  <div className="flex flex-col items-center justify-center p-12 bg-neutral-900/30 border border-neutral-800 rounded-md text-center">
     <Search className="text-neutral-600 mb-4" size={40} />
     <h3 className="text-xl font-bold text-neutral-300 mb-2">{title}</h3>
     <p className="text-neutral-500 text-sm">{description}</p>
@@ -95,7 +95,7 @@ const EmptyState = ({ title, description }: { title: string; description: string
 const RadioSkeleton = () => (
   <div className="space-y-3">
     {[1, 2, 3].map(i => (
-      <div key={i} className="h-20 bg-neutral-900/60 border border-neutral-800 rounded-xl animate-pulse"></div>
+      <div key={i} className="h-20 bg-neutral-900/60 border border-neutral-800 rounded-md motion-safe:animate-pulse"></div>
     ))}
   </div>
 );
@@ -108,6 +108,7 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasError, setHasError] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   const togglePlay = () => {
     if (audioRef.current && !hasError) {
@@ -126,6 +127,16 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
     }
   };
 
+  const cyclePlaybackRate = () => {
+    const rates = [1, 1.25, 1.5, 2];
+    const currentIndex = rates.indexOf(playbackRate);
+    const nextRate = rates[(currentIndex + 1) % rates.length];
+    setPlaybackRate(nextRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextRate;
+    }
+  };
+
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       const cur = audioRef.current.currentTime;
@@ -141,6 +152,7 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
   const handleLoadedMetadata = () => {
     if (audioRef.current && audioRef.current.duration) {
       setDuration(audioRef.current.duration);
+      audioRef.current.playbackRate = playbackRate;
     }
   };
 
@@ -166,7 +178,7 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
   const teamColor = meta?.team ? teamColors[meta.team] || '#EF4444' : '#EF4444';
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-neutral-900/90 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-all shadow-md group">
+    <div className="flex items-center gap-4 p-4 bg-neutral-900/90 border border-neutral-800 rounded-md hover:border-neutral-700 transition-ui shadow-md group">
       <audio
         ref={audioRef}
         src={url}
@@ -176,26 +188,38 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
         onError={() => setHasError(true)}
       />
 
-      <button
-        onClick={togglePlay}
-        disabled={hasError}
-        aria-label={isPlaying ? 'Pause team radio' : 'Play team radio'}
-        className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-all shadow-lg ${
-          hasError
-            ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
-            : isPlaying
-            ? 'bg-red-600 text-white ring-2 ring-red-500/50 scale-105'
-            : 'bg-neutral-800 hover:bg-red-600 text-white'
-        }`}
-      >
-        {hasError ? (
-          <AlertCircle size={20} />
-        ) : isPlaying ? (
-          <Pause size={20} className="fill-current" />
-        ) : (
-          <Play size={20} className="fill-current ml-0.5" />
-        )}
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={togglePlay}
+          disabled={hasError}
+          aria-label={isPlaying ? 'Pause team radio' : 'Play team radio'}
+          className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-ui shadow-lg ${
+            hasError
+              ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+              : isPlaying
+              ? 'bg-red-600 text-white ring-2 ring-red-500/50 scale-105'
+              : 'bg-neutral-800 hover:bg-red-600 text-white'
+          }`}
+        >
+          {hasError ? (
+            <AlertCircle size={20} />
+          ) : isPlaying ? (
+            <Pause size={20} className="fill-current" />
+          ) : (
+            <Play size={20} className="fill-current ml-0.5" />
+          )}
+        </button>
+
+        {/* Playback Speed Control */}
+        <button
+          onClick={cyclePlaybackRate}
+          disabled={hasError}
+          className="w-12 h-6 flex-shrink-0 flex items-center justify-center rounded-md bg-neutral-800 hover:bg-neutral-700 text-white text-[11px] font-bold font-mono transition-ui disabled:opacity-30"
+          title="Cycle playback speed"
+        >
+          {playbackRate}x
+        </button>
+      </div>
 
       <div className="flex-grow min-w-0">
         <div className="flex items-center justify-between gap-2 mb-2">
@@ -223,12 +247,12 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
             {/* Waveform Equalizer Animation */}
             {isPlaying && (
               <div className="flex items-center gap-1.5 px-1 bg-red-950/40 border border-red-500/30 rounded px-1.5 py-0.5" title="Transmission Active">
-                <Radio size={11} className="text-red-400 animate-pulse" />
+                <Radio size={11} className="text-red-400" />
                 <div className="flex items-end gap-0.5 h-3">
-                  <span className="w-1 rounded-full bg-red-500 animate-pulse h-2" style={{ animationDuration: '450ms' }} />
-                  <span className="w-1 rounded-full bg-red-400 animate-pulse h-3" style={{ animationDuration: '300ms' }} />
-                  <span className="w-1 rounded-full bg-red-500 animate-pulse h-1.5" style={{ animationDuration: '550ms' }} />
-                  <span className="w-1 rounded-full bg-red-400 animate-pulse h-2.5" style={{ animationDuration: '350ms' }} />
+                  <span className="w-1 rounded-full bg-red-500 motion-safe:animate-pulse h-2" style={{ animationDuration: '450ms' }} />
+                  <span className="w-1 rounded-full bg-red-400 motion-safe:animate-pulse h-3" style={{ animationDuration: '300ms' }} />
+                  <span className="w-1 rounded-full bg-red-500 motion-safe:animate-pulse h-1.5" style={{ animationDuration: '550ms' }} />
+                  <span className="w-1 rounded-full bg-red-400 motion-safe:animate-pulse h-2.5" style={{ animationDuration: '350ms' }} />
                 </div>
               </div>
             )}
@@ -246,12 +270,12 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
           title="Click to seek"
         >
           <div
-            className="h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full transition-all duration-100 ease-linear"
+            className="h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full transition-ui duration-100 ease-linear"
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <div className="flex justify-between items-center text-[10px] text-neutral-500 font-mono mt-1">
+        <div className="flex justify-between items-center text-[11px] text-neutral-500 font-mono mt-1">
           <span>{formatAudioTime(currentTime)}</span>
           <span>{duration > 0 ? formatAudioTime(duration) : '--:--'}</span>
         </div>
@@ -288,7 +312,7 @@ export default function TeamRadioSection() {
   });
 
   return (
-    <section className="w-full bg-neutral-950 p-6 rounded-2xl border border-neutral-800 shadow-xl">
+    <section className="w-full bg-neutral-950 p-6 rounded-lg border border-neutral-800 shadow-xl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-black italic uppercase flex items-center gap-2 text-white">
@@ -302,7 +326,7 @@ export default function TeamRadioSection() {
           <div className="flex bg-neutral-900 border border-neutral-800 rounded-lg p-1">
             <button
               onClick={() => setSessionFilter('latest')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-ui ${
                 sessionFilter === 'latest'
                   ? 'bg-red-600 text-white shadow-md'
                   : 'text-neutral-500 hover:text-white'
@@ -312,7 +336,7 @@ export default function TeamRadioSection() {
             </button>
             <button
               onClick={() => setSessionFilter('previous')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-ui ${
                 sessionFilter === 'previous'
                   ? 'bg-neutral-700 text-white shadow-md'
                   : 'text-neutral-500 hover:text-white'
@@ -323,9 +347,10 @@ export default function TeamRadioSection() {
           </div>
 
           <select
+            aria-label="Filter radio by driver"
             value={driverFilter}
             onChange={(e) => setDriverFilter(e.target.value)}
-            className="bg-neutral-900 border border-neutral-800 text-sm rounded-lg px-3 py-2 text-white outline-none focus:border-red-500 font-medium"
+            className="bg-neutral-900 border border-neutral-800 text-sm rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500 font-medium"
           >
             <option value="all">All Drivers ({sortedDriverEntries.length})</option>
             {sortedDriverEntries.map(([num, info]) => (

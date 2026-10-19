@@ -15,8 +15,7 @@ interface DriverStandingsListProps {
 }
 
 const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) => (
-  <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 h-full shadow-2xl flex flex-col relative overflow-hidden">
-    <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4" />
+  <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 h-full shadow-2xl flex flex-col relative overflow-hidden">
     <div className="flex justify-between items-center mb-5 border-b border-neutral-800/80 pb-4 relative z-10">
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500">
@@ -49,7 +48,7 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
           <Link 
             key={driver.name} 
             to={`/driver/${driverId}`}
-            className={`flex items-center justify-between text-sm py-2.5 px-3 rounded-xl border transition-all group cursor-pointer ${bgClass}`}
+            className={`flex items-center justify-between text-sm py-2.5 px-3 rounded-md border transition-ui group cursor-pointer ${bgClass}`}
           >
             <div className="flex items-center gap-3 min-w-0">
               <span className={`font-mono font-black text-xs w-5 text-center ${
@@ -63,7 +62,7 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
                 {driver.name}
               </span>
               {isLeader && (
-                <span className="hidden sm:inline-block bg-yellow-500/20 text-yellow-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40 uppercase shadow-[0_0_10px_rgba(250,204,21,0.2)]">
+                <span className="hidden sm:inline-block bg-yellow-500/20 text-yellow-400 text-[11px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40 uppercase ">
                   <Crown size={10} className="inline-block mr-1 -mt-0.5" />P1
                 </span>
               )}
@@ -71,7 +70,7 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
 
             <div className="flex items-center gap-2 flex-shrink-0 font-mono">
               <span className="font-extrabold text-white text-base">{parseInt(String(driver.points), 10)}</span>
-              <span className="text-[10px] text-neutral-500 uppercase font-sans font-bold">PTS</span>
+              <span className="text-[11px] text-neutral-500 uppercase font-sans font-bold">PTS</span>
               <ChevronRight size={14} className="text-neutral-600 group-hover:text-white transition-colors ml-1" />
             </div>
           </Link>

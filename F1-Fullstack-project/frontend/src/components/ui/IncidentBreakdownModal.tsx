@@ -51,13 +51,13 @@ const IncidentBreakdownModal = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[80vh] flex flex-col bg-neutral-950 border border-neutral-800 rounded-3xl overflow-hidden shadow-[0_25px_80px_rgba(0,0,0,0.85)]"
+        className="w-full max-w-2xl max-h-[80vh] flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg overflow-hidden shadow-[0_25px_80px_rgba(0,0,0,0.85)]"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between gap-4 p-5 md:p-6 border-b border-neutral-800 bg-neutral-900/60">
           <div className="flex items-center gap-3 min-w-0">
-            <span className={`p-2.5 rounded-xl border ${accentBorder} ${accentBg} ${accentText} shrink-0`}>
+            <span className={`p-2.5 rounded-md border ${accentBorder} ${accentBg} ${accentText} shrink-0`}>
               <Icon size={20} />
             </span>
             <div className="min-w-0">
@@ -73,7 +73,7 @@ const IncidentBreakdownModal = ({
             type="button"
             onClick={onClose}
             aria-label="Close breakdown"
-            className="p-2 rounded-xl text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors shrink-0"
+            className="p-2 rounded-md text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors shrink-0"
           >
             <X size={18} />
           </button>
@@ -89,8 +89,8 @@ const IncidentBreakdownModal = ({
               className="group flex items-center gap-4 p-4 md:px-6 hover:bg-neutral-900/70 transition-colors"
             >
               {/* Round badge */}
-              <span className="w-12 h-12 shrink-0 flex flex-col items-center justify-center rounded-xl bg-neutral-900 border border-neutral-800">
-                <span className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider">Rnd</span>
+              <span className="w-12 h-12 shrink-0 flex flex-col items-center justify-center rounded-md bg-neutral-900 border border-neutral-800">
+                <span className="text-[11px] uppercase font-bold text-neutral-500 tracking-wider">Rnd</span>
                 <span className="text-lg font-black font-mono leading-none text-white">{incident.round}</span>
               </span>
 
@@ -113,11 +113,11 @@ const IncidentBreakdownModal = ({
               {/* Session badge + status + grid */}
               <div className="flex items-center gap-3 shrink-0">
                 {incident.session_type === 'Sprint' ? (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-500/15 text-orange-400 border border-orange-500/40">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-orange-500/15 text-orange-400 border border-orange-500/40">
                     Sprint
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/40">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/40">
                     Grand Prix
                   </span>
                 )}
@@ -125,7 +125,7 @@ const IncidentBreakdownModal = ({
                   <div className={`text-xs font-bold ${accentText}`}>
                     {incident.status || incident.position_text}
                   </div>
-                  <div className="text-[10px] text-neutral-500 font-mono uppercase">
+                  <div className="text-[11px] text-neutral-500 font-mono uppercase">
                     Grid {incident.grid ? `P${incident.grid}` : '—'}
                   </div>
                 </div>
@@ -137,7 +137,7 @@ const IncidentBreakdownModal = ({
 
         {/* Footer hint */}
         <div className="p-3 md:px-6 border-t border-neutral-800 bg-neutral-900/40 text-center">
-          <span className="text-[10px] text-neutral-600 font-mono uppercase tracking-widest">
+          <span className="text-[11px] text-neutral-600 font-mono uppercase tracking-widest">
             Click an incident to open the race detail
           </span>
         </div>

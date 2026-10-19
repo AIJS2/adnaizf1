@@ -235,9 +235,9 @@ const SimulatorPage = () => {
         {/* Header */}
         <div className="mb-10 relative">
           <div className="absolute -left-10 -top-10 w-32 h-32 bg-red-500/20 blur-[60px] rounded-full pointer-events-none"></div>
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight flex items-center gap-3 italic transform -skew-x-6">
-            <Calculator className="text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" size={46} />
-            Championship <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Simulator</span>
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight flex items-center gap-3 italic ">
+            <Calculator className="text-red-500 " size={46} />
+            Championship <span className=" text-chalk">Simulator</span>
           </h1>
           <p className="text-neutral-400 mt-2 text-lg font-medium max-w-2xl">
             Test "What-If" scenarios on the remaining rounds{remainingRaces.length > 0 && <> (R{remainingRaces[0].round}–R{remainingRaces[remainingRaces.length - 1].round})</>}. Pick a Grand Prix, predict the podium, fastest lap, and Sprint winner, and watch the championship standings recalculate.
@@ -248,11 +248,11 @@ const SimulatorPage = () => {
           
           {/* Left Panel: Inputs + Title Fight */}
           <div className="lg:col-span-4 space-y-6">
-          <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden">
+          <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-lg p-6 md:p-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-[100px] rounded-full pointer-events-none"></div>
             
             <h3 className="text-2xl font-black mb-6 flex items-center gap-2 uppercase tracking-tight italic border-b border-white/10 pb-4 text-white">
-              <FlaskConical className="text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" size={24} /> 
+              <FlaskConical className="text-red-500 " size={24} /> 
               Strategy Command
             </h3>
             
@@ -273,7 +273,7 @@ const SimulatorPage = () => {
                   value={selectedRound}
                   onChange={e => setSelectedRound(e.target.value === '' ? '' : Number(e.target.value))}
                   disabled={remainingRaces.length === 0}
-                  className="w-full bg-neutral-950/90 border border-white/10 hover:border-red-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-red-400 focus:ring-4 focus:ring-red-400/20 transition-all shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-neutral-950/90 border border-white/10 hover:border-red-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-400/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {remainingRaces.length === 0 && <option value="">{loading ? 'Loading calendar…' : 'No remaining rounds'}</option>}
                   {remainingRaces.map(r => (
@@ -283,7 +283,7 @@ const SimulatorPage = () => {
                   ))}
                 </select>
                 {selectedRace && (
-                  <p className="mt-1.5 text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
+                  <p className="mt-1.5 text-[11px] text-neutral-500 font-bold uppercase tracking-widest">
                     {selectedRace.location || selectedRace.country || ''}{selectedRace.date ? ` • ${selectedRace.date}` : ''}
                   </p>
                 )}
@@ -292,10 +292,10 @@ const SimulatorPage = () => {
               {/* P1 Input */}
               <div className="relative group">
                 <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
-                  <span className="flex items-center gap-1"><Trophy size={12} className="text-yellow-400" /> P1 Winner</span> <span className="text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]">+25 PTS</span>
+                  <span className="flex items-center gap-1"><Trophy size={12} className="text-yellow-400" /> P1 Winner</span> <span className="text-yellow-400 ">+25 PTS</span>
                 </label>
-                <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P1 Winner" value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-all shadow-inner appearance-none cursor-pointer">
+                <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
+                <select aria-label="P1 Winner" value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P1 --</option>
                   {originalDrivers.map(d => <option key={`p1-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -304,10 +304,10 @@ const SimulatorPage = () => {
               {/* P2 Input */}
               <div className="relative group">
                 <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
-                  <span className="flex items-center gap-1"><Crosshair size={12} className="text-slate-300" /> P2 Runner-up</span> <span className="text-slate-300 drop-shadow-[0_0_5px_rgba(203,213,225,0.8)]">+18 PTS</span>
+                  <span className="flex items-center gap-1"><Crosshair size={12} className="text-slate-300" /> P2 Runner-up</span> <span className="text-slate-300 ">+18 PTS</span>
                 </label>
-                <div className="absolute inset-0 bg-slate-300/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P2 Runner-up" value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-all shadow-inner appearance-none cursor-pointer">
+                <div className="absolute inset-0 bg-slate-300/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
+                <select aria-label="P2 Runner-up" value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P2 --</option>
                   {originalDrivers.map(d => <option key={`p2-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -316,10 +316,10 @@ const SimulatorPage = () => {
               {/* P3 Input */}
               <div className="relative group">
                 <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
-                  <span className="flex items-center gap-1"><Activity size={12} className="text-amber-500" /> P3 Podium</span> <span className="text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.8)]">+15 PTS</span>
+                  <span className="flex items-center gap-1"><Activity size={12} className="text-amber-500" /> P3 Podium</span> <span className="text-amber-500 ">+15 PTS</span>
                 </label>
-                <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P3 Podium" value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all shadow-inner appearance-none cursor-pointer">
+                <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
+                <select aria-label="P3 Podium" value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P3 --</option>
                   {originalDrivers.map(d => <option key={`p3-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -328,10 +328,10 @@ const SimulatorPage = () => {
               {/* Fastest Lap Input */}
               <div className="relative group">
                 <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
-                  <span className="flex items-center gap-1"><Zap size={12} className="text-purple-500" /> Fastest Lap</span> <span className="text-purple-400 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]">+1 PTS</span>
+                  <span className="flex items-center gap-1"><Zap size={12} className="text-purple-500" /> Fastest Lap</span> <span className="text-purple-400 ">+1 PTS</span>
                 </label>
-                <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="Fastest Lap" value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-inner appearance-none cursor-pointer">
+                <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
+                <select aria-label="Fastest Lap" value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select Fastest Lap --</option>
                   {originalDrivers.map(d => <option key={`fl-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -342,16 +342,16 @@ const SimulatorPage = () => {
                 <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
                   <span className="flex items-center gap-1"><Timer size={12} className={isSprintWeekend ? 'text-cyan-500' : 'text-neutral-600'} /> Sprint Winner</span>
                   {isSprintWeekend
-                    ? <span className="text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]">+8 PTS</span>
+                    ? <span className="text-cyan-400 ">+8 PTS</span>
                     : <span className="text-neutral-600">NO SPRINT</span>}
                 </label>
-                <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="Sprint Winner" value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} disabled={!isSprintWeekend} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-xl p-3.5 text-white font-bold outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-all shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
+                <select aria-label="Sprint Winner" value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} disabled={!isSprintWeekend} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   <option value="">-- Select Sprint Winner --</option>
                   {originalDrivers.map(d => <option key={`sw-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
                 {!isSprintWeekend && (
-                  <p className="mt-1.5 text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
+                  <p className="mt-1.5 text-[11px] text-neutral-500 font-bold uppercase tracking-widest">
                     This Grand Prix has no Sprint session — sprint points do not apply.
                   </p>
                 )}
@@ -360,13 +360,13 @@ const SimulatorPage = () => {
               <div className="pt-4 flex flex-col sm:flex-row gap-3">
                 <button 
                   onClick={simulate} 
-                  className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] hover:-translate-y-0.5 flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-red-400/30"
+                  className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-red-400/30"
                 >
                   <Calculator size={18} /> Compute
                 </button>
                 <button 
                   onClick={reset} 
-                  className="sm:w-1/3 bg-neutral-900/80 hover:bg-neutral-800 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-white/10 hover:border-white/30 backdrop-blur-sm"
+                  className="sm:w-1/3 bg-neutral-900/80 hover:bg-neutral-800 text-white font-bold py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-white/10 hover:border-white/30 backdrop-blur-sm"
                 >
                   <RefreshCw size={16} /> Reset
                 </button>
@@ -375,22 +375,22 @@ const SimulatorPage = () => {
           </div>
 
             {/* Title Fight: Max Possible Points / Clinch Scenario */}
-            <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-lg p-6 md:p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 blur-[100px] rounded-full pointer-events-none"></div>
               <h3 className="text-2xl font-black mb-4 flex items-center gap-2 uppercase tracking-tight italic border-b border-white/10 pb-4 text-white">
-                <Crown className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" size={24} />
+                <Crown className="text-yellow-400 " size={24} />
                 Title Fight
               </h3>
 
               {maxPointsInfo ? (
                 <div className="space-y-4 relative z-10">
-                  <div className="flex items-center justify-between bg-neutral-950/80 border border-white/10 rounded-2xl px-4 py-3">
+                  <div className="flex items-center justify-between bg-neutral-950/80 border border-white/10 rounded-lg px-4 py-3">
                     <div>
-                      <span className="block text-[10px] text-neutral-500 font-black uppercase tracking-widest">Max Possible Points</span>
+                      <span className="block text-[11px] text-neutral-500 font-black uppercase tracking-widest">Max Possible Points</span>
                       <span className="text-3xl font-black italic text-white">+{maxPointsInfo.available}</span>
                     </div>
                     <div className="text-right">
-                      <span className="block text-[10px] text-neutral-500 font-black uppercase tracking-widest">{remainingRaces.length} rounds left</span>
+                      <span className="block text-[11px] text-neutral-500 font-black uppercase tracking-widest">{remainingRaces.length} rounds left</span>
                       <span className="text-xs font-bold text-neutral-300">
                         {maxPointsInfo.sprintRounds > 0
                           ? `incl. ${maxPointsInfo.sprintRounds} Sprint${maxPointsInfo.sprintRounds > 1 ? 's' : ''} (+8 each)`
@@ -409,20 +409,20 @@ const SimulatorPage = () => {
 
                   <div className="space-y-2">
                     {maxPointsInfo.contenders.map((c, i) => (
-                      <div key={c.id} className="flex items-center gap-3 bg-neutral-950/70 border border-white/5 rounded-xl px-3 py-2">
+                      <div key={c.id} className="flex items-center gap-3 bg-neutral-950/70 border border-white/5 rounded-md px-3 py-2">
                         <span className="w-5 text-center text-xs font-black text-neutral-500">{i + 1}</span>
                         <span className="w-1 h-6 rounded-full" style={{ backgroundColor: teamColors[c.team] || '#666' }}></span>
                         <div className="flex-1 min-w-0">
                           <span className="block text-xs font-black uppercase italic truncate text-white">{c.name}</span>
-                          <span className="block text-[9px] font-bold text-neutral-500 uppercase tracking-widest truncate">{c.team}</span>
+                          <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest truncate">{c.team}</span>
                         </div>
                         <div className="text-right">
                           <span className="block text-sm font-black font-mono text-white">{c.points}</span>
-                          <span className="block text-[9px] font-bold text-neutral-500 uppercase tracking-widest">max {c.maxPossible}</span>
+                          <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest">max {c.maxPossible}</span>
                         </div>
                         <span
                           title={c.eliminated ? 'Eliminated from title contention' : 'Still mathematically in title contention'}
-                          className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${c.eliminated ? 'text-neutral-500 border-neutral-700 bg-neutral-900' : 'text-green-400 border-green-500/40 bg-green-500/10'}`}
+                          className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${c.eliminated ? 'text-neutral-500 border-neutral-700 bg-neutral-900' : 'text-green-400 border-green-500/40 bg-green-500/10'}`}
                         >
                           {c.eliminated ? 'OUT' : 'IN'}
                         </span>
@@ -431,33 +431,33 @@ const SimulatorPage = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest relative z-10">Waiting for standings &amp; calendar…</p>
+                <p className="text-neutral-500 text-xs font-bold tracking-normal relative z-10">Waiting for standings &amp; calendar…</p>
               )}
             </div>
           </div>
 
           {/* Right Panel: Simulated Standings */}
           <div className="lg:col-span-8">
-            <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col h-full">
+            <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-lg p-6 md:p-8 flex flex-col h-full">
               
               <div className="flex flex-col xl:flex-row xl:items-center justify-between border-b border-white/10 pb-6 mb-6 gap-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <h3 className="text-2xl font-black flex items-center gap-3 italic uppercase tracking-tight text-white">
-                    <Activity className="text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" size={28} /> 
+                    <Activity className="text-red-500 " size={28} /> 
                     Predicted Standings
                   </h3>
                   {p1 || p2 || p3 || fastestLap || (isSprintWeekend && sprintWinner) ? (
-                    <span className="bg-red-500/20 text-red-400 border border-red-500/50 px-3 py-1 rounded-full text-xs font-black tracking-widest uppercase animate-pulse flex items-center gap-2 shadow-[0_0_10px_rgba(239,68,68,0.3)]">
-                      <div className="w-2 h-2 bg-red-400 rounded-full shadow-[0_0_5px_rgba(248,113,113,1)]"></div>
+                    <span className="bg-red-500/20 text-red-400 border border-red-500/50 px-3 py-1 rounded-full text-xs font-black tracking-normal motion-safe:animate-pulse flex items-center gap-2 ">
+                      <div className="w-2 h-2 bg-red-400 rounded-full "></div>
                       Simulated
                     </span>
                   ) : (
-                    <span className="bg-neutral-800/80 border border-white/10 text-neutral-400 px-3 py-1 rounded-full text-xs font-black tracking-widest uppercase">
+                    <span className="bg-neutral-800/80 border border-white/10 text-neutral-400 px-3 py-1 rounded-full text-xs font-black tracking-normal ">
                       Current
                     </span>
                   )}
                   {selectedRace && (
-                    <span className="bg-neutral-800/80 border border-white/10 text-neutral-300 px-3 py-1 rounded-full text-xs font-black tracking-widest uppercase">
+                    <span className="bg-neutral-800/80 border border-white/10 text-neutral-300 px-3 py-1 rounded-full text-xs font-black tracking-normal ">
                       R{selectedRace.round} {selectedRace.name}{selectedRace.is_sprint ? ' • SPRINT' : ''}
                     </span>
                   )}
@@ -467,13 +467,13 @@ const SimulatorPage = () => {
                 <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg p-1 w-full md:w-auto">
                   <button 
                     onClick={() => setViewMode('drivers')}
-                    className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'drivers' ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
+                    className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-ui flex items-center justify-center gap-2 ${viewMode === 'drivers' ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
                   >
                     <Flag size={14} /> Drivers
                   </button>
                   <button 
                     onClick={() => setViewMode('constructors')}
-                    className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'constructors' ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
+                    className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-ui flex items-center justify-center gap-2 ${viewMode === 'constructors' ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
                   >
                     <Users size={14} /> Constructors
                   </button>
@@ -481,9 +481,9 @@ const SimulatorPage = () => {
               </div>
 
               {loading ? (
-                <div className="space-y-3 animate-pulse flex-1">
+                <div className="space-y-3 motion-safe:animate-pulse flex-1">
                   {[1, 2, 3, 4, 5, 6].map(i => (
-                    <div key={i} className="h-20 bg-neutral-800/50 rounded-2xl w-full border border-white/5"></div>
+                    <div key={i} className="h-20 bg-neutral-800/50 rounded-lg w-full border border-white/5"></div>
                   ))}
                 </div>
               ) : (
@@ -499,17 +499,17 @@ const SimulatorPage = () => {
                     return (
                       <div 
                         key={driverKey(d)} 
-                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-2xl p-4 flex items-center gap-4 md:gap-6 transition-all duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
+                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-lg p-4 flex items-center gap-4 md:gap-6 transition-ui duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
                       >
-                        <div className="absolute left-0 top-0 bottom-0 w-1.5 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: teamColor, color: teamColor }}></div>
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 " style={{ backgroundColor: teamColor, color: teamColor }}></div>
                         
                         <div className="flex flex-col items-center justify-center w-12 md:w-16 ml-2">
-                          <span className="text-xl md:text-3xl font-black italic text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">{d.position}</span>
+                          <span className="text-xl md:text-3xl font-black italic text-white ">{d.position}</span>
                           <div className="flex items-center justify-center mt-0.5">
                             {posChange > 0 ? (
-                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded border border-green-500/40 shadow-[0_0_8px_rgba(74,222,128,0.3)]"><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
+                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded border border-green-500/40 "><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
                             ) : posChange < 0 ? (
-                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40 shadow-[0_0_8px_rgba(239,68,68,0.3)]"><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
+                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40 "><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
                             ) : (
                               <span className="text-neutral-500 font-bold text-xs"><Minus size={12} strokeWidth={3} /></span>
                             )}
@@ -520,13 +520,13 @@ const SimulatorPage = () => {
                           <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-sm group-hover:text-red-400 transition-colors">
                             {d.name}
                           </h4>
-                          <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest truncate">{d.team}</span>
+                          <span className="text-xs md:text-sm font-bold text-neutral-400 tracking-normal truncate">{d.team}</span>
                         </div>
 
                         <div className="text-right flex items-center gap-4">
                           <div className="w-16 md:w-20 text-right">
                             {ptsGained > 0 && (
-                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded text-xs md:text-sm font-black tracking-wider animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded text-xs md:text-sm font-black tracking-wider motion-safe:animate-pulse ">
                                 +{ptsGained}
                               </span>
                             )}
@@ -535,7 +535,7 @@ const SimulatorPage = () => {
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: ptsGained > 0 ? '#fff' : '#e5e5e5', textShadow: ptsGained > 0 ? '0 0 10px rgba(255,255,255,0.5)' : 'none' }}>
                               {d.points}
                             </span>
-                            <span className="block text-[9px] md:text-[10px] text-neutral-500 font-black tracking-widest uppercase -mt-1">PTS</span>
+                            <span className="block text-[11px] md:text-[11px] text-neutral-500 font-black tracking-widest uppercase -mt-1">PTS</span>
                           </div>
                         </div>
                         {ptsGained > 0 && (
@@ -556,17 +556,17 @@ const SimulatorPage = () => {
                     return (
                       <div 
                         key={team.id} 
-                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-2xl p-4 flex items-center gap-4 md:gap-6 transition-all duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
+                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-lg p-4 flex items-center gap-4 md:gap-6 transition-ui duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
                       >
-                        <div className="absolute left-0 top-0 bottom-0 w-1.5 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: teamColor, color: teamColor }}></div>
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 " style={{ backgroundColor: teamColor, color: teamColor }}></div>
                         
                         <div className="flex flex-col items-center justify-center w-12 md:w-16 ml-2">
-                          <span className="text-xl md:text-3xl font-black italic text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">{team.position}</span>
+                          <span className="text-xl md:text-3xl font-black italic text-white ">{team.position}</span>
                           <div className="flex items-center justify-center mt-0.5">
                             {posChange > 0 ? (
-                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded border border-green-500/40 shadow-[0_0_8px_rgba(74,222,128,0.3)]"><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
+                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded border border-green-500/40 "><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
                             ) : posChange < 0 ? (
-                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40 shadow-[0_0_8px_rgba(239,68,68,0.3)]"><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
+                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40 "><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
                             ) : (
                               <span className="text-neutral-500 font-bold text-xs"><Minus size={12} strokeWidth={3} /></span>
                             )}
@@ -577,7 +577,7 @@ const SimulatorPage = () => {
                           <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-sm group-hover:text-red-400 transition-colors flex items-center gap-3">
                             {team.name} {logo && <img src={logo} alt={team.name} className="h-5 md:h-6 object-contain opacity-80" />}
                           </h4>
-                          <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest truncate">
+                          <span className="text-xs md:text-sm font-bold text-neutral-400 tracking-normal truncate">
                             {(team.drivers || []).join(' / ')}
                           </span>
                         </div>
@@ -585,7 +585,7 @@ const SimulatorPage = () => {
                         <div className="text-right flex items-center gap-4">
                           <div className="w-16 md:w-20 text-right">
                             {ptsGained > 0 && (
-                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded text-xs md:text-sm font-black tracking-wider animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded text-xs md:text-sm font-black tracking-wider motion-safe:animate-pulse ">
                                 +{ptsGained}
                               </span>
                             )}
@@ -594,7 +594,7 @@ const SimulatorPage = () => {
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: ptsGained > 0 ? '#fff' : '#e5e5e5', textShadow: ptsGained > 0 ? '0 0 10px rgba(255,255,255,0.5)' : 'none' }}>
                               {team.points}
                             </span>
-                            <span className="block text-[9px] md:text-[10px] text-neutral-500 font-black tracking-widest uppercase -mt-1">PTS</span>
+                            <span className="block text-[11px] md:text-[11px] text-neutral-500 font-black tracking-widest uppercase -mt-1">PTS</span>
                           </div>
                         </div>
                         {ptsGained > 0 && (
@@ -605,7 +605,7 @@ const SimulatorPage = () => {
                   })}
                   
                   <div className="pt-4 text-center border-t border-white/5 mt-6">
-                    <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest pt-2">
+                    <p className="text-neutral-500 text-xs font-bold tracking-normal pt-2">
                       * Showing top 10 simulated {viewMode} standings
                     </p>
                   </div>

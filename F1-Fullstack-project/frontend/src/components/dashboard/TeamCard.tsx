@@ -27,7 +27,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
   return (
     <Link
       to={`/team/${teamId}`}
-      className="block group bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 shadow-lg relative overflow-hidden cursor-pointer"
+      className="block group bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg p-5 transition-ui duration-300 shadow-lg relative overflow-hidden cursor-pointer"
     >
       {/* Accent left color border */}
       <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: color }} />
@@ -65,7 +65,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
       {/* Mini Progress Bar */}
       <div className="mt-3 w-full bg-neutral-950 rounded-full h-1 overflow-hidden">
         <div 
-          className="h-full rounded-full transition-all duration-500" 
+          className="h-full rounded-full transition-ui duration-500" 
           style={{ width: `${pct}%`, backgroundColor: color }} 
         />
       </div>

@@ -75,15 +75,15 @@ const DriverProfilePage = () => {
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
         <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
-          <div className="animate-pulse space-y-8 w-full">
-            <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
+          <div className="motion-safe:animate-pulse space-y-8 w-full">
+            <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-lg w-full"></div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-2xl"></div>
-              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-2xl"></div>
-              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-2xl"></div>
-              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-2xl"></div>
+              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-lg"></div>
+              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-lg"></div>
+              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-lg"></div>
+              <div className="h-32 bg-neutral-900/60 border border-neutral-800 rounded-lg"></div>
             </div>
-            <div className="h-96 bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
+            <div className="h-96 bg-neutral-900/60 border border-neutral-800 rounded-lg w-full"></div>
           </div>
         </main>
       </div>
@@ -159,7 +159,7 @@ const DriverProfilePage = () => {
         </Link>
 
         {/* Aggressive Hero Card */}
-        <section className="relative rounded-3xl p-8 md:p-12 mb-10 overflow-hidden bg-neutral-900/40 border border-neutral-800 backdrop-blur-md">
+        <section className="relative rounded-lg p-8 md:p-12 mb-10 overflow-hidden bg-neutral-900/40 border border-neutral-800 backdrop-blur-md">
           {/* Neon Glow Effects based on Team Color */}
           <div 
             className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 pointer-events-none"
@@ -192,17 +192,17 @@ const DriverProfilePage = () => {
                 <span className="text-sm font-black uppercase tracking-[0.3em] text-neutral-400">{profile.team}</span>
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white uppercase italic transform -skew-x-6 flex flex-wrap items-baseline gap-4">
+              <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white italic flex flex-wrap items-baseline gap-4">
                 {profile.name}
                 <span className="text-3xl md:text-5xl text-neutral-700">#{profile.driver_number}</span>
               </h1>
               
               <div className="mt-6 flex flex-wrap items-center gap-4">
-                <span className="px-4 py-1.5 bg-neutral-800 text-neutral-200 text-xs font-bold uppercase tracking-widest rounded-full border border-neutral-700">
+                <span className="px-4 py-1.5 bg-neutral-800 text-neutral-200 text-xs font-bold tracking-normal rounded-full border border-neutral-700">
                   {currentYear} Season Driver
                 </span>
                 <span 
-                  className="px-4 py-1.5 text-xs font-bold uppercase tracking-widest rounded-full border"
+                  className="px-4 py-1.5 text-xs font-bold tracking-normal rounded-full border"
                   style={{ borderColor: `${teamColor}40`, color: teamColor, backgroundColor: `${teamColor}10` }}
                 >
                   {profile.points} Points
@@ -217,7 +217,7 @@ const DriverProfilePage = () => {
                 style={{ backgroundColor: profile.position === 1 ? '#eab308' : teamColor }}
               />
               <div className="relative flex flex-col items-center justify-center w-36 h-36 bg-neutral-900 border border-neutral-700 rounded-full shadow-2xl">
-                <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-[0.2em] mb-1">Position</span>
+                <span className="text-[11px] uppercase font-bold text-neutral-500 tracking-[0.2em] mb-1">Position</span>
                 <div className="text-5xl font-black text-white font-mono leading-none tracking-tighter">
                   P{profile.position}
                 </div>
@@ -242,17 +242,17 @@ const DriverProfilePage = () => {
               <>
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300" style={{ backgroundColor: teamColor }} />
                 {stat.onClick && (
-                  <span className="absolute top-4 right-4 text-[10px] font-mono uppercase tracking-wider text-neutral-600 group-hover:text-white transition-colors">
+                  <span className="absolute top-4 right-4 text-[11px] font-mono uppercase tracking-wider text-neutral-600 group-hover:text-white transition-colors">
                     Details →
                   </span>
                 )}
                 <div className="p-5 flex flex-col items-start relative z-10">
-                  <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-[0.2em] mb-2">{stat.label}</span>
+                  <span className="text-[11px] text-neutral-500 uppercase font-bold tracking-[0.2em] mb-2">{stat.label}</span>
                   <div className={`text-3xl lg:text-4xl font-black font-mono tracking-tighter ${stat.color} ${stat.tooltip ? 'cursor-help border-b border-dashed border-current' : ''}`}>
                     {stat.value}
                   </div>
                   {stat.sub && (
-                    <span className="mt-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">
+                    <span className="mt-1.5 text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-500">
                       {stat.sub}
                     </span>
                   )}
@@ -281,7 +281,7 @@ const DriverProfilePage = () => {
 
         {/* Teammate Head-to-Head */}
         {tm && (
-          <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl mb-8">
+          <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 md:p-8 shadow-2xl mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-3">
                 <Users className="text-red-500" size={24} />
@@ -294,28 +294,28 @@ const DriverProfilePage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Qualifying H2H */}
-              <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-5">
+              <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-5">
                 <div className="flex justify-between items-center text-sm font-bold mb-2">
                   <span style={{ color: teamColor }}>{profile.name} ({tm?.quali_h2h?.driver_ahead})</span>
                   <span className="text-neutral-500 uppercase text-xs tracking-wider">Qualifying</span>
                   <span className="text-neutral-400">({tm?.quali_h2h?.teammate_ahead}) {tm.name}</span>
                 </div>
                 <div className="w-full bg-neutral-800 rounded-full h-3 overflow-hidden flex">
-                  <div className="h-full transition-all duration-500" style={{ width: `${qualiH2HPct}%`, backgroundColor: teamColor }}></div>
-                  <div className="h-full bg-neutral-600 transition-all duration-500" style={{ width: `${100 - qualiH2HPct}%` }}></div>
+                  <div className="h-full transition-[width] duration-500" style={{ width: `${qualiH2HPct}%`, backgroundColor: teamColor }}></div>
+                  <div className="h-full bg-neutral-600 transition-[width] duration-500" style={{ width: `${100 - qualiH2HPct}%` }}></div>
                 </div>
               </div>
 
               {/* Race H2H */}
-              <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-5">
+              <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-5">
                 <div className="flex justify-between items-center text-sm font-bold mb-2">
                   <span style={{ color: teamColor }}>{profile.name} ({tm?.race_h2h?.driver_ahead})</span>
                   <span className="text-neutral-500 uppercase text-xs tracking-wider">Race Finish</span>
                   <span className="text-neutral-400">({tm?.race_h2h?.teammate_ahead}) {tm.name}</span>
                 </div>
                 <div className="w-full bg-neutral-800 rounded-full h-3 overflow-hidden flex">
-                  <div className="h-full transition-all duration-500" style={{ width: `${raceH2HPct}%`, backgroundColor: teamColor }}></div>
-                  <div className="h-full bg-neutral-600 transition-all duration-500" style={{ width: `${100 - raceH2HPct}%` }}></div>
+                  <div className="h-full transition-[width] duration-500" style={{ width: `${raceH2HPct}%`, backgroundColor: teamColor }}></div>
+                  <div className="h-full bg-neutral-600 transition-[width] duration-500" style={{ width: `${100 - raceH2HPct}%` }}></div>
                 </div>
               </div>
             </div>
@@ -323,7 +323,7 @@ const DriverProfilePage = () => {
         )}
 
         {/* Points Progression Chart */}
-        <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl mb-8">
+        <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 md:p-8 shadow-2xl mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-3">
               <TrendingUp className="text-yellow-500" size={24} />
@@ -367,7 +367,7 @@ const DriverProfilePage = () => {
         </section>
 
         {/* Round by Round Results Table */}
-        <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl">
+        <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg overflow-hidden shadow-2xl">
           <div className="p-6 border-b border-neutral-800 flex items-center justify-between">
             <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
               <Flag size={20} className="text-red-500" />

@@ -137,7 +137,7 @@ const defaultSearchItems: SearchItem[] = [
     team: 'Alpine',
     link: '/team/alpine',
     icon: Users,
-    keywords: ['alpine', 'gasly', 'doohan', 'renault']
+    keywords: ['alpine', 'gasly', 'colapinto', 'renault']
   },
   {
     id: 'team-williams',
@@ -147,7 +147,7 @@ const defaultSearchItems: SearchItem[] = [
     team: 'Williams',
     link: '/team/williams',
     icon: Users,
-    keywords: ['williams', 'albon', 'sainz', 'colapinto']
+    keywords: ['williams', 'albon', 'sainz']
   },
   {
     id: 'team-rb',
@@ -179,8 +179,6 @@ const defaultSearchItems: SearchItem[] = [
     icon: Users,
     keywords: ['haas', 'bearman', 'ocon']
   },
-
-  // Drivers
   {
     id: 'driver-max_verstappen',
     type: 'Drivers',
@@ -192,6 +190,18 @@ const defaultSearchItems: SearchItem[] = [
     link: '/driver/max_verstappen',
     icon: User,
     keywords: ['max', 'verstappen', 'ver', 'red bull', 'champion', '1']
+  },
+  {
+    id: 'driver-isack_hadjar',
+    type: 'Drivers',
+    title: 'Isack Hadjar',
+    code: 'HAD',
+    number: 6,
+    team: 'Red Bull Racing',
+    subtitle: '#6 · Red Bull Racing',
+    link: '/driver/isack_hadjar',
+    icon: User,
+    keywords: ['isack', 'hadjar', 'had', 'red bull', '6']
   },
   {
     id: 'driver-lando_norris',
@@ -206,18 +216,6 @@ const defaultSearchItems: SearchItem[] = [
     keywords: ['lando', 'norris', 'nor', 'mclaren', '4']
   },
   {
-    id: 'driver-charles_leclerc',
-    type: 'Drivers',
-    title: 'Charles Leclerc',
-    code: 'LEC',
-    number: 16,
-    team: 'Ferrari',
-    subtitle: '#16 · Ferrari',
-    link: '/driver/charles_leclerc',
-    icon: User,
-    keywords: ['charles', 'leclerc', 'lec', 'ferrari', '16']
-  },
-  {
     id: 'driver-oscar_piastri',
     type: 'Drivers',
     title: 'Oscar Piastri',
@@ -230,16 +228,16 @@ const defaultSearchItems: SearchItem[] = [
     keywords: ['oscar', 'piastri', 'pia', 'mclaren', '81']
   },
   {
-    id: 'driver-carlos_sainz',
+    id: 'driver-charles_leclerc',
     type: 'Drivers',
-    title: 'Carlos Sainz',
-    code: 'SAI',
-    number: 55,
+    title: 'Charles Leclerc',
+    code: 'LEC',
+    number: 16,
     team: 'Ferrari',
-    subtitle: '#55 · Ferrari',
-    link: '/driver/carlos_sainz',
+    subtitle: '#16 · Ferrari',
+    link: '/driver/charles_leclerc',
     icon: User,
-    keywords: ['carlos', 'sainz', 'sai', 'ferrari', 'smooth operator', '55']
+    keywords: ['charles', 'leclerc', 'lec', 'ferrari', '16']
   },
   {
     id: 'driver-lewis_hamilton',
@@ -247,11 +245,11 @@ const defaultSearchItems: SearchItem[] = [
     title: 'Lewis Hamilton',
     code: 'HAM',
     number: 44,
-    team: 'Mercedes',
-    subtitle: '#44 · Mercedes',
+    team: 'Ferrari',
+    subtitle: '#44 · Ferrari',
     link: '/driver/lewis_hamilton',
     icon: User,
-    keywords: ['lewis', 'hamilton', 'ham', 'mercedes', '7x champion', '44']
+    keywords: ['lewis', 'hamilton', 'ham', 'ferrari', '7x champion', '44']
   },
   {
     id: 'driver-george_russell',
@@ -266,16 +264,16 @@ const defaultSearchItems: SearchItem[] = [
     keywords: ['george', 'russell', 'rus', 'mercedes', '63']
   },
   {
-    id: 'driver-sergio_perez',
+    id: 'driver-andrea_kimi_antonelli',
     type: 'Drivers',
-    title: 'Sergio Perez',
-    code: 'PER',
-    number: 11,
-    team: 'Red Bull Racing',
-    subtitle: '#11 · Red Bull Racing',
-    link: '/driver/sergio_perez',
+    title: 'Kimi Antonelli',
+    code: 'ANT',
+    number: 12,
+    team: 'Mercedes',
+    subtitle: '#12 · Mercedes',
+    link: '/driver/andrea_kimi_antonelli',
     icon: User,
-    keywords: ['sergio', 'checo', 'perez', 'per', 'red bull', '11']
+    keywords: ['kimi', 'antonelli', 'andrea', 'ant', 'mercedes', '12']
   },
   {
     id: 'driver-fernando_alonso',
@@ -314,16 +312,16 @@ const defaultSearchItems: SearchItem[] = [
     keywords: ['pierre', 'gasly', 'gas', 'alpine', '10']
   },
   {
-    id: 'driver-esteban_ocon',
+    id: 'driver-franco_colapinto',
     type: 'Drivers',
-    title: 'Esteban Ocon',
-    code: 'OCO',
-    number: 31,
+    title: 'Franco Colapinto',
+    code: 'COL',
+    number: 43,
     team: 'Alpine',
-    subtitle: '#31 · Alpine',
-    link: '/driver/esteban_ocon',
+    subtitle: '#43 · Alpine',
+    link: '/driver/franco_colapinto',
     icon: User,
-    keywords: ['esteban', 'ocon', 'oco', 'alpine', 'haas', '31']
+    keywords: ['franco', 'colapinto', 'col', 'alpine', 'argentina', '43']
   },
   {
     id: 'driver-alexander_albon',
@@ -338,16 +336,16 @@ const defaultSearchItems: SearchItem[] = [
     keywords: ['alexander', 'albon', 'alb', 'williams', '23']
   },
   {
-    id: 'driver-franco_colapinto',
+    id: 'driver-carlos_sainz',
     type: 'Drivers',
-    title: 'Franco Colapinto',
-    code: 'COL',
-    number: 43,
+    title: 'Carlos Sainz',
+    code: 'SAI',
+    number: 55,
     team: 'Williams',
-    subtitle: '#43 · Williams',
-    link: '/driver/franco_colapinto',
+    subtitle: '#55 · Williams',
+    link: '/driver/carlos_sainz',
     icon: User,
-    keywords: ['franco', 'colapinto', 'col', 'williams', 'argentina', '43']
+    keywords: ['carlos', 'sainz', 'sai', 'williams', 'smooth operator', '55']
   },
   {
     id: 'driver-nico_hulkenberg',
@@ -355,23 +353,23 @@ const defaultSearchItems: SearchItem[] = [
     title: 'Nico Hulkenberg',
     code: 'HUL',
     number: 27,
-    team: 'Haas F1 Team',
-    subtitle: '#27 · Haas F1 Team',
+    team: 'Kick Sauber',
+    subtitle: '#27 · Kick Sauber',
     link: '/driver/nico_hulkenberg',
     icon: User,
-    keywords: ['nico', 'hulkenberg', 'hul', 'haas', 'sauber', 'hulk', '27']
+    keywords: ['nico', 'hulkenberg', 'hul', 'sauber', 'hulk', '27']
   },
   {
-    id: 'driver-kevin_magnussen',
+    id: 'driver-gabriel_bortoleto',
     type: 'Drivers',
-    title: 'Kevin Magnussen',
-    code: 'MAG',
-    number: 20,
-    team: 'Haas F1 Team',
-    subtitle: '#20 · Haas F1 Team',
-    link: '/driver/kevin_magnussen',
+    title: 'Gabriel Bortoleto',
+    code: 'BOR',
+    number: 5,
+    team: 'Kick Sauber',
+    subtitle: '#5 · Kick Sauber',
+    link: '/driver/gabriel_bortoleto',
     icon: User,
-    keywords: ['kevin', 'magnussen', 'mag', 'haas', 'kmag', '20']
+    keywords: ['gabriel', 'bortoleto', 'bor', 'sauber', 'brazil', '5']
   },
   {
     id: 'driver-yuki_tsunoda',
@@ -386,18 +384,6 @@ const defaultSearchItems: SearchItem[] = [
     keywords: ['yuki', 'tsunoda', 'tsu', 'rb', 'japan', '22']
   },
   {
-    id: 'driver-daniel_ricciardo',
-    type: 'Drivers',
-    title: 'Daniel Ricciardo',
-    code: 'RIC',
-    number: 3,
-    team: 'RB',
-    subtitle: '#3 · RB',
-    link: '/driver/daniel_ricciardo',
-    icon: User,
-    keywords: ['daniel', 'ricciardo', 'ric', 'rb', 'honey badger', '3']
-  },
-  {
     id: 'driver-liam_lawson',
     type: 'Drivers',
     title: 'Liam Lawson',
@@ -410,52 +396,28 @@ const defaultSearchItems: SearchItem[] = [
     keywords: ['liam', 'lawson', 'law', 'rb', 'red bull', '30']
   },
   {
-    id: 'driver-valtteri_bottas',
-    type: 'Drivers',
-    title: 'Valtteri Bottas',
-    code: 'BOT',
-    number: 77,
-    team: 'Sauber',
-    subtitle: '#77 · Kick Sauber',
-    link: '/driver/valtteri_bottas',
-    icon: User,
-    keywords: ['valtteri', 'bottas', 'bot', 'sauber', '77']
-  },
-  {
-    id: 'driver-zhou_guanyu',
-    type: 'Drivers',
-    title: 'Zhou Guanyu',
-    code: 'ZHO',
-    number: 24,
-    team: 'Sauber',
-    subtitle: '#24 · Kick Sauber',
-    link: '/driver/zhou_guanyu',
-    icon: User,
-    keywords: ['zhou', 'guanyu', 'zho', 'sauber', 'china', '24']
-  },
-  {
     id: 'driver-oliver_bearman',
     type: 'Drivers',
     title: 'Oliver Bearman',
     code: 'BEA',
-    number: 38,
+    number: 87,
     team: 'Haas F1 Team',
-    subtitle: '#38 · Haas / Ferrari',
+    subtitle: '#87 · Haas F1 Team',
     link: '/driver/oliver_bearman',
     icon: User,
-    keywords: ['oliver', 'bearman', 'bea', 'ferrari', 'haas', '38']
+    keywords: ['oliver', 'bearman', 'bea', 'haas', '87']
   },
   {
-    id: 'driver-andrea_kimi_antonelli',
+    id: 'driver-esteban_ocon',
     type: 'Drivers',
-    title: 'Kimi Antonelli',
-    code: 'ANT',
-    number: 12,
-    team: 'Mercedes',
-    subtitle: '#12 · Mercedes',
-    link: '/driver/andrea_kimi_antonelli',
+    title: 'Esteban Ocon',
+    code: 'OCO',
+    number: 31,
+    team: 'Haas F1 Team',
+    subtitle: '#31 · Haas F1 Team',
+    link: '/driver/esteban_ocon',
     icon: User,
-    keywords: ['kimi', 'antonelli', 'andrea', 'ant', 'mercedes', '12']
+    keywords: ['esteban', 'ocon', 'oco', 'haas', '31']
   },
 
   // Grand Prix Circuits & Races
@@ -728,31 +690,40 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16 md:pt-24 px-4 bg-black/80 backdrop-blur-md animate-fadeIn transition-all"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 md:pt-24 px-4 bg-tarmac/80 backdrop-blur-md animate-route-in overscroll-contain"
       onClick={() => setIsOpen(false)}
     >
-      <div 
-        className="w-full max-w-2xl bg-neutral-900/95 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] backdrop-blur-2xl ring-1 ring-white/10"
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search"
+        className="w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-lg shadow-2xl shadow-black/60 overflow-hidden flex flex-col max-h-[80vh] overscroll-contain animate-slide-in-bottom"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
-        {/* Search Input Bar */}
-        <div className="relative flex items-center px-4 py-3.5 border-b border-neutral-800 bg-neutral-950/60">
-          <Search className="text-red-500 mr-3 shrink-0" size={20} />
+        {/* Search Input Bar: the red underline is the focus indicator. */}
+        <div className="relative flex items-center px-4 py-3.5 border-b border-neutral-800 focus-within:border-red-600 transition-colors duration-150">
+          <Search className="text-red-500 mr-3 shrink-0" size={20} aria-hidden="true" />
           <input
             ref={inputRef}
-            type="text"
+            type="search"
+            name="command-search"
+            aria-label="Search drivers, teams, circuits or tools"
+            autoComplete="off"
+            spellCheck={false}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search drivers, teams, circuits, or tools... (e.g. Verstappen, Ferrari, Monaco, Compare)"
-            className="w-full bg-transparent text-white text-base placeholder-neutral-500 focus:outline-none"
+            placeholder="Verstappen, Ferrari, Monaco, Compare…"
+            className="w-full bg-transparent text-chalk text-base placeholder-neutral-500 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
-            <button 
+            <button
+              type="button"
               onClick={() => setQuery('')}
+              aria-label="Clear search"
               className="text-neutral-400 hover:text-white p-1 rounded-md transition-colors mr-2"
             >
-              <X size={16} />
+              <X size={16} aria-hidden="true" />
             </button>
           )}
           <span className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-mono font-bold bg-neutral-800 text-neutral-400 rounded border border-neutral-700">
@@ -766,7 +737,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1 rounded-full font-medium transition-all duration-150 shrink-0 ${
+              className={`px-3 py-1 rounded-full font-medium transition-ui duration-150 shrink-0 ${
                 selectedCategory === cat 
                   ? 'bg-red-600 text-white shadow-sm shadow-red-600/30 font-semibold' 
                   : 'bg-neutral-800/70 text-neutral-400 hover:text-white hover:bg-neutral-700/60'
@@ -803,7 +774,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
                   data-index={idx}
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-all duration-150 group ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-ui duration-150 group ${
                     isSelected 
                       ? 'bg-neutral-800/90 text-white shadow-md border border-neutral-700/70' 
                       : 'hover:bg-neutral-800/50 text-neutral-300 border border-transparent'
@@ -842,13 +813,13 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
                           {item.title}
                         </span>
                         {item.code && (
-                          <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-neutral-800 text-neutral-300 rounded border border-neutral-700">
+                          <span className="px-1.5 py-0.2 text-[11px] font-mono font-bold bg-neutral-800 text-neutral-300 rounded border border-neutral-700">
                             {item.code}
                           </span>
                         )}
                         {item.number !== undefined && (
                           <span 
-                            className="px-1.5 py-0.2 text-[10px] font-mono font-bold rounded"
+                            className="px-1.5 py-0.2 text-[11px] font-mono font-bold rounded"
                             style={{ 
                               backgroundColor: `${accentColor}25`, 
                               color: accentColor,
@@ -867,7 +838,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
 
                   {/* Right side category badge / arrow */}
                   <div className="flex items-center gap-2.5 shrink-0 ml-3">
-                    <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-neutral-800/90 text-neutral-400 border border-neutral-700/50">
+                    <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-neutral-800/90 text-neutral-400 border border-neutral-700/50">
                       {item.type}
                     </span>
                     <div className={`p-1 rounded-md transition-transform ${isSelected ? 'text-red-500 translate-x-0.5' : 'text-neutral-600'}`}>
@@ -884,16 +855,16 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
         <div className="px-4 py-2.5 bg-neutral-950/80 border-t border-neutral-800 text-neutral-400 text-[11px] flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[10px]">↑</kbd>
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[10px]">↓</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">↑</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">↓</kbd>
               <span>to navigate</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[10px]">↵</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">↵</kbd>
               <span>to select</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[10px]">ESC</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">ESC</kbd>
               <span>to close</span>
             </span>
           </div>

@@ -110,7 +110,7 @@ const LiveTimingPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     if (status.includes('YELLOW')) return 'bg-yellow-500 text-black';
-    if (status.includes('RED')) return 'bg-red-600 text-white animate-pulse';
+    if (status.includes('RED')) return 'bg-red-600 text-white motion-safe:animate-pulse';
     if (status.includes('SC') || status.includes('VSC')) return 'bg-orange-500 text-white';
     return 'bg-green-500 text-black';
   };
@@ -135,18 +135,18 @@ const LiveTimingPage: React.FC = () => {
         {/* Header Bar */}
         <div className="flex flex-col xl:flex-row xl:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
           <div>
-            <div className={`inline-flex items-center gap-2 border text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]'}`}>
-              <Activity size={12} className={connectionStatus === 'connected' ? 'animate-pulse' : ''} />
-              {connectionStatus === 'connecting' ? 'AWAITING CONNECTION...' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING...' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'NO LIVE SESSION'}
+            <div className={`inline-flex items-center gap-2 border text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 ' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 ') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 '}`}>
+              <Activity size={12} className={connectionStatus === 'connected' ? '' : ''} />
+              {connectionStatus === 'connecting' ? 'AWAITING CONNECTION…' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING…' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'NO LIVE SESSION'}
             </div>
-            <h1 className="text-4xl font-black tracking-tighter uppercase flex items-center gap-2">
-              Pit Wall <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Telemetry</span>
+            <h1 className="text-4xl font-black tracking-tight flex items-center gap-2">
+              Pit Wall <span className=" text-chalk">Telemetry</span>
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold bg-[#0a0a0a] border border-[#222] rounded-md px-4 py-2 uppercase tracking-wider shadow-inner w-full md:w-auto">
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,1)]"></div> Overall Best</span>
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(74,222,128,1)]"></div> Personal Best</span>
+          <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold bg-tarmac border border-[#222] rounded-md px-4 py-2 uppercase tracking-wider shadow-inner w-full md:w-auto">
+            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500 "></div> Overall Best</span>
+            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500 "></div> Personal Best</span>
             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-yellow-400"></div> No Improvement</span>
           </div>
         </div>
@@ -154,18 +154,17 @@ const LiveTimingPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
           {/* Main Timing Table (Left 3 cols) */}
-          <div className="lg:col-span-3 bg-[#080808] border border-[#1a1a1a] rounded-xl overflow-hidden shadow-2xl flex flex-col relative min-w-0">
+          <div className="lg:col-span-3 bg-tarmac border border-[#1a1a1a] rounded-md overflow-hidden shadow-2xl flex flex-col relative min-w-0">
             {/* Glossy top highlight */}
             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
 
-            <div className="overflow-x-auto flex-1">
+            <div className="overflow-auto flex-1 max-h-[calc(100vh-280px)]" style={{ overflowAnchor: 'none' }}>
               {hasNoSessionData ? (
                 <div className="flex flex-col items-center justify-center text-center py-16 px-6">
                   {/* Subtle pit-wall radar beacon */}
                   <div className="relative mb-5 flex items-center justify-center">
-                    <div className="absolute w-20 h-20 rounded-full bg-red-600/15 blur-xl animate-pulse" />
-                    <div className="w-14 h-14 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex items-center justify-center text-neutral-400 shadow-inner">
-                      <Radio size={24} className="text-red-500 animate-pulse" />
+                    <div className="w-14 h-14 rounded-lg bg-neutral-900/90 border border-neutral-800 flex items-center justify-center text-neutral-400 shadow-inner">
+                      <Radio size={24} className="text-red-500" />
                     </div>
                   </div>
 
@@ -182,7 +181,7 @@ const LiveTimingPage: React.FC = () => {
                     <div className="mt-8 flex flex-col items-center w-full max-w-lg">
                       {/* Event badge capsule */}
                       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-[11px] uppercase font-bold tracking-widest text-neutral-400 mb-5 shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                        <span className="w-2 h-2 rounded-full bg-red-500 motion-safe:animate-ping" />
                         <span>NEXT UP: <span className="text-white font-black">{heroRaceName}</span></span>
                         {heroSessionName && (
                           <span className="text-neutral-500 border-l border-neutral-700 pl-2 font-mono">
@@ -192,12 +191,12 @@ const LiveTimingPage: React.FC = () => {
                       </div>
 
                       {/* HeroCountdown display card */}
-                      <div className="relative p-5 sm:p-6 rounded-2xl bg-[#0a0a0a] border border-[#222] shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col items-center w-full sm:w-auto">
+                      <div className="relative p-5 sm:p-6 rounded-lg bg-tarmac border border-[#222] flex flex-col items-center w-full sm:w-auto">
                         <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
                         <HeroCountdown targetDate={targetCountdownDate} phase={heroPhase} />
                       </div>
 
-                      <div className="mt-4 flex items-center gap-2 text-[10px] text-neutral-500 font-mono tracking-widest uppercase">
+                      <div className="mt-4 flex items-center gap-2 text-[11px] text-neutral-500 font-mono tracking-widest uppercase">
                         <Clock size={12} className="text-neutral-600" />
                         <span>Lights Out Countdown</span>
                       </div>
@@ -206,10 +205,10 @@ const LiveTimingPage: React.FC = () => {
                 </div>
               ) : (
               <table className="w-full text-[13px] tracking-tight whitespace-nowrap min-w-[700px]">
-                <thead className="bg-[#0f0f0f] text-neutral-500 font-black text-left border-b border-[#222] shadow-sm">
+                <thead className="bg-neutral-950 text-neutral-500 font-black text-left border-b border-[#222] shadow-sm sticky top-0 z-10">
                   <tr>
-                    <th className="p-3 w-10 text-center border-r border-[#1a1a1a]">P</th>
-                    <th className="p-3 min-w-[140px] border-r border-[#1a1a1a]">DRIVER</th>
+                    <th className="p-3 w-10 text-center border-r border-[#1a1a1a] sticky left-0 bg-neutral-950 z-20">P</th>
+                    <th className="p-3 min-w-[140px] border-r border-[#1a1a1a] sticky left-10 bg-neutral-950 z-20">DRIVER</th>
                     <th className="p-3 w-20 border-r border-[#1a1a1a]">TYRE</th>
                     <th className="p-3 w-20 text-right border-r border-[#1a1a1a]">GAP</th>
                     <th className="p-3 w-20 text-right border-r border-[#1a1a1a]">INT</th>
@@ -222,17 +221,17 @@ const LiveTimingPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-[#151515]">
                   {connectionStatus === 'connecting' ? Array.from({length: 20}).map((_, i) => (
-                    <tr key={`skel-${i}`} className="animate-pulse h-[36px]">
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-4 mx-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-[#222] rounded w-16"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-[#222] rounded w-10"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-12 ml-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 ml-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-14 ml-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-[#222] rounded w-10 mx-auto"></div></td>
-                      <td className="p-2"><div className="h-3 bg-[#222] rounded w-4 mx-auto"></div></td>
+                    <tr key={`skel-${i}`} className="motion-safe:animate-pulse h-[36px]">
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-4 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-neutral-850 rounded w-16"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-neutral-850 rounded w-10"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-12 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-14 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 mx-auto"></div></td>
+                      <td className="p-2"><div className="h-3 bg-neutral-850 rounded w-4 mx-auto"></div></td>
                     </tr>
                   )) : sortedLines.length > 0 ? sortedLines.map((row) => (
                     <TimingRow key={row.driver} row={row} />
@@ -263,12 +262,12 @@ const LiveTimingPage: React.FC = () => {
           <div className="lg:col-span-1 flex flex-col gap-6">
 
             {/* Track Map */}
-            <div className="bg-[#080808] border border-[#1a1a1a] rounded-xl p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
+            <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
-              <h3 className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
+              <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
                 <Activity size={14} /> Track Map Simulation
               </h3>
-              <div className="relative w-full aspect-[2/1] bg-[#050505] rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
+              <div className="relative w-full aspect-[2/1] bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
                 <svg viewBox="0 0 300 150" className="w-full h-full">
                   {/* Track outline */}
                   <ellipse cx="150" cy="75" rx="120" ry="50" fill="none" stroke="#111" strokeWidth="12" />
@@ -305,9 +304,9 @@ const LiveTimingPage: React.FC = () => {
             </div>
 
             {/* Track Status */}
-            <div className="bg-[#080808] border border-[#1a1a1a] rounded-xl p-5 shadow-xl relative overflow-hidden">
+            <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
-              <h3 className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
+              <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
                 <Flag size={14} /> Track Status
               </h3>
               <div className={`w-full py-3 rounded-md font-black text-center text-xl tracking-widest shadow-inner border border-black/50 ${getStatusColor(data.trackStatus)}`}>
@@ -316,26 +315,26 @@ const LiveTimingPage: React.FC = () => {
             </div>
 
             {/* Weather */}
-            <div className="bg-[#080808] border border-[#1a1a1a] rounded-xl p-5 shadow-xl relative overflow-hidden">
+            <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
-              <h3 className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
+              <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
                 <CloudRain size={14} /> Local Conditions
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-[#0a0a0a] p-3 rounded border border-[#151515]">
-                  <div className="text-[9px] text-neutral-500 mb-1 font-bold tracking-wider">AIR TEMP</div>
+                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                  <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">AIR TEMP</div>
                   <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-red-500"/> {data.weather.air}</div>
                 </div>
-                <div className="bg-[#0a0a0a] p-3 rounded border border-[#151515]">
-                  <div className="text-[9px] text-neutral-500 mb-1 font-bold tracking-wider">TRACK TEMP</div>
+                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                  <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">TRACK TEMP</div>
                   <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-orange-500"/> {data.weather.track}</div>
                 </div>
-                <div className="bg-[#0a0a0a] p-3 rounded border border-[#151515]">
-                  <div className="text-[9px] text-neutral-500 mb-1 font-bold tracking-wider">HUMIDITY</div>
+                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                  <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">HUMIDITY</div>
                   <div className="font-bold flex items-center gap-2 text-md"><Wind size={14} className="text-blue-500"/> {data.weather.humidity}</div>
                 </div>
-                <div className="bg-[#0a0a0a] p-3 rounded border border-[#151515]">
-                  <div className="text-[9px] text-neutral-500 mb-1 font-bold tracking-wider">RAIN RISK</div>
+                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                  <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">RAIN RISK</div>
                   <div className="font-bold flex items-center gap-2 text-md"><CloudRain size={14} className="text-cyan-500"/> {data.weather.rain}</div>
                 </div>
               </div>
@@ -350,21 +349,21 @@ const LiveTimingPage: React.FC = () => {
         {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           {/* Race Control Messages */}
-          <div className="bg-[#080808] border border-[#1a1a1a] rounded-xl p-4 flex flex-col shadow-xl min-h-[300px] relative overflow-hidden">
+          <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-4 flex flex-col shadow-xl min-h-[300px] relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
-            <h3 className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-2">
+            <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-2">
               <Radio size={14} /> Race Control Log
             </h3>
-            <div className="flex-1 overflow-y-auto pr-3 space-y-2 font-mono text-[10px] custom-scrollbar">
+            <div className="flex-1 overflow-y-auto pr-3 space-y-2 font-mono text-[11px] custom-scrollbar">
               {data.messages.length > 0 ? data.messages.map((m, idx) => (
-                <div key={idx} className="flex flex-col py-1.5 border-b border-[#151515] last:border-0 group hover:bg-[#0a0a0a] transition-colors rounded px-1">
+                <div key={idx} className="flex flex-col py-1.5 border-b border-[#151515] last:border-0 group hover:bg-tarmac transition-colors rounded px-1">
                   <span className="text-neutral-600 font-bold">{m.time}</span>
                   <span className={`font-black tracking-wide ${m.type === 'pit' ? 'text-blue-400' : m.type === 'flag' ? 'text-yellow-400' : 'text-neutral-300'}`}>
                     {m.msg}
                   </span>
                 </div>
               )) : (
-                <div className="text-neutral-600 font-bold flex items-center justify-center h-full">Monitoring radio channels...</div>
+                <div className="text-neutral-600 font-bold flex items-center justify-center h-full">Monitoring radio channels…</div>
               )}
             </div>
           </div>
@@ -388,20 +387,20 @@ const TimingRow = memo<TimingRowProps>(({ row }) => {
   );
 
   return (
-    <tr className="hover:bg-[#111] transition-colors group relative">
-      <td className="p-2.5 text-center font-black text-neutral-500 border-r border-[#151515]">{row.position}</td>
+    <tr className="hover:bg-neutral-950 transition-colors group relative">
+      <td className="p-2.5 text-center font-black text-neutral-500 border-r border-[#151515] sticky left-0 bg-tarmac group-hover:bg-neutral-950 z-10 tabular-nums">{row.position}</td>
 
-      <td className="p-2.5 font-black text-white text-[14px] border-r border-[#151515] flex items-center gap-2">
+      <td className="p-2.5 font-black text-white text-[14px] border-r border-[#151515] flex items-center gap-2 sticky left-10 bg-tarmac group-hover:bg-neutral-950 z-10">
         <div className="w-1 h-5 rounded-sm shadow-sm" style={{ backgroundColor: teamColor }}></div>
         {row.driver}
         {row.status === 'PIT' && (
-          <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[9px] rounded-sm animate-pulse uppercase tracking-wider">
+          <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[11px] rounded-sm motion-safe:animate-pulse uppercase tracking-wider">
             IN PIT
           </span>
         )}
         {row.status !== 'PIT' && isIntervalClose && (
           <span
-            className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[9px] rounded-sm uppercase tracking-wider drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]"
+            className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[11px] rounded-sm uppercase tracking-wider "
             title="Manual Override Available"
           >
             OVR
@@ -411,9 +410,9 @@ const TimingRow = memo<TimingRowProps>(({ row }) => {
       <td className="p-2.5 border-r border-[#151515]">
         <TyreIcon compound={row.tyre} age={row.tyre_age} />
       </td>
-      <td className="p-2.5 text-right text-neutral-300 font-mono border-r border-[#151515]">{row.gap}</td>
-      <td className="p-2.5 text-right text-neutral-400 font-mono border-r border-[#151515]">{row.interval}</td>
-      <td className="p-2.5 text-right border-r border-[#151515] bg-[#0c0c0c] group-hover:bg-[#151515] transition-colors shadow-inner">
+      <td className="p-2.5 text-right text-neutral-300 font-mono border-r border-[#151515] tabular-nums">{row.gap}</td>
+      <td className="p-2.5 text-right text-neutral-400 font-mono border-r border-[#151515] tabular-nums">{row.interval}</td>
+      <td className="p-2.5 text-right border-r border-[#151515] bg-tarmac group-hover:bg-neutral-950 transition-colors shadow-inner">
         <SectorTime time={row.lastLap} color={row.lap_color} />
       </td>
       <td className="p-2.5 text-center border-r border-[#151515]">
@@ -425,7 +424,7 @@ const TimingRow = memo<TimingRowProps>(({ row }) => {
       <td className="p-2.5 text-center border-r border-[#151515]">
         <SectorTime time={row.sector3} color={row.s3_color} />
       </td>
-      <td className="p-2.5 text-center text-neutral-600 font-mono font-bold">{row.pits}</td>
+      <td className="p-2.5 text-center text-neutral-600 font-mono font-bold tabular-nums">{row.pits}</td>
     </tr>
   );
 });
@@ -447,10 +446,10 @@ const TyreIcon: React.FC<TyreIconProps> = ({ compound, age }) => {
 
   return (
     <div className="flex items-center gap-1.5">
-      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${bg} ${text}`}>
+      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black ${bg} ${text}`}>
         {compound}
       </div>
-      <span className="text-[10px] text-neutral-400">{age}L</span>
+      <span className="text-[11px] text-neutral-400">{age}L</span>
     </div>
   );
 };

@@ -1,25 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background-color:#08090b">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="description" content="Professional Formula 1 Telemetry, Live Timing, Driver H2H & Championship Analytics" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Formula 1 telemetry, live timing, head-to-head driver comparisons and championship analytics." />
+    <meta name="theme-color" content="#08090b" />
+    <meta name="color-scheme" content="dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="F1 PitWall" />
+    <meta name="apple-mobile-web-app-title" content="Analyziz" />
     <link rel="manifest" href="/manifest.json" />
-    <title>F1 Hub — Telemetry, Analytics & Pit-Wall</title>
+    <title>Analyziz | F1 telemetry, timing and championship analytics</title>
   </head>
   <body>
     <script>
-      window.addEventListener('error', function(e) {
-        var errDiv = document.createElement('div');
-        errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:99999;padding:20px;font-family:monospace;white-space:pre-wrap;';
-        errDiv.innerHTML = '<h2>Global Error Caught</h2>' + e.message + '<br/><br/>' + (e.error && e.error.stack ? e.error.stack : '');
-        document.body.appendChild(errDiv);
-      });
+      // Dev-only overlay for errors outside React. textContent (not innerHTML)
+      // so an error message can never inject markup.
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        window.addEventListener('error', function (e) {
+          var box = document.createElement('pre');
+          box.style.cssText = 'position:fixed;inset:auto 0 0 0;max-height:40vh;overflow:auto;margin:0;background:#470301;color:#ffdfdc;z-index:99999;padding:16px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;';
+          box.textContent = 'Uncaught error: ' + e.message + '\n\n' + (e.error && e.error.stack ? e.error.stack : '');
+          document.body.appendChild(box);
+        });
+      }
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

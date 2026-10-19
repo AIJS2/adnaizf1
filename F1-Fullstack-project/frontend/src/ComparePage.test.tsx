@@ -162,7 +162,7 @@ describe('ComparePage H2H Feature', () => {
 
     // Should see search input and Charles Leclerc in dropdown
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Search driver, team, or #...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search driver, team, or #…')).toBeInTheDocument();
       expect(screen.getByText('Charles Leclerc')).toBeInTheDocument();
     });
 

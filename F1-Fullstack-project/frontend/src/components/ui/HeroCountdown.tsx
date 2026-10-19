@@ -63,26 +63,32 @@ const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, phase = 'futu
   // down past lights out (even if the initial page phase was 'race_day' or 'future').
   if (phase === 'live' || timeLeft.isLive) {
     return (
-      <div className="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/40 text-green-400 font-black px-4 py-2 rounded-xl text-sm animate-pulse font-mono uppercase tracking-wider">
-        <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+      <div className="inline-flex items-center gap-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-black italic px-4 py-2 rounded-md text-sm">
+        <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+        </span>
         SESSION IS LIVE ON TRACK
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2 sm:gap-3">
+    <div className="flex items-stretch gap-1.5 sm:gap-2" role="timer" aria-label="Time until the session starts">
       {[
         { val: timeLeft.days, label: 'DAYS' },
         { val: timeLeft.hours, label: 'HRS' },
         { val: timeLeft.minutes, label: 'MIN' },
         { val: timeLeft.seconds, label: 'SEC' },
-      ].map((item, idx) => (
-        <div key={idx} className="bg-neutral-900/90 border border-neutral-800 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-center min-w-[56px] sm:min-w-[64px] shadow-lg">
-          <div className="font-mono font-black text-2xl sm:text-3xl text-white tracking-tight">
+      ].map((item) => (
+        <div
+          key={item.label}
+          className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 sm:px-4 sm:py-2.5 text-center min-w-[58px] sm:min-w-[68px]"
+        >
+          <div className="font-black text-2xl sm:text-3xl text-chalk leading-none tabular-nums">
             {String(item.val).padStart(2, '0')}
           </div>
-          <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-extrabold mt-0.5">
+          <div className="text-[10px] tracking-wide text-neutral-500 font-bold mt-1.5">
             {item.label}
           </div>
         </div>

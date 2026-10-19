@@ -56,11 +56,11 @@ function TeamsPage() {
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
         <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
-          <div className="animate-pulse space-y-8 w-full">
-            <div className="h-16 w-64 bg-neutral-900/60 border border-neutral-800 rounded-xl"></div>
+          <div className="motion-safe:animate-pulse space-y-8 w-full">
+            <div className="h-16 w-64 bg-neutral-900/60 border border-neutral-800 rounded-md"></div>
             <div className="space-y-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                <div key={i} className="h-20 bg-neutral-900/60 border border-neutral-800 rounded-2xl w-full"></div>
+                <div key={i} className="h-20 bg-neutral-900/60 border border-neutral-800 rounded-lg w-full"></div>
               ))}
             </div>
           </div>
@@ -76,7 +76,7 @@ function TeamsPage() {
       
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         <header className="mb-10">
-          <h1 className="text-5xl md:text-6xl font-black tracking-tighter italic uppercase">
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight italic ">
             Team <span className="text-red-600">Standings</span>
           </h1>
           <p className="text-lg text-neutral-400 font-medium tracking-wide">{currentYear} Constructor Championship</p>
@@ -85,9 +85,13 @@ function TeamsPage() {
         {/* Search Bar */}
         <div className="relative mb-10 max-w-xl">
           <input
-            type="text"
-            placeholder="Search by team name..."
-            className="w-full bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 rounded-sm py-4 pl-12 pr-4 text-white focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+            type="search"
+            aria-label="Search teams"
+            name="team-search"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Search by team name…"
+            className="w-full bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 rounded-sm py-4 pl-12 pr-4 text-white focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-ui font-medium"
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={22} />
@@ -115,7 +119,7 @@ function TeamsPage() {
                   />
 
                   {/* Kartu Utama */}
-                  <div className={`relative flex items-stretch bg-neutral-900/90 backdrop-blur-md border rounded-r-lg rounded-l-sm overflow-hidden transition-all duration-300 group-hover:border-neutral-500 ${isP1 ? 'border-yellow-500/50' : 'border-neutral-800'}`}>
+                  <div className={`relative flex items-stretch bg-neutral-900/90 backdrop-blur-md border rounded-r-lg rounded-l-sm overflow-hidden transition-ui duration-300 group-hover:border-neutral-500 ${isP1 ? 'border-yellow-500/50' : 'border-neutral-800'}`}>
 
                     {/* Kotak Posisi */}
                     <div
@@ -132,7 +136,7 @@ function TeamsPage() {
                       {logo && (
                         <img
                           src={logo}
-                          className="absolute -right-4 -bottom-6 h-32 md:h-40 opacity-5 pointer-events-none grayscale group-hover:grayscale-0 group-hover:opacity-15 transition-all duration-500 transform group-hover:scale-110"
+                          className="absolute -right-4 -bottom-6 h-32 md:h-40 opacity-5 pointer-events-none grayscale group-hover:grayscale-0 group-hover:opacity-15 transition-ui duration-500 transform"
                           alt=""
                         />
                       )}
@@ -143,7 +147,7 @@ function TeamsPage() {
                             {team.name}
                           </h2>
                           {isP1 && (
-                            <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] animate-pulse ml-2 shrink-0" />
+                            <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 ml-2 shrink-0" />
                           )}
                         </div>
                       </div>
@@ -152,15 +156,15 @@ function TeamsPage() {
                     {/* Statistik Kanan */}
                     <div className="flex items-center gap-6 md:gap-10 pr-4 md:pr-8 py-4 z-20 bg-gradient-to-l from-neutral-900 via-neutral-900/80 to-transparent pl-8">
                       <div className="hidden sm:flex flex-col items-end">
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Wins</span>
+                        <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Wins</span>
                         <span className="text-xl font-bold text-neutral-300">{team.wins}</span>
                       </div>
                       <div className="hidden sm:flex flex-col items-end">
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Podiums</span>
+                        <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Podiums</span>
                         <span className="text-xl font-bold text-neutral-300">{team.podiums}</span>
                       </div>
                       <div className="flex flex-col items-end min-w-[70px] md:min-w-[90px]">
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Points</span>
+                        <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Points</span>
                         <div className="flex flex-col items-end leading-none">
                           <span className="text-4xl md:text-5xl font-black italic text-white tracking-tighter">{team.points}</span>
                           {(team.points_last_race || 0) > 0 && (

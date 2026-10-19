@@ -1,4 +1,5 @@
 import React from 'react';
+import { RotateCw } from 'lucide-react';
 
 interface ErrorStateProps {
   message?: string;
@@ -7,14 +8,20 @@ interface ErrorStateProps {
 
 const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-red-500 text-lg mb-4">{message || 'Gagal Memuat Data'}</p>
+    <div className="min-h-screen bg-tarmac flex items-center justify-center px-6">
+      <div className="max-w-md text-center" role="alert">
+        <div className="mx-auto mb-5 h-1 w-12 bg-red-600" aria-hidden="true" />
+        <p className="text-lg font-bold text-chalk">{message || 'Gagal Memuat Data'}</p>
+        <p className="mt-2 text-sm text-neutral-400">
+          Periksa koneksi ke server data, lalu coba lagi.
+        </p>
         {onRetry && (
           <button
+            type="button"
             onClick={onRetry}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold rounded-md transition-colors"
           >
+            <RotateCw size={16} aria-hidden="true" />
             Coba Lagi
           </button>
         )}

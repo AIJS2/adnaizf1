@@ -89,7 +89,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
 
   if (!sessionResults.length) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-neutral-900/40 rounded-3xl border border-neutral-800">
+      <div className="flex flex-col items-center justify-center p-12 bg-neutral-900/40 rounded-lg border border-neutral-800">
         <TrendingUp className="text-neutral-600 mb-4" size={48} />
         <h3 className="text-neutral-400 font-bold text-lg">No progression data available.</h3>
       </div>
@@ -101,7 +101,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl">
         <div>
           <h2 className="text-xl md:text-2xl font-black flex items-center gap-3 tracking-tight">
             <TrendingUp className="text-red-500" /> Championship Progression
@@ -110,10 +110,10 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
         </div>
         
         {/* Toggle Mode */}
-        <div className="flex bg-neutral-950 p-1.5 rounded-xl border border-neutral-800/80">
+        <div className="flex bg-neutral-950 p-1.5 rounded-md border border-neutral-800/80">
           <button 
             onClick={() => setViewMode('drivers')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-ui ${
               viewMode === 'drivers' ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
@@ -121,7 +121,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
           </button>
           <button 
             onClick={() => setViewMode('constructors')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-ui ${
               viewMode === 'constructors' ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
@@ -130,7 +130,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
         </div>
       </div>
 
-      <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl">
+      <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 md:p-8 shadow-2xl">
         <div className="h-[500px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>

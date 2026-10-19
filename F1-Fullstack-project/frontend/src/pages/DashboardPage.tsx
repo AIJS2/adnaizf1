@@ -56,11 +56,11 @@ function DashboardPage() {
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
         <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
-          <div className="animate-pulse space-y-6">
-            <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
+          <div className="motion-safe:animate-pulse space-y-6">
+            <div className="h-64 md:h-80 bg-neutral-900/60 border border-neutral-800 rounded-lg w-full"></div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="h-[400px] bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
-              <div className="h-[400px] bg-neutral-900/60 border border-neutral-800 rounded-3xl w-full"></div>
+              <div className="h-[400px] bg-neutral-900/60 border border-neutral-800 rounded-lg w-full"></div>
+              <div className="h-[400px] bg-neutral-900/60 border border-neutral-800 rounded-lg w-full"></div>
             </div>
           </div>
         </main>
@@ -130,67 +130,61 @@ function DashboardPage() {
 
         {/* 1. SEASON PULSE BAR */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-red-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(239,68,68,0.15)] transition-all duration-300 group cursor-default">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors pointer-events-none" />
-            <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-red-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
+            <div className="w-10 h-10 rounded-md bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 flex-shrink-0 group-hover:rotate-3 transition-ui">
               <Calendar size={18} />
             </div>
             <div className="min-w-0 relative z-10">
-              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-red-400 transition-colors">Season Calendar</span>
+              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-red-400 transition-colors">Season Calendar</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {lastRace ? <>{lastRace.round} <span className="text-neutral-500 font-medium">/ {dashboardData?.total_races || 24}</span> Races</> : `${dashboardData?.year ?? currentYear} FIA F1 Season`}
               </p>
-              {lastRace && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-red-300/80 transition-colors">Next: {upcomingRace?.name || 'End of Season'}</p>}
+              {lastRace && <p className="text-[11px] text-neutral-400 mt-0.5 truncate group-hover:text-red-300/80 transition-colors">Next: {upcomingRace?.name || 'End of Season'}</p>}
             </div>
           </div>
 
-          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-yellow-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(234,179,8,0.15)] transition-all duration-300 group cursor-default">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-colors pointer-events-none" />
-            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 flex-shrink-0 group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-yellow-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
+            <div className="w-10 h-10 rounded-md bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 flex-shrink-0 group-hover:-rotate-3 transition-ui">
               <Crown size={18} />
             </div>
             <div className="min-w-0 relative z-10">
-              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-yellow-500 transition-colors">Drivers Leader</span>
+              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-yellow-500 transition-colors">Drivers Leader</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Driver ? `${p1Name || 'Unknown Driver'} (${parseInt(String(p1Driver.points), 10)} PTS)` : '-'}
               </p>
-              {p2Driver && p2Name && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-yellow-400/80 transition-colors">+{Math.round(p1Points - p2Points)} PTS ahead of {p2Name.split(' ').pop()}</p>}
+              {p2Driver && p2Name && <p className="text-[11px] text-neutral-400 mt-0.5 truncate group-hover:text-yellow-400/80 transition-colors">+{Math.round(p1Points - p2Points)} PTS ahead of {p2Name.split(' ').pop()}</p>}
             </div>
           </div>
 
-          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-cyan-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(6,182,212,0.15)] transition-all duration-300 group cursor-default">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-colors pointer-events-none" />
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-cyan-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
+            <div className="w-10 h-10 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0 group-hover:rotate-3 transition-ui">
               <Shield size={18} />
             </div>
             <div className="min-w-0 relative z-10">
-              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-cyan-400 transition-colors">Constructors Leader</span>
+              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-cyan-400 transition-colors">Constructors Leader</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {p1Team ? `${p1Team.name} (${parseInt(String(p1Team.points), 10)} PTS)` : '-'}
               </p>
-              {p2Team && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-cyan-300/80 transition-colors">+{teamGap} PTS ahead of {p2Team.name}</p>}
+              {p2Team && <p className="text-[11px] text-neutral-400 mt-0.5 truncate group-hover:text-cyan-300/80 transition-colors">+{teamGap} PTS ahead of {p2Team.name}</p>}
             </div>
           </div>
 
-          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-orange-500/50 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg hover:shadow-[0_0_25px_rgba(249,115,22,0.15)] transition-all duration-300 group cursor-default">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors pointer-events-none" />
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 flex-shrink-0 group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all">
+          <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-orange-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
+            <div className="w-10 h-10 rounded-md bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 flex-shrink-0 group-hover:-rotate-3 transition-ui">
               <Flame size={18} />
             </div>
             <div className="min-w-0 relative z-10">
-              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-orange-500 transition-colors">Last GP Winner</span>
+              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-500 block group-hover:text-orange-500 transition-colors">Last GP Winner</span>
               <p className="text-sm font-black text-white truncate drop-shadow-md">
                 {lastRace?.winner ? `${lastRace.winner}` : (dashboardData?.last_race_name || '-')}
               </p>
-              {lastRace && <p className="text-[10px] text-neutral-400 mt-0.5 truncate group-hover:text-orange-400/80 transition-colors">{lastRace.name}</p>}
+              {lastRace && <p className="text-[11px] text-neutral-400 mt-0.5 truncate group-hover:text-orange-400/80 transition-colors">{lastRace.name}</p>}
             </div>
           </div>
         </section>
 
         {/* 2. NEXT GRAND PRIX COMMAND CENTER HERO */}
-        <section className="relative bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 md:p-10 shadow-2xl overflow-hidden mb-8 group">
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 right-0 w-80 h-80 bg-orange-600/5 rounded-full blur-2xl pointer-events-none" />
+        <section className="relative bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 md:p-10 shadow-2xl overflow-hidden mb-8 group">
 
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 relative z-10">
             <div className="max-w-xl">
@@ -200,12 +194,12 @@ function DashboardPage() {
                   Next Grand Prix Hub &bull; {nextEvent?.round ? `Round ${nextEvent.round}` : 'Upcoming'}
                 </span>
                 {heroPhase === 'race_day' && (
-                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 motion-safe:animate-pulse">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Race Day — Today
                   </span>
                 )}
                 {heroPhase === 'live' && (
-                  <span className="bg-green-500/20 text-green-400 border border-green-500/50 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                  <span className="bg-green-500/20 text-green-400 border border-green-500/50 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 motion-safe:animate-pulse">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-400" /> Live On Track
                   </span>
                 )}
@@ -216,7 +210,7 @@ function DashboardPage() {
                 )}
               </div>
 
-              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white uppercase italic">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white italic">
                 {heroRaceName}
               </h1>
 
@@ -239,13 +233,13 @@ function DashboardPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <Link 
                   to={nextEvent?.round ? `/race/${dashboardData?.year}/${nextEvent.round}` : `/races`}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-600/20 hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-md font-bold text-sm transition-ui shadow-lg shadow-red-600/20"
                 >
                   <Flag size={16} /> View Race Details
                 </Link>
                 <Link 
                   to="/races"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-800/80 hover:bg-neutral-800 text-white border border-neutral-700 hover:border-neutral-600 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-800/80 hover:bg-neutral-800 text-white border border-neutral-700 hover:border-neutral-600 rounded-md font-bold text-sm transition-ui"
                 >
                   <Gauge size={16} /> Open Telemetry
                 </Link>
@@ -255,14 +249,14 @@ function DashboardPage() {
             {/* Right side: Circuit Artwork */}
             {trackMapImg && (
               <div className="flex flex-col items-center justify-center lg:items-end flex-shrink-0">
-                <div className="relative p-4 sm:p-6 bg-neutral-950/60 border border-neutral-800/80 rounded-3xl backdrop-blur-xl shadow-2xl flex flex-col items-center">
-                  <div className="absolute top-3 left-4 text-[10px] uppercase font-bold tracking-widest text-neutral-500 flex items-center gap-1.5">
+                <div className="relative p-4 sm:p-6 bg-neutral-950/60 border border-neutral-800/80 rounded-lg backdrop-blur-xl shadow-2xl flex flex-col items-center">
+                  <div className="absolute top-3 left-4 text-[11px] uppercase font-bold tracking-widest text-neutral-500 flex items-center gap-1.5">
                     <Activity size={12} className="text-red-500" /> Circuit Layout
                   </div>
                   <img 
                     src={trackMapImg} 
                     alt={upcomingRace?.name || "Circuit Map"} 
-                    className="w-56 sm:w-64 md:w-72 h-44 sm:h-52 object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] mt-4 group-hover:scale-105 transition-transform duration-500" 
+                    className="w-56 sm:w-64 md:w-72 h-44 sm:h-52 object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] mt-4 transition-transform duration-500" 
                   />
                   <div className="mt-2 text-xs font-mono font-bold text-neutral-400">
                     {upcomingRace?.location || 'Official F1 Circuit'}
@@ -275,15 +269,15 @@ function DashboardPage() {
 
         {/* 3. WORLD CHAMPIONSHIP TITLE FIGHT (P1 vs P2) */}
         {p1Driver && p2Driver && (
-          <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl mb-8 relative overflow-hidden">
+          <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 md:p-8 shadow-2xl mb-8 relative overflow-hidden">
             {/* Title Fight dramatic background gradients */}
             <div className="absolute top-0 left-0 w-1/3 h-full opacity-20 pointer-events-none blur-3xl transition-colors duration-1000" style={{ backgroundColor: teamColors[p1Driver.team] || '#EF4444' }} />
             <div className="absolute top-0 right-0 w-1/3 h-full opacity-20 pointer-events-none blur-3xl transition-colors duration-1000" style={{ backgroundColor: teamColors[p2Driver.team] || '#3B82F6' }} />
 
             <div className="flex items-center justify-between mb-6 relative z-10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/30 flex items-center justify-center text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                  <Swords size={20} className="animate-pulse" />
+                <div className="w-10 h-10 rounded-md bg-red-600/10 border border-red-500/30 flex items-center justify-center text-red-500 ">
+                  <Swords size={20} className="" />
                 </div>
                 <div>
                   <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
@@ -302,20 +296,20 @@ function DashboardPage() {
               {/* P1 Driver Card */}
               <Link
                 to={`/driver/${p1Name ? p1Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
-                className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-2xl p-5 transition-all duration-300 flex items-center justify-between relative overflow-hidden hover:-translate-y-1 shadow-lg"
+                className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-lg p-5 transition-ui duration-300 flex items-center justify-between relative overflow-hidden shadow-lg"
               >
                 <div 
-                  className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-all duration-300" 
+                  className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-ui duration-300" 
                   style={{ backgroundColor: teamColors[p1Driver.team] || '#EF4444', boxShadow: `0 0 15px ${teamColors[p1Driver.team]}80` }} 
                 />
                 <div className="flex items-center gap-4 ml-2">
-                  <div className="text-4xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-md italic pr-1">P1</div>
+                  <div className="text-4xl font-black font-mono drop-shadow-md italic pr-1 text-chalk">P1</div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
                         {p1Name || 'Unknown Driver'}
                       </h3>
-                      <span className="text-[10px] font-bold bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 flex items-center gap-1">
+                      <span className="text-[11px] font-bold bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 flex items-center gap-1">
                         <Crown size={10} /> LEADER
                       </span>
                     </div>
@@ -334,20 +328,20 @@ function DashboardPage() {
               {/* P2 Driver Card */}
               <Link
                 to={`/driver/${p2Name ? p2Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
-                className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-2xl p-5 transition-all duration-300 flex items-center justify-between relative overflow-hidden hover:-translate-y-1 shadow-lg"
+                className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-lg p-5 transition-ui duration-300 flex items-center justify-between relative overflow-hidden shadow-lg"
               >
                 <div 
-                  className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-all duration-300" 
+                  className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-ui duration-300" 
                   style={{ backgroundColor: teamColors[p2Driver.team] || '#3B82F6', boxShadow: `0 0 15px ${teamColors[p2Driver.team]}80` }} 
                 />
                 <div className="flex items-center gap-4 ml-2">
-                  <div className="text-4xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-slate-200 to-slate-500 drop-shadow-md italic pr-1">P2</div>
+                  <div className="text-4xl font-black font-mono drop-shadow-md italic pr-1 text-chalk">P2</div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
                         {p2Name || 'Unknown Driver'}
                       </h3>
-                      <span className="text-[10px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 flex items-center gap-1">
+                      <span className="text-[11px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 flex items-center gap-1">
                         <Target size={10} /> HUNTING
                       </span>
                     </div>
@@ -365,24 +359,24 @@ function DashboardPage() {
             </div>
 
             {/* Duel Gap Bar */}
-            <div className="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-4 md:p-5 relative z-10 shadow-inner">
+            <div className="bg-neutral-950/90 border border-neutral-800 rounded-lg p-4 md:p-5 relative z-10 shadow-inner">
               <div className="flex justify-between items-center text-xs font-mono text-neutral-300 mb-3">
                 <span className="font-black text-white text-sm tracking-tight">{p1Name || 'Unknown Driver'} <span className="text-neutral-500 ml-1">({p1DuelPct}%)</span></span>
-                <span className="bg-neutral-900 text-red-500 border border-red-500/30 px-3 py-1 rounded-full font-black text-[10px] tracking-widest shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                <span className="bg-neutral-900 text-red-500 border border-red-500/30 px-3 py-1 rounded-full font-black text-[11px] tracking-widest ">
                   GAP: {titleGap} PTS
                 </span>
                 <span className="font-black text-white text-sm tracking-tight"><span className="text-neutral-500 mr-1">({100 - p1DuelPct}%)</span> {p2Name || 'Unknown Driver'}</span>
               </div>
               <div className="w-full bg-neutral-900 rounded-full h-3 overflow-hidden flex border border-neutral-800">
                 <div 
-                  className="h-full transition-all duration-1000 relative" 
+                  className="h-full transition-ui duration-1000 relative" 
                   style={{ width: `${p1DuelPct}%`, backgroundColor: teamColors[p1Driver.team] || '#EF4444' }} 
                 >
                   <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" />
                 </div>
                 <div className="w-1 h-full bg-neutral-950 flex-shrink-0 z-10" />
                 <div 
-                  className="h-full transition-all duration-1000 relative" 
+                  className="h-full transition-ui duration-1000 relative" 
                   style={{ width: `${100 - p1DuelPct}%`, backgroundColor: teamColors[p2Driver.team] || '#666666' }} 
                 />
               </div>
@@ -394,7 +388,7 @@ function DashboardPage() {
         <section className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+              <div className="w-10 h-10 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
                 <Shield size={20} />
               </div>
               <div>
@@ -430,7 +424,7 @@ function DashboardPage() {
 
         {/* 5b. EMPTY SEASON NOTICE */}
         {driverStandings.length === 0 && raceAnalytics.length === 0 && (
-          <section className="mb-8 rounded-3xl border border-neutral-800 bg-neutral-900/60 p-8 text-center backdrop-blur-xl">
+          <section className="mb-8 rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center backdrop-blur-xl">
             <FlagTriangleRight className="mx-auto mb-3 text-neutral-600" size={36} />
             <h3 className="text-lg font-black uppercase tracking-tight text-white">
               No live data available
@@ -449,12 +443,11 @@ function DashboardPage() {
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <Link
             to="/races"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-red-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_rgba(239,68,68,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-red-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(239,68,68,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <Gauge size={80} className="absolute -right-6 -bottom-6 text-red-500/5 group-hover:text-red-500/10 transition-colors pointer-events-none" />
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-colors" />
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-500/30 flex items-center justify-center text-red-500 mb-5 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+              <div className="w-12 h-12 rounded-lg bg-red-600/10 border border-red-500/30 flex items-center justify-center text-red-500 mb-5 group-hover:rotate-3 transition-transform">
                 <Gauge size={24} />
               </div>
               <h3 className="text-lg font-black text-white group-hover:text-red-400 transition-colors uppercase tracking-tight">
@@ -471,12 +464,11 @@ function DashboardPage() {
 
           <Link
             to="/compare"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-purple-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_rgba(168,85,247,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-purple-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(168,85,247,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <Swords size={80} className="absolute -right-6 -bottom-6 text-purple-500/5 group-hover:text-purple-500/10 transition-colors pointer-events-none" />
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-colors" />
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-5 group-hover:scale-110 group-hover:-rotate-3 transition-transform">
+              <div className="w-12 h-12 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-5 group-hover:-rotate-3 transition-transform">
                 <Swords size={24} />
               </div>
               <h3 className="text-lg font-black text-white group-hover:text-purple-400 transition-colors uppercase tracking-tight">
@@ -493,12 +485,11 @@ function DashboardPage() {
 
           <Link
             to="/simulator"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-emerald-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-emerald-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <FlaskConical size={80} className="absolute -right-6 -bottom-6 text-emerald-500/5 group-hover:text-emerald-500/10 transition-colors pointer-events-none" />
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors" />
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-5 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+              <div className="w-12 h-12 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-5 group-hover:rotate-3 transition-transform">
                 <FlaskConical size={24} />
               </div>
               <h3 className="text-lg font-black text-white group-hover:text-emerald-400 transition-colors uppercase tracking-tight">
@@ -515,12 +506,11 @@ function DashboardPage() {
 
           <Link
             to="/stats"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-yellow-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_rgba(234,179,8,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-yellow-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(234,179,8,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <Crown size={80} className="absolute -right-6 -bottom-6 text-yellow-500/5 group-hover:text-yellow-500/10 transition-colors pointer-events-none" />
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl group-hover:bg-yellow-500/20 transition-colors" />
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 mb-5 group-hover:scale-110 group-hover:-rotate-3 transition-transform">
+              <div className="w-12 h-12 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 mb-5 group-hover:-rotate-3 transition-transform">
                 <Crown size={24} />
               </div>
               <h3 className="text-lg font-black text-white group-hover:text-yellow-400 transition-colors uppercase tracking-tight">
@@ -537,12 +527,11 @@ function DashboardPage() {
 
           <Link
             to="/races"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-cyan-500/50 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_rgba(6,182,212,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-cyan-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(6,182,212,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <FlagTriangleRight size={80} className="absolute -right-6 -bottom-6 text-cyan-500/5 group-hover:text-cyan-500/10 transition-colors pointer-events-none" />
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-colors" />
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+              <div className="w-12 h-12 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 group-hover:rotate-3 transition-transform">
                 <FlagTriangleRight size={24} />
               </div>
               <h3 className="text-lg font-black text-white group-hover:text-cyan-400 transition-colors uppercase tracking-tight">

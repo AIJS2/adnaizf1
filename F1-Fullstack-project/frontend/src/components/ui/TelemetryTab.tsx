@@ -27,18 +27,87 @@ interface TelemetryDriverOption {
 const isDidNotStart = (status?: string): boolean =>
   typeof status === 'string' && status.toLowerCase().includes('did not start');
 
-const adjustColor = (col: string, amt: number): string => {
-  if (!col) return '#ffffff';
-  let color = col.replace(/^#/, '');
-  if (color.length === 3) color = color[0]+color[0]+color[1]+color[1]+color[2]+color[2];
-  const num = parseInt(color, 16);
-  let r = (num >> 16) + amt;
-  let b = ((num >> 8) & 0x00FF) + amt;
-  let g = (num & 0x0000FF) + amt;
-  r = Math.max(Math.min(255, r), 0);
-  b = Math.max(Math.min(255, b), 0);
-  g = Math.max(Math.min(255, g), 0);
-  return '#' + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
+/** Generate visually distinct colors for teammates using HSL color space rotation */
+const generateTeammateColors = (baseColor: string, teamSize: number): string[] => {
+  // Convert hex to RGB
+  const hex = baseColor.replace(/^#/, '');
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  // Convert RGB to HSL
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  const colors: string[] = [];
+
+  for (let i = 0; i < teamSize; i++) {
+    let newH = h;
+    let newS = s;
+    let newL = l;
+
+    if (i === 0) {
+      // First driver: base color
+      colors.push(baseColor);
+    } else if (i === 1) {
+      // Second driver: darker and slightly shifted hue
+      newL = Math.max(0.2, l - 0.25);
+      newH = (h + 0.05) % 1;
+      colors.push(hslToHex(newH, newS, newL));
+    } else if (i === 2) {
+      // Third driver: lighter and shifted hue opposite direction
+      newL = Math.min(0.8, l + 0.15);
+      newS = Math.min(1, s + 0.2);
+      newH = (h - 0.05 + 1) % 1;
+      colors.push(hslToHex(newH, newS, newL));
+    }
+  }
+
+  return colors;
+};
+
+/** Convert HSL to Hex */
+const hslToHex = (h: number, s: number, l: number): string => {
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+
+  let r, g, b;
+
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+
+  const toHex = (x: number) => {
+    const hex = Math.round(x * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
 const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void }) => {
@@ -56,10 +125,10 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
   const visibleLaps = getVisibleLaps();
 
   return (
-    <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72">
+    <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72">
       <div className="absolute top-0 w-3/4 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent"></div>
       
-      <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+      <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
         <Crosshair size={12} className="text-red-500" /> Lap Selector
       </div>
       
@@ -73,7 +142,7 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
         
         <div className="flex-1 flex justify-center items-center gap-3">
           {!currentLap ? (
-            <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 tracking-widest animate-pulse">
+            <div className="text-2xl font-black tracking-widest text-chalk">
               FASTEST
             </div>
           ) : (
@@ -84,14 +153,14 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
                   <div 
                     key={l}
                     onClick={() => handleLapClick(l)}
-                    className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-                      isActive ? 'scale-125 mx-2' : 'opacity-40 hover:opacity-100 hover:scale-110'
+                    className={`flex flex-col items-center cursor-pointer transition-ui duration-300 ${
+                      isActive ? 'scale-125 mx-2' : 'opacity-40 hover:opacity-100'
                     }`}
                   >
-                    <div className={`text-[10px] mb-1.5 font-mono ${isActive ? 'text-red-400 font-black' : 'text-neutral-400 font-bold'}`}>
+                    <div className={`text-[11px] mb-1.5 font-mono ${isActive ? 'text-red-400 font-black' : 'text-neutral-400 font-bold'}`}>
                       {l}
                     </div>
-                    <div className={`w-1 rounded-full transition-all ${isActive ? 'h-8 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'h-3 bg-neutral-600'}`}></div>
+                    <div className={`w-1 rounded-full transition-[height,background-color,box-shadow] ${isActive ? 'h-8 bg-red-500 ' : 'h-3 bg-neutral-600'}`}></div>
                   </div>
                 );
               })}
@@ -113,13 +182,13 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
       <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg overflow-hidden p-1 w-full max-w-[200px]">
         <button 
           onClick={setFastest}
-          className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${!currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
+          className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-ui ${!currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
         >
           FASTEST
         </button>
         <button 
           onClick={() => { if(!currentLap) setLap('1') }}
-          className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
+          className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-ui ${currentLap ? 'bg-neutral-800 text-white shadow-md' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
         >
           MANUAL
         </button>
@@ -270,7 +339,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
             <Activity size={14} /> Telemetry Pro
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-            Lap Telemetry <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Analysis</span>
+            Lap Telemetry <span className=" text-chalk">Analysis</span>
           </h1>
           <p className="text-neutral-400 mt-2 text-sm">
             Synchronized throttle, braking, corner speed, and delta time comparison for up to 10 drivers.
@@ -278,13 +347,13 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
         </div>
       </div>
 
-      <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl mb-8 flex flex-col xl:flex-row gap-6 items-stretch">
+      <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl mb-8 flex flex-col xl:flex-row gap-6 items-stretch">
         
         {/* Drivers Box */}
-        <div className="flex-1 bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-4 relative overflow-hidden shadow-2xl flex flex-col">
+        <div className="flex-1 bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 relative overflow-hidden shadow-2xl flex flex-col">
           <div className="absolute top-0 w-3/4 left-0 h-1 bg-gradient-to-r from-transparent via-blue-600 to-transparent"></div>
           
-          <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+          <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
             <Radio size={12} className="text-blue-500" /> Select Drivers (Max 10)
           </div>
 
@@ -298,7 +367,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                   key={d.abbreviation}
                   onClick={() => toggleDriver(d.abbreviation)}
                   disabled={isDisabled}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 border ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-ui flex items-center gap-1.5 border ${
                     isSelected 
                       ? 'bg-neutral-800 text-white border-neutral-500 shadow-md' 
                       : isDisabled
@@ -310,7 +379,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                   {d.abbreviation}
                   {isDidNotStart(d.status) && (
                     <span
-                      className="ml-0.5 px-1 py-px rounded text-[9px] leading-none font-black bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                      className="ml-0.5 px-1 py-px rounded text-[11px] leading-none font-black bg-amber-500/20 text-amber-400 border border-amber-500/40"
                       title="Did not start - no telemetry available for this driver"
                     >
                       DNS
@@ -322,7 +391,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           </div>
         </div>
 
-        {/* Selection hint */}
+        {/* Selection hint: warn when a selected driver has no telemetry (DNS) */}
         {selectedDrivers.length > 0 && !telemetryData && (
           <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-start gap-2 text-xs font-bold text-amber-400">
             <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
@@ -343,25 +412,25 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           <button 
             onClick={fetchTelemetry}
             disabled={loading || selectedDrivers.length === 0}
-            className="w-full xl:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-8 rounded-2xl transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50 text-sm h-[48px] xl:h-full xl:min-h-[140px]"
+            className="w-full xl:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-8 rounded-lg transition-ui shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50 text-sm h-[48px] xl:h-full xl:min-h-[140px]"
           >
             <div className="flex xl:flex-col items-center gap-2">
               {loading ? <RefreshCw className="animate-spin" size={24} /> : <Zap size={24} />}
-              <span>{loading ? 'Analyzing...' : 'Run Analysis'}</span>
+              <span>{loading ? 'Analyzing…' : 'Run Analysis'}</span>
             </div>
           </button>
         </div>
       </section>
 
       {error && (
-        <div className="bg-red-950/40 border border-red-500/50 text-red-400 p-5 rounded-2xl mb-8 flex items-center gap-3">
+        <div className="bg-red-950/40 border border-red-500/50 text-red-400 p-5 rounded-lg mb-8 flex items-center gap-3">
           <AlertTriangle size={24} className="flex-shrink-0" />
           <span className="font-semibold text-sm">{error}</span>
         </div>
       )}
 
       {warning && warning.length > 0 && !error && telemetryData && telemetryData.drivers.length > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-2xl p-4 mb-6 flex items-start gap-3">
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-lg p-4 mb-6 flex items-start gap-3">
           <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" />
           <div className="text-sm">
             <p className="font-bold">Tanpa data telemetry:</p>
@@ -375,9 +444,9 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       )}
 
       {loading && !telemetryData && (
-        <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-16 flex flex-col items-center justify-center min-h-[40vh] mb-8">
+        <div className="bg-neutral-900/40 border border-neutral-800 rounded-lg p-16 flex flex-col items-center justify-center min-h-[40vh] mb-8">
           <RefreshCw className="animate-spin text-red-500 mb-4" size={44} />
-          <h3 className="text-xl font-bold animate-pulse text-white">Extracting Multi-Driver Telemetry...</h3>
+          <h3 className="text-xl font-bold text-white">Extracting Multi-Driver Telemetry…</h3>
           <p className="text-xs text-neutral-500 mt-2">Aligning GPS distance & channels for {selectedDrivers.length} drivers</p>
         </div>
       )}
@@ -386,7 +455,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           instead of rendering an empty card with nothing to read. When instead
           every requested driver failed, list each one with its own reason. */}
       {telemetryData && telemetryData.drivers.length === 0 && (
-        <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-10 mb-8 text-center">
+        <div className="bg-neutral-900/40 border border-neutral-800 rounded-lg p-10 mb-8 text-center">
           <Radio className="mx-auto text-neutral-600 mb-3" size={32} />
           <p className="text-sm font-semibold text-neutral-300">
             {emptyStateMessage ??
@@ -410,21 +479,21 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
         <div className={`space-y-8 transition-opacity duration-300 ${loading ? 'opacity-40 pointer-events-none blur-[2px]' : 'opacity-100'}`}>
           <div className="flex justify-between items-center">
             {loading && (
-              <div className="flex items-center gap-2 text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-full animate-pulse">
-                <RefreshCw className="animate-spin" size={16} /> Fetching {selectedDrivers.length} Drivers Telemetry...
+              <div className="flex items-center gap-2 text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-full motion-safe:animate-pulse">
+                <RefreshCw className="animate-spin" size={16} /> Fetching {selectedDrivers.length} Drivers Telemetry…
               </div>
             )}
             <div className="flex-1 flex justify-end">
               <button 
                 onClick={handleExportPNG}
-                className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold py-2 px-4 rounded-xl transition-all shadow-md hover:shadow-lg border border-neutral-700 flex items-center gap-2"
+                className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold py-2 px-4 rounded-md transition-ui shadow-md hover:shadow-lg border border-neutral-700 flex items-center gap-2"
               >
                 Export Social Card (PNG)
               </button>
             </div>
           </div>
 
-          <div id="telemetry-card" className="space-y-8 p-6 bg-neutral-950/90 rounded-3xl">
+          <div id="telemetry-card" className="space-y-8 p-6 bg-neutral-950/90 rounded-lg">
 
             
             {/* Track Domination Map */}
@@ -444,7 +513,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                 const logo = teamLogos[info.team];
                 
                 return (
-                  <div key={drv} className="bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group" style={{ borderTopWidth: '4px', borderTopColor: teamCol }}>
+                  <div key={drv} className="bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-5 shadow-xl relative overflow-hidden group" style={{ borderTopWidth: '4px', borderTopColor: teamCol }}>
                     <div className="absolute -right-4 -bottom-6 text-7xl font-black opacity-5 pointer-events-none font-mono" style={{ color: teamCol }}>
                       {drv}
                     </div>
@@ -457,20 +526,22 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                     </div>
                     
                     <div className="space-y-3 relative z-10">
-                      <div className="bg-neutral-900/80 p-3 rounded-xl border border-neutral-800/50">
-                        <div className="text-[10px] text-neutral-500 font-bold uppercase mb-1 flex items-center gap-1"><Flag size={12}/> Lap Time</div>
-                        <div className="font-mono text-lg font-bold text-white">{info.lap_time || 'N/A'}</div>
-                        <div className="text-[10px] font-bold mt-1" style={{color: info.compound === 'SOFT' ? '#FF3333' : info.compound === 'MEDIUM' ? '#EAEA00' : '#FFFFFF'}}>{info.compound} TYRE</div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-neutral-900/80 p-2 rounded-xl border border-neutral-800/50">
-                          <div className="text-[10px] text-neutral-500 font-bold uppercase mb-1">Top Speed</div>
-                          <div className="font-mono text-sm font-bold text-white">{info.max_speed} <span className="text-[10px] text-neutral-500">km/h</span></div>
+                      <div className="bg-neutral-900/80 p-3 rounded-md border border-neutral-800/50">
+                        <div className="text-[11px] text-neutral-500 font-bold uppercase mb-1 flex items-center gap-1"><Flag size={12}/> Lap Time</div>
+                        <div className="font-mono text-lg font-bold text-white tabular-nums">{info.lap_time || 'N/A'}</div>
+                        <div className="text-[11px] font-bold mt-1 uppercase" style={{color: info.compound === 'SOFT' ? '#FF3333' : info.compound === 'MEDIUM' ? '#EAEA00' : info.compound === 'HARD' ? '#FFFFFF' : info.compound === 'INTERMEDIATE' ? '#22C55E' : info.compound === 'WET' ? '#3B82F6' : '#888888'}}>
+                          {info.compound} TYRE
                         </div>
-                        <div className="bg-neutral-900/80 p-2 rounded-xl border border-neutral-800/50">
-                          <div className="text-[10px] text-neutral-500 font-bold uppercase mb-1">Avg Speed</div>
-                          <div className="font-mono text-sm font-bold text-white">{info.avg_speed} <span className="text-[10px] text-neutral-500">km/h</span></div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-neutral-900/80 p-2 rounded-md border border-neutral-800/50">
+                          <div className="text-[11px] text-neutral-500 font-bold uppercase mb-1">Top Speed</div>
+                          <div className="font-mono text-sm font-bold text-white tabular-nums">{info.max_speed} <span className="text-[11px] text-neutral-500">km/h</span></div>
+                        </div>
+                        <div className="bg-neutral-900/80 p-2 rounded-md border border-neutral-800/50">
+                          <div className="text-[11px] text-neutral-500 font-bold uppercase mb-1">Avg Speed</div>
+                          <div className="font-mono text-sm font-bold text-white tabular-nums">{info.avg_speed} <span className="text-[11px] text-neutral-500">km/h</span></div>
                         </div>
                       </div>
                     </div>
@@ -483,21 +554,44 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
             {(() => {
               const driverStyles: Record<string, { color: string; strokeDasharray?: string }> = {};
               const teamCounts: Record<string, number> = {};
+              const teamDrivers: Record<string, string[]> = {};
+
+              // First pass: group drivers by team
+              telemetryData.drivers.forEach(drv => {
+                const team = telemetryData.driver_info[drv]?.team;
+                if (!teamDrivers[team]) {
+                  teamDrivers[team] = [];
+                }
+                teamDrivers[team].push(drv);
+              });
+
+              // Second pass: assign colors with smart differentiation
               telemetryData.drivers.forEach(drv => {
                 const team = telemetryData.driver_info[drv]?.team;
                 if (!teamCounts[team]) teamCounts[team] = 0;
-                
+
                 const index = teamCounts[team];
+                const teamSize = teamDrivers[team]?.length || 1;
                 teamCounts[team]++;
-                
-                let strokeDasharray = undefined;
-                if (index === 1) strokeDasharray = "5 5";
-                else if (index === 2) strokeDasharray = "3 3";
-                
-                let color = teamColors[team] || '#fff';
-                if (index === 1) color = adjustColor(color, -60);
-                else if (index === 2) color = adjustColor(color, 60);
-                
+
+                const baseColor = teamColors[team] || '#fff';
+
+                let color: string;
+                let strokeDasharray: string | undefined = undefined;
+
+                if (teamSize === 1) {
+                  // Single driver from this team - use base color
+                  color = baseColor;
+                } else {
+                  // Multiple drivers from same team - generate distinct colors
+                  const teammateColors = generateTeammateColors(baseColor, teamSize);
+                  color = teammateColors[index] || baseColor;
+
+                  // Also add dash pattern for extra differentiation
+                  if (index === 1) strokeDasharray = "5 5";
+                  else if (index === 2) strokeDasharray = "3 3";
+                }
+
                 driverStyles[drv] = {
                   color,
                   strokeDasharray

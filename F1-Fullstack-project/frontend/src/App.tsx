@@ -5,7 +5,7 @@ import LandingPage from './pages/LandingPage';
 
 function App() {
   return (
-    <main className="bg-[#070707] min-h-screen text-white">
+    <main className="bg-tarmac min-h-screen text-white">
       <LandingPage />
     </main>
   );

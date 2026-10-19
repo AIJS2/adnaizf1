@@ -122,7 +122,7 @@ function RaceDetailPage() {
   };
 
   const SkeletonLoader = () => (
-    <div className="bg-neutral-950 min-h-screen text-white font-sans animate-pulse">
+    <div className="bg-neutral-950 min-h-screen text-white font-sans motion-safe:animate-pulse">
       
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         <div className="flex flex-col sm:flex-row justify-between sm:items-end mb-8 gap-4">
@@ -137,7 +137,7 @@ function RaceDetailPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 h-32">
+            <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 h-32">
               <div className="h-4 w-24 bg-neutral-800 rounded mb-4"></div>
               <div className="h-6 w-32 bg-neutral-800 rounded mb-2"></div>
               <div className="h-4 w-48 bg-neutral-800 rounded"></div>
@@ -145,9 +145,9 @@ function RaceDetailPage() {
           ))}
         </div>
         <div className="h-10 w-full bg-neutral-800 rounded mb-4"></div>
-        <div className="h-64 w-full bg-neutral-900 border border-neutral-800 rounded-2xl"></div>
+        <div className="h-64 w-full bg-neutral-900 border border-neutral-800 rounded-lg"></div>
         <div className="mt-4 text-center text-neutral-500">
-          Fetching comprehensive F1 data... this might take 1-2 minutes if cache is cold.
+          Fetching comprehensive F1 data… this might take 1-2 minutes if cache is cold.
         </div>
       </main>
     </div>
@@ -306,12 +306,12 @@ function RaceDetailPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm shrink-0">
             {((isFetching && Boolean(data)) || raceData?._cache_state === 'revalidating') && (
-              <div className="flex items-center gap-2 py-2 px-3 bg-red-950/40 border border-red-800/40 rounded-xl text-xs font-mono font-bold text-red-400 shadow-lg backdrop-blur">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-                <span>Syncing live telemetry...</span>
+              <div className="flex items-center gap-2 py-2 px-3 bg-red-950/40 border border-red-800/40 rounded-md text-xs font-mono font-bold text-red-400 shadow-lg backdrop-blur">
+                <span className="w-2 h-2 rounded-full bg-red-500 motion-safe:animate-ping"></span>
+                <span>Syncing live telemetry…</span>
               </div>
             )}
-            <div className="flex items-center gap-2 py-2.5 px-4 bg-neutral-900/80 backdrop-blur border border-neutral-700/50 rounded-xl font-mono font-bold shadow-lg">
+            <div className="flex items-center gap-2 py-2.5 px-4 bg-neutral-900/80 backdrop-blur border border-neutral-700/50 rounded-md font-mono font-bold shadow-lg">
               <Calendar size={16} className="text-red-500" />
               <span className="text-neutral-400">Season</span>
               <span className="text-white">{year}</span>
@@ -321,7 +321,7 @@ function RaceDetailPage() {
                 onChange={handleRaceChange}
                 value={round}
                 aria-label="Select Race Round"
-                className="bg-neutral-900/80 backdrop-blur border border-neutral-700/50 py-2.5 pl-4 pr-10 rounded-xl font-bold appearance-none cursor-pointer shadow-lg focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-white"
+                className="bg-neutral-900/80 backdrop-blur border border-neutral-700/50 py-2.5 pl-4 pr-10 rounded-md font-bold appearance-none cursor-pointer shadow-lg focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-ui text-white"
               >
                 {schedule.map((race: Race) => (
                   <option key={race.round} value={race.round}>{race.location}</option>
@@ -333,11 +333,11 @@ function RaceDetailPage() {
         </section>
 
         {/* Track Map */}
-        <section className="mb-10 flex flex-col items-center justify-center bg-neutral-900/40 backdrop-blur-md border border-neutral-800/80 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
+        <section className="mb-10 flex flex-col items-center justify-center bg-neutral-900/40 backdrop-blur-md border border-neutral-800/80 rounded-lg p-8 relative overflow-hidden shadow-2xl">
           <div className="absolute top-5 left-6 flex items-center gap-2">
             <span className="text-neutral-500 font-black text-xs uppercase tracking-[0.2em]">Circuit Layout</span>
             {raceData?.race_info?.country && (
-              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
+              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
                 {raceData.race_info.country}
               </span>
             )}
@@ -345,7 +345,7 @@ function RaceDetailPage() {
 
           <div className="absolute top-5 right-6 flex flex-wrap items-center gap-2">
             {raceData?.results?.[0]?.laps && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-950/40 text-red-400 border border-red-800/40 uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-red-950/40 text-red-400 border border-red-800/40 uppercase tracking-wider">
                 <Flag size={10} />
                 <span>{raceData.results[0].laps} LAPS</span>
               </span>
@@ -356,7 +356,7 @@ function RaceDetailPage() {
               const airTemp = latestWeather.air_temp ?? latestWeather.AirTemp;
               if (trackTemp == null && airTemp == null) return null;
               return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-neutral-800/90 text-neutral-300 border border-neutral-700/60 uppercase tracking-wider">
                   <Thermometer size={10} className="text-amber-500" />
                   {trackTemp != null && <span>Track {Math.round(trackTemp)}°C</span>}
                   {trackTemp != null && airTemp != null && <span className="text-neutral-500">•</span>}
@@ -371,7 +371,7 @@ function RaceDetailPage() {
             <img 
               src={trackMapImg} 
               alt={`Track map for ${raceData?.race_info?.name || raceData?.race_info?.location}`}
-              className="h-32 md:h-64 object-contain brightness-0 invert opacity-70 transition-all duration-500 hover:opacity-100 hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] mt-4 sm:mt-2"
+              className="h-32 md:h-64 object-contain brightness-0 invert opacity-70 transition-ui duration-500 hover:opacity-100 mt-4 sm:mt-2"
             />
           ) : (
             <div className="text-neutral-600 italic py-10 font-bold">
@@ -391,15 +391,15 @@ function RaceDetailPage() {
         <section className="mb-6 space-y-4">
           {sessionTabs.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-2 ml-2">Official Sessions</h3>
-              <div className="flex items-center gap-2 p-2 bg-neutral-900/60 backdrop-blur-md border border-neutral-800/80 rounded-2xl overflow-x-auto no-scrollbar shadow-xl">
+              <h3 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-2 ml-2">Official Sessions</h3>
+              <div className="flex items-center gap-2 p-2 bg-neutral-900/60 backdrop-blur-md border border-neutral-800/80 rounded-lg overflow-x-auto no-scrollbar shadow-xl">
                 {sessionTabs.map(tab => {
                   const isActive = activeTab === tab;
                   return (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-all duration-300 ${
+                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-ui duration-300 ${
                         isActive
                           ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
                           : 'text-neutral-400 hover:bg-neutral-800/80 hover:text-white'
@@ -416,15 +416,15 @@ function RaceDetailPage() {
 
           {telemetryTabs.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-2 ml-2">Data & Telemetry</h3>
-              <div className="flex flex-wrap items-center gap-2 p-2 bg-neutral-900/60 backdrop-blur-md border border-neutral-800/80 rounded-2xl shadow-xl">
+              <h3 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-2 ml-2">Data & Telemetry</h3>
+              <div className="flex flex-wrap items-center gap-2 p-2 bg-neutral-900/60 backdrop-blur-md border border-neutral-800/80 rounded-lg shadow-xl">
                 {telemetryTabs.map(tab => {
                   const isActive = activeTab === tab;
                   return (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-all duration-300 ${
+                      className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-ui duration-300 ${
                         isActive
                           ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
                           : 'text-neutral-400 hover:bg-neutral-800/80 hover:text-white'
@@ -442,7 +442,7 @@ function RaceDetailPage() {
 
         {/* Main Content Area */}
         <section className="mb-12">
-          <div className="bg-neutral-900/40 backdrop-blur-xl border border-neutral-800/80 shadow-2xl rounded-3xl overflow-hidden">
+          <div className="bg-neutral-900/40 backdrop-blur-xl border border-neutral-800/80 shadow-2xl rounded-lg overflow-hidden">
             {renderActiveContent()}
           </div>
         </section>

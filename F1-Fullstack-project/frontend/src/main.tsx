@@ -99,7 +99,16 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Suspense fallback={<div className="min-h-screen bg-[#070707] text-white" />}>
+        <Suspense
+          fallback={
+            <div className="min-h-screen bg-tarmac" role="status" aria-label="Loading…">
+              {/* Thin red sweep along the top edge, like a timing-screen refresh. */}
+              <div className="fixed inset-x-0 top-0 h-0.5 overflow-hidden bg-neutral-900">
+                <div className="h-full w-2/5 bg-red-600 animate-load-sweep" />
+              </div>
+            </div>
+          }
+        >
           <RouterProvider router={router} />
         </Suspense>
       </QueryClientProvider>

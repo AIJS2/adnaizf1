@@ -40,27 +40,40 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
   }, [calculateTimeLeft]);
 
   if (!Object.keys(timeLeft).length) {
-    return <span className="text-xl font-bold text-green-400 animate-pulse">RACE IS LIVE!</span>;
+    return (
+      <span className="inline-flex items-center gap-2 text-lg font-black italic text-emerald-400">
+        <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+        </span>
+        RACE IS LIVE!
+      </span>
+    );
   }
 
   const timeKeys = Object.keys(timeLeft) as Array<keyof TimeLeft>;
 
-  const countdownComponents = timeKeys.map((interval, index) => (
-    <React.Fragment key={interval}>
-      <span className="text-2xl font-bold text-white tracking-wider font-mono">
-        {String(timeLeft[interval] ?? 0).padStart(2, '0')}
-      </span>
-      {index < timeKeys.length - 1 && (
-        <span className="text-xl font-bold text-neutral-600 mx-4">:</span>
-      )}
-    </React.Fragment>
-  ));
-
   return (
-    <div className="flex items-center justify-center">
-      {countdownComponents}
+    <div className="flex items-start gap-1 sm:gap-2" role="timer" aria-label="Time until the next session">
+      {timeKeys.map((interval, index) => (
+        <React.Fragment key={interval}>
+          <div className="flex flex-col items-center min-w-[2.75rem] sm:min-w-[3.5rem]">
+            <span className="text-3xl sm:text-4xl font-black text-chalk leading-none tabular-nums">
+              {String(timeLeft[interval] ?? 0).padStart(2, '0')}
+            </span>
+            <span className="mt-1.5 text-[11px] font-semibold text-neutral-500" aria-hidden="true">
+              {UNIT_LABEL[interval]}
+            </span>
+          </div>
+          {index < timeKeys.length - 1 && (
+            <span className="text-2xl sm:text-3xl font-light leading-none text-neutral-700" aria-hidden="true">:</span>
+          )}
+        </React.Fragment>
+      ))}
     </div>
   );
 };
+
+const UNIT_LABEL: Record<keyof TimeLeft, string> = { HARI: 'days', JAM: 'hrs', MENIT: 'min', DETIK: 'sec' };
 
 export default CountdownTimer;

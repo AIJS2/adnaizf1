@@ -55,11 +55,11 @@ function DriversPage() {
       <div className="bg-neutral-950 min-h-screen text-white font-sans">
         
         <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
-          <div className="animate-pulse space-y-8 w-full">
-            <div className="h-16 w-64 bg-neutral-900/60 border border-neutral-800 rounded-xl"></div>
+          <div className="motion-safe:animate-pulse space-y-8 w-full">
+            <div className="h-16 w-64 bg-neutral-900/60 border border-neutral-800 rounded-md"></div>
             <div className="space-y-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                <div key={i} className="h-20 bg-neutral-900/60 border border-neutral-800 rounded-2xl w-full"></div>
+                <div key={i} className="h-20 bg-neutral-900/60 border border-neutral-800 rounded-lg w-full"></div>
               ))}
             </div>
           </div>
@@ -75,7 +75,7 @@ function DriversPage() {
       
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         <header className="mb-10">
-          <h1 className="text-5xl md:text-6xl font-black tracking-tighter italic uppercase">
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight italic ">
             Driver <span className="text-red-600">Standings</span>
           </h1>
           <p className="text-lg text-neutral-400 font-medium tracking-wide">{currentYear} Season Championship</p>
@@ -83,9 +83,13 @@ function DriversPage() {
 
         <div className="relative mb-10 max-w-xl">
           <input
-            type="text"
-            placeholder="Search by driver or team..."
-            className="w-full bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 rounded-sm py-4 pl-12 pr-4 text-white focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all font-medium"
+            type="search"
+            aria-label="Search drivers"
+            name="driver-search"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Search by driver or team…"
+            className="w-full bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 rounded-sm py-4 pl-12 pr-4 text-white focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-ui font-medium"
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={22} />
@@ -106,11 +110,11 @@ function DriversPage() {
                 <div key={driver.id} className="relative group animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay }}>
                   <div className={`absolute inset-0 transition-opacity duration-500 blur-xl rounded-lg ${isP1 ? 'opacity-20 group-hover:opacity-40' : 'opacity-0 group-hover:opacity-20'}`} style={{ backgroundColor: teamColor }} />
 
-                  <div className={`relative flex items-stretch bg-neutral-900/90 backdrop-blur-md border rounded-r-lg rounded-l-sm overflow-hidden transition-all duration-300 group-hover:border-neutral-500 ${isP1 ? 'border-yellow-500/50' : 'border-neutral-800'}`}>
+                  <div className={`relative flex items-stretch bg-neutral-900/90 backdrop-blur-md border rounded-r-lg rounded-l-sm overflow-hidden transition-ui duration-300 group-hover:border-neutral-500 ${isP1 ? 'border-yellow-500/50' : 'border-neutral-800'}`}>
 
                     {/* Dominance Bar */}
                     <div
-                      className="absolute bottom-0 left-0 h-1 transition-all duration-1000 ease-out z-30"
+                      className="absolute bottom-0 left-0 h-1 transition-ui duration-1000 ease-out z-30"
                       style={{ width: `${dominancePercentage}%`, backgroundColor: teamColor, boxShadow: `0 0 10px ${teamColor}` }}
                     />
 
@@ -121,17 +125,17 @@ function DriversPage() {
 
                     {/* Driver Info */}
                     <div className="flex-grow min-w-0 flex items-center p-4 md:p-6 z-10 relative overflow-hidden">
-                      {logo && <img src={logo} className="absolute -right-4 -bottom-6 h-32 md:h-40 opacity-5 pointer-events-none grayscale group-hover:grayscale-0 group-hover:opacity-10 transition-all duration-500 transform group-hover:scale-110" alt="" />}
+                      {logo && <img src={logo} className="absolute -right-4 -bottom-6 h-32 md:h-40 opacity-5 pointer-events-none grayscale group-hover:grayscale-0 group-hover:opacity-10 transition-ui duration-500 transform" alt="" />}
 
                       <div className="flex flex-col min-w-0 gap-1.5 z-20">
                         <div className="flex items-center gap-3 min-w-0">
                           <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic text-white group-hover:text-red-500 transition-colors truncate">{driver.name}</h2>
                           <span className="hidden sm:inline-block text-xs font-mono font-bold bg-white/10 px-2 py-1 rounded-sm text-neutral-300 shrink-0">{driver.abbreviation}</span>
-                          {isP1 && <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] animate-pulse shrink-0" />}
+                          {isP1 && <Trophy size={24} className="text-yellow-400 fill-yellow-400/20 shrink-0" />}
                         </div>
                         <div className="flex items-center gap-2 min-w-0">
                           {logo && <img src={logo} className="h-4 w-auto brightness-200 opacity-80 shrink-0" alt="" />}
-                          <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest truncate">{driver.team}</span>
+                          <span className="text-xs md:text-sm font-bold text-neutral-400 tracking-normal truncate">{driver.team}</span>
                         </div>
                       </div>
                     </div>
@@ -139,15 +143,15 @@ function DriversPage() {
                     {/* Stats */}
                     <div className="flex items-center gap-6 md:gap-10 pr-4 md:pr-8 py-4 z-20 bg-gradient-to-l from-neutral-900 via-neutral-900/80 to-transparent pl-8">
                       <div className="hidden sm:flex flex-col items-end">
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Wins</span>
+                        <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Wins</span>
                         <span className="text-xl font-bold text-neutral-300">{driver.wins}</span>
                       </div>
                       <div className="hidden sm:flex flex-col items-end">
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Podiums</span>
+                        <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Podiums</span>
                         <span className="text-xl font-bold text-neutral-300">{driver.podiums}</span>
                       </div>
                       <div className="flex flex-col items-end min-w-[70px] md:min-w-[90px]">
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Points</span>
+                        <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Points</span>
                         <div className="flex flex-col items-end leading-none">
                           <div className="flex items-center gap-2">
                             <span className="text-4xl md:text-5xl font-black italic text-white tracking-tighter">{driver.points}</span>

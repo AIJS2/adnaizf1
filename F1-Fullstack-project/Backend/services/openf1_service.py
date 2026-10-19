@@ -257,6 +257,48 @@ def get_weather(session_key: int) -> Optional[list[dict[str, Any]]]:
     return _get("/weather", params={"session_key": session_key})
 
 
+def get_car_data(
+    session_key: int,
+    driver_number: Optional[int] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> Optional[list[dict[str, Any]]]:
+    """Car-channel samples (speed/throttle/brake/gear/DRS/rpm), or None.
+
+    The date bounds must be sent as the strict `date>` / `date<` operators:
+    OpenF1 silently matches zero rows (and answers 404) for `date>=`/`date<=`,
+    which made an earlier lap-window query look like missing data.
+    """
+    params: dict[str, Any] = {"session_key": session_key}
+    if driver_number is not None:
+        params["driver_number"] = driver_number
+    if start:
+        params["date>"] = start
+    if end:
+        params["date<"] = end
+    return _get("/car_data", params=params)
+
+
+def get_location(
+    session_key: int,
+    driver_number: Optional[int] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> Optional[list[dict[str, Any]]]:
+    """X/Y/Z position samples used to draw the track map, or None.
+
+    Uses the same strict `date>` / `date<` filters as `get_car_data`.
+    """
+    params: dict[str, Any] = {"session_key": session_key}
+    if driver_number is not None:
+        params["driver_number"] = driver_number
+    if start:
+        params["date>"] = start
+    if end:
+        params["date<"] = end
+    return _get("/location", params=params)
+
+
 def openf1_status() -> dict[str, Any]:
     """Connection probe for the /health endpoint.
 
@@ -486,6 +528,8 @@ __all__ = [
     "get_laps",
     "get_stints",
     "get_weather",
+    "get_car_data",
+    "get_location",
     "openf1_status",
     "fetch_classification",
     "session_key_for",

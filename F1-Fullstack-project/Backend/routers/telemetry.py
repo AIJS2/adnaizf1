@@ -32,7 +32,7 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
         }
 
     CACHE_FILE = os.path.join(
-        "cache", f"telemetry_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json"
+        "cache", f"telemetry_v2_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json"
     )
     cached_data = get_advanced_cache(CACHE_FILE, hours=24)  # Telemetry cached longer
     if cached_data:

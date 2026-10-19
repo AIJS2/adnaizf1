@@ -1,10 +1,13 @@
-import fastf1
-import pandas as pd
 import logging
+import json
 import os
 import threading
+import time
 from typing import Optional
 
+import pandas as pd
+
+from services import openf1_telemetry
 from services.fastf1_safe import (
     has_rows,
     is_valid_year,
@@ -13,6 +16,51 @@ from services.fastf1_safe import (
 )
 
 TELEMETRY_LOAD_KWARGS = dict(telemetry=True, laps=True, weather=False, messages=False)
+
+# F1's archive has no lap timing for most 2026 rounds, and every FastF1
+# session.load() pays the failed network requests again (FastF1 does not cache
+# negative results). Remember that verdict for a day so a second driver
+# comparison for the same round goes straight to OpenF1 instead of waiting out
+# the same timeouts.
+_FASTF1_GAP_TTL_SECONDS = 24 * 60 * 60
+_FASTF1_GAP_DIR = "cache"
+
+
+def _fastf1_gap_path(year: int, round_number: int) -> str:
+    return os.path.join(
+        _FASTF1_GAP_DIR, f"fastf1_no_laps_{year}_{round_number}.json",
+    )
+
+
+def _read_fastf1_gap(year: int, round_number: int) -> Optional[dict]:
+    """The cached "no timing archive" verdict, or None when absent/expired."""
+    path = _fastf1_gap_path(year, round_number)
+    try:
+        if not os.path.exists(path):
+            return None
+        if time.time() - os.path.getmtime(path) > _FASTF1_GAP_TTL_SECONDS:
+            return None
+        with open(path, "r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except Exception:  # noqa: BLE001 - a broken marker must not break telemetry
+        return None
+
+
+def _write_fastf1_gap(year: int, round_number: int, statuses: dict) -> None:
+    try:
+        os.makedirs(_FASTF1_GAP_DIR, exist_ok=True)
+        with open(_fastf1_gap_path(year, round_number), "w", encoding="utf-8") as handle:
+            json.dump({"statuses": statuses, "saved_at": time.time()}, handle)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _clear_fastf1_gap(year: int, round_number: int) -> None:
+    try:
+        os.remove(_fastf1_gap_path(year, round_number))
+    except OSError:
+        pass
+
 
 # ---------------------------------------------------------------------------
 # Concurrency lock per (year, round_number) so concurrent FastF1 session.load()
@@ -153,157 +201,13 @@ def _extract_lap_telemetry(target_lap, drv: str) -> tuple:
     return None, "No lap data for this driver in this session."
 
 
-def process_telemetry_compare(year: int, round_number: int, driver_list: list, lap: Optional[int] = None):
-    # Validate before spending a network round-trip on an impossible request.
-    if not is_valid_year(year) or not isinstance(round_number, int) or round_number < 1:
-        return _build_empty_payload(
-            f"Round {round_number} is not a valid race round for {year}.",
-            driver_list,
-        )
+def _assemble_payload(driver_data: dict, binned_dfs: list, unavailable: dict, driver_list: list) -> dict:
+    """Merge per-driver binned frames into the API payload.
 
-    # Concurrency lock for FastF1 session.load() per (year, round_number).
-    lock = _get_session_lock(year, round_number)
-    with lock:
-        session = load_session_safe(year, round_number, "R", **TELEMETRY_LOAD_KWARGS)
-
-    if session is None:
-        return _build_empty_payload(
-            f"No race session exists for {year} round {round_number}.",
-            driver_list,
-        )
-
-    laps = safe_getattr(session, "laps")
-    if laps is None or getattr(laps, "empty", True):
-        # The timing archive is missing this session entirely (13 of the 2026
-        # rounds so far), so no driver can produce telemetry. Saying "yet"
-        # implied the overlay might appear later; state the real blocker.
-        return _build_empty_payload(
-            "F1's official timing archive has no lap data for this race, "
-            "so lap telemetry cannot be built.",
-            driver_list,
-        )
-
-    driver_data = {}
-    binned_dfs = []
-    unavailable = {}
-
-    all_drivers_set = set(laps["Driver"]) if "Driver" in laps.columns else set()
-
-    # A driver with no timed lap still deserves a specific answer: "did not
-    # start"/"disqualified"/"retired" beats a vague "no lap data". FastF1 keeps
-    # Status + Laps for every result it can read, even when the timing data is
-    # missing, so a DNS or a lap-1 retirement can be named.
-    status_by_driver: dict[str, tuple[str, Optional[int]]] = {}
-    results = safe_getattr(session, "results")
-    if results is not None and not getattr(results, "empty", True):
-        for _, row in results.iterrows():
-            abbr = row.get("Abbreviation")
-            if pd.isna(abbr) or not abbr:
-                continue
-            status = str(row.get("Status", "") or "").strip()
-            raw_laps = row.get("Laps")
-            try:
-                laps_done = int(raw_laps) if pd.notna(raw_laps) else None
-            except (TypeError, ValueError):
-                laps_done = None
-            status_by_driver[str(abbr)] = (status, laps_done)
-
-    def no_lap_reason_for(drv: str) -> str:
-        """Why `drv` has no lap to analyse, in the driver's own terms."""
-        return _no_lap_reason(*status_by_driver.get(drv, ("", None)))
-
-    # ── Per-driver isolation: one driver's failure never breaks another's ──
-    for drv in driver_list:
-        no_lap_reason = no_lap_reason_for(drv)
-        try:
-            drv_laps = laps[laps["Driver"] == drv] if drv in all_drivers_set else None
-            if drv_laps is None or drv_laps.empty:
-                unavailable[drv] = no_lap_reason
-                continue
-
-            if lap is not None:
-                lap_df = drv_laps.loc[drv_laps["LapNumber"] == lap]
-                target_lap = lap_df.iloc[0] if not lap_df.empty else None
-            else:
-                # Fastest *valid* lap: exclude rows with NaN LapTime first.
-                valid_laps = (
-                    drv_laps.dropna(subset=["LapTime"])
-                    if "LapTime" in drv_laps.columns
-                    else drv_laps
-                )
-                if valid_laps.empty:
-                    unavailable[drv] = no_lap_reason
-                    continue
-                fastest_idx = valid_laps["LapTime"].idxmin()
-                target_lap = valid_laps.loc[fastest_idx]
-
-            target_lap, err = _validate_lap(target_lap, drv)
-            if err:
-                unavailable[drv] = no_lap_reason
-                continue
-
-            drv_info = session.get_driver(drv)
-            team = str(drv_info.get("TeamName", "")) if drv_info is not None else ""
-            name = (
-                f"{drv_info.get('FirstName', '')} {drv_info.get('LastName', '')}".strip()
-                if drv_info is not None
-                else drv
-            )
-
-            # Car channels + distance + X/Y. See _extract_lap_telemetry().
-            tel, tel_err = _extract_lap_telemetry(target_lap, drv)
-            if tel is None or tel_err:
-                # The lap exists, so this is not a DNS/DNF story: the archive
-                # simply has no car channels for it.
-                unavailable[drv] = (
-                    "Lap telemetry is not published for this driver in this session."
-                )
-                continue
-
-            tel = tel.copy()
-            tel["Elapsed"] = (tel["Time"] - tel["Time"].iloc[0]).dt.total_seconds()
-            tel["DRSActive"] = (
-                tel["DRS"].apply(lambda x: 1 if x in [10, 12, 14, 1] else 0)
-                if "DRS" in tel.columns
-                else 0
-            )
-
-            s_filtered = tel[tel["Speed"] > 30]["Speed"]
-            min_speed = (
-                round(float(s_filtered.min()), 1)
-                if not s_filtered.empty
-                else round(float(tel["Speed"].min()), 1)
-            )
-
-            driver_data[drv] = {
-                "name": name,
-                "team": team,
-                "lap_time": (
-                    str(target_lap["LapTime"]).split("0 days ")[-1]
-                    if pd.notna(target_lap.get("LapTime"))
-                    else None
-                ),
-                "compound": str(target_lap.get("Compound", "UNKNOWN")),
-                "max_speed": round(float(tel["Speed"].max()), 1),
-                "min_speed": min_speed,
-                "avg_speed": round(float(tel["Speed"].mean()), 1),
-            }
-
-            binned = tel.groupby(tel["Distance"] // 10 * 10).mean(numeric_only=True).reset_index(names="BinnedDist")
-            binned.columns = [c if c == "BinnedDist" else f"{c}_{drv}" for c in binned.columns]
-            binned_dfs.append(binned)
-
-        except Exception as e:  # noqa: BLE001
-            logging.warning(
-                f"Unexpected error processing {drv} at {year}/{round_number}: {e}",
-                exc_info=True,
-            )
-            unavailable[drv] = (
-                "Lap telemetry could not be processed for this driver."
-            )
-            continue
-
-    if not binned_dfs:
+    Shared by the FastF1 and OpenF1 paths: whichever source produced the
+    frames, the charts consume the same distance-keyed records.
+    """
+    if not binned_dfs or not driver_data:
         # Nobody produced telemetry. Return per-driver reasons instead of raising.
         return {
             "drivers": [],
@@ -403,6 +307,275 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
     }
 
 
+def _ingest_openf1_frames(collected: dict, driver_data: dict, binned_dfs: list) -> dict:
+    """Add OpenF1 frames to the running driver/binned collections.
+
+    Returns {driver: failure_reason} for frames that could not be processed.
+    Frames already in `driver_data` (FastF1 output) are never touched.
+    """
+    failed = {}
+    for drv, info, frame in collected.get("frames") or []:
+        try:
+            frame = frame.copy()
+            frame["Elapsed"] = (frame["Time"] - frame["Time"].iloc[0]).dt.total_seconds()
+            frame["DRSActive"] = (
+                frame["DRS"].apply(lambda x: 1 if x in [10, 12, 14, 1] else 0)
+                if "DRS" in frame.columns
+                else 0
+            )
+            binned = frame.groupby(frame["Distance"] // 10 * 10).mean(numeric_only=True).reset_index(names="BinnedDist")
+            binned.columns = [c if c == "BinnedDist" else f"{c}_{drv}" for c in binned.columns]
+            driver_data[drv] = info
+            binned_dfs.append(binned)
+        except Exception as e:  # noqa: BLE001
+            logging.warning(
+                f"Unexpected error processing OpenF1 telemetry for {drv}: {e}",
+                exc_info=True,
+            )
+            failed[drv] = "Lap telemetry could not be processed for this driver."
+    return failed
+
+
+def _telemetry_from_openf1(year: int, round_number: int, driver_list: list, lap, reason_for) -> Optional[dict]:
+    """Build the payload from OpenF1 when FastF1 has no lap timing.
+
+    Returns None only when OpenF1 has no race session for the round, so the
+    caller can tell "both sources are empty" from "OpenF1 answered and named
+    each driver's gap".
+    """
+    try:
+        collected = openf1_telemetry.collect(
+            year, round_number, driver_list, lap=lap,
+        )
+    except Exception as e:  # noqa: BLE001 - a fallback must never break the page
+        logging.warning(
+            f"OpenF1 telemetry fallback failed for {year}/{round_number}: "
+            f"{type(e).__name__}: {e}",
+        )
+        return None
+    if collected is None:
+        return None
+
+    driver_data = {}
+    binned_dfs = []
+    unavailable = dict(_ingest_openf1_frames(collected, driver_data, binned_dfs))
+
+    for drv in driver_list:
+        if drv in driver_data or drv in unavailable:
+            continue
+        reason = collected["missing"].get(drv)
+        if reason is None and drv in collected["no_laps"]:
+            reason = reason_for(drv)
+        unavailable[drv] = reason or "No lap data for this driver in this session."
+
+    return _assemble_payload(driver_data, binned_dfs, unavailable, driver_list)
+
+
+def process_telemetry_compare(year: int, round_number: int, driver_list: list, lap: Optional[int] = None):
+    # Validate before spending a network round-trip on an impossible request.
+    if not is_valid_year(year) or not isinstance(round_number, int) or round_number < 1:
+        return _build_empty_payload(
+            f"Round {round_number} is not a valid race round for {year}.",
+            driver_list,
+        )
+
+    # Concurrency lock for FastF1 session.load() per (year, round_number).
+    # When a previous attempt already found no lap timing, skip it: FastF1
+    # does not cache failed requests, so retrying costs the same timeouts.
+    gap_marker = _read_fastf1_gap(year, round_number)
+    if gap_marker is not None:
+        session = None
+        laps = None
+    else:
+        lock = _get_session_lock(year, round_number)
+        with lock:
+            session = load_session_safe(year, round_number, "R", **TELEMETRY_LOAD_KWARGS)
+        laps = safe_getattr(session, "laps") if session is not None else None
+
+    laps_missing = session is None or laps is None or getattr(laps, "empty", True)
+
+    # A driver with no timed lap still deserves a specific answer: "did not
+    # start"/"disqualified"/"retired" beats a vague "no lap data". FastF1 keeps
+    # Status + Laps for every result it can read, even when the timing data is
+    # missing, so a DNS or a lap-1 retirement can be named.
+    status_by_driver: dict[str, tuple[str, Optional[int]]] = {}
+    if gap_marker is not None:
+        for abbr, entry in (gap_marker.get("statuses") or {}).items():
+            try:
+                status, laps_done = entry
+            except (TypeError, ValueError):
+                continue
+            status_by_driver[str(abbr)] = (str(status or ""), laps_done)
+    else:
+        results = safe_getattr(session, "results") if session is not None else None
+        if results is not None and not getattr(results, "empty", True):
+            for _, row in results.iterrows():
+                abbr = row.get("Abbreviation")
+                if pd.isna(abbr) or not abbr:
+                    continue
+                status = str(row.get("Status", "") or "").strip()
+                raw_laps = row.get("Laps")
+                try:
+                    laps_done = int(raw_laps) if pd.notna(raw_laps) else None
+                except (TypeError, ValueError):
+                    laps_done = None
+                status_by_driver[str(abbr)] = (status, laps_done)
+
+    def no_lap_reason_for(drv: str) -> str:
+        """Why `drv` has no lap to analyse, in the driver's own terms."""
+        return _no_lap_reason(*status_by_driver.get(drv, ("", None)))
+
+    if laps_missing:
+        # F1's archive has no laps for most 2026 rounds, but OpenF1 keeps
+        # car_data/location for those same sessions. Only answer with the
+        # honest empty payload when OpenF1 has nothing either.
+        if gap_marker is None:
+            _write_fastf1_gap(year, round_number, status_by_driver)
+        payload = _telemetry_from_openf1(
+            year, round_number, driver_list, lap, no_lap_reason_for,
+        )
+        if payload is not None:
+            return payload
+        if session is None and gap_marker is None:
+            return _build_empty_payload(
+                f"No race session exists for {year} round {round_number}.",
+                driver_list,
+            )
+        return _build_empty_payload(
+            "No lap telemetry is available for this race from F1's timing "
+            "archive or OpenF1.",
+            driver_list,
+        )
+
+    _clear_fastf1_gap(year, round_number)
+
+    driver_data = {}
+    binned_dfs = []
+    unavailable = {}
+    openf1_fallback: list[str] = []
+
+    all_drivers_set = set(laps["Driver"]) if "Driver" in laps.columns else set()
+
+    # ── Per-driver isolation: one driver's failure never breaks another's ──
+    for drv in driver_list:
+        no_lap_reason = no_lap_reason_for(drv)
+        try:
+            drv_laps = laps[laps["Driver"] == drv] if drv in all_drivers_set else None
+            if drv_laps is None or drv_laps.empty:
+                unavailable[drv] = no_lap_reason
+                continue
+
+            if lap is not None:
+                lap_df = drv_laps.loc[drv_laps["LapNumber"] == lap]
+                target_lap = lap_df.iloc[0] if not lap_df.empty else None
+            else:
+                # Fastest *valid* lap: exclude rows with NaN LapTime first.
+                valid_laps = (
+                    drv_laps.dropna(subset=["LapTime"])
+                    if "LapTime" in drv_laps.columns
+                    else drv_laps
+                )
+                if valid_laps.empty:
+                    unavailable[drv] = no_lap_reason
+                    continue
+                fastest_idx = valid_laps["LapTime"].idxmin()
+                target_lap = valid_laps.loc[fastest_idx]
+
+            target_lap, err = _validate_lap(target_lap, drv)
+            if err:
+                unavailable[drv] = no_lap_reason
+                continue
+
+            drv_info = session.get_driver(drv)
+            team = str(drv_info.get("TeamName", "")) if drv_info is not None else ""
+            name = (
+                f"{drv_info.get('FirstName', '')} {drv_info.get('LastName', '')}".strip()
+                if drv_info is not None
+                else drv
+            )
+
+            # Car channels + distance + X/Y. See _extract_lap_telemetry().
+            tel, tel_err = _extract_lap_telemetry(target_lap, drv)
+            if tel is None or tel_err:
+                # The lap exists, so this is not a DNS/DNF story: the archive
+                # simply has no car channels for it. OpenF1 sometimes does,
+                # so remember the driver for the fallback pass below.
+                openf1_fallback.append(drv)
+                continue
+
+            tel = tel.copy()
+            tel["Elapsed"] = (tel["Time"] - tel["Time"].iloc[0]).dt.total_seconds()
+            tel["DRSActive"] = (
+                tel["DRS"].apply(lambda x: 1 if x in [10, 12, 14, 1] else 0)
+                if "DRS" in tel.columns
+                else 0
+            )
+
+            s_filtered = tel[tel["Speed"] > 30]["Speed"]
+            min_speed = (
+                round(float(s_filtered.min()), 1)
+                if not s_filtered.empty
+                else round(float(tel["Speed"].min()), 1)
+            )
+
+            driver_data[drv] = {
+                "name": name,
+                "team": team,
+                "lap_time": (
+                    str(target_lap["LapTime"]).split("0 days ")[-1]
+                    if pd.notna(target_lap.get("LapTime"))
+                    else None
+                ),
+                "compound": str(target_lap.get("Compound", "UNKNOWN")),
+                "max_speed": round(float(tel["Speed"].max()), 1),
+                "min_speed": min_speed,
+                "avg_speed": round(float(tel["Speed"].mean()), 1),
+            }
+
+            binned = tel.groupby(tel["Distance"] // 10 * 10).mean(numeric_only=True).reset_index(names="BinnedDist")
+            binned.columns = [c if c == "BinnedDist" else f"{c}_{drv}" for c in binned.columns]
+            binned_dfs.append(binned)
+
+        except Exception as e:  # noqa: BLE001
+            logging.warning(
+                f"Unexpected error processing {drv} at {year}/{round_number}: {e}",
+                exc_info=True,
+            )
+            unavailable[drv] = (
+                "Lap telemetry could not be processed for this driver."
+            )
+            continue
+
+    if openf1_fallback:
+        # FastF1 kept the lap times but no car channels (R17 Singapore serves
+        # exactly this way). OpenF1 has the channels for those sessions, so
+        # fill only those drivers. FastF1 output is never replaced.
+        collected = None
+        try:
+            collected = openf1_telemetry.collect(
+                year, round_number, openf1_fallback, lap=lap,
+            )
+        except Exception as e:  # noqa: BLE001
+            logging.warning(
+                f"OpenF1 car-channel fallback failed for {year}/{round_number}: "
+                f"{type(e).__name__}: {e}",
+            )
+        if collected is not None:
+            failures = _ingest_openf1_frames(collected, driver_data, binned_dfs)
+            for drv in openf1_fallback:
+                if drv in driver_data:
+                    continue
+                reason = failures.get(drv) or collected["missing"].get(drv)
+                if reason is None and drv in collected["no_laps"]:
+                    reason = no_lap_reason_for(drv)
+                unavailable[drv] = (
+                    reason
+                    or "Lap telemetry is not published for this driver in this session."
+                )
+
+    return _assemble_payload(driver_data, binned_dfs, unavailable, driver_list)
+
+
 def get_telemetry_drivers_list(year: int, round_number: int):
     """Drivers who contested a race. Returns [] when the session has no data."""
     if not is_valid_year(year) or not isinstance(round_number, int) or round_number < 1:
@@ -415,7 +588,16 @@ def get_telemetry_drivers_list(year: int, round_number: int):
             telemetry=False, laps=False, weather=False, messages=False,
         )
     if session is None or not has_rows(session, "results"):
-        return []
+        # FastF1's event/results frame can be missing for a round whose timing
+        # archive is absent; OpenF1's roster still names the entrants.
+        try:
+            return openf1_telemetry.driver_options(year, round_number)
+        except Exception as e:  # noqa: BLE001 - the picker must never break
+            logging.warning(
+                f"OpenF1 driver list fallback failed for {year}/{round_number}: "
+                f"{type(e).__name__}: {e}",
+            )
+            return []
 
     drivers_list = []
     for _, row in safe_getattr(session, "results").iterrows():

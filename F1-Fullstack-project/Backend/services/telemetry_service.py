@@ -30,6 +30,30 @@ def _get_session_lock(year: int, round_number: int) -> threading.Lock:
         return _session_locks[key]
 
 
+def _no_lap_reason(status: str, laps_done: Optional[int]) -> str:
+    """Why a driver has no lap to analyse, in the driver's own terms.
+
+    FastF1 keeps the classification (Status + Laps) even for sessions whose
+    timing data is missing, so a DNS, a disqualification or a retirement can be
+    named instead of falling back to a vague "no lap data".
+    """
+    normalized = (status or "").strip().lower()
+    if "did not start" in normalized:
+        return "Did not start this race - no lap telemetry exists for this driver."
+    if "disqualif" in normalized or "excluded" in normalized:
+        return "Disqualified from this race - no lap telemetry exists for this driver."
+    finished = (
+        not normalized
+        or normalized.startswith("finished")
+        or normalized.startswith("lapped")
+        or normalized.startswith("+")  # lapped finishers: "+1 Lap"
+    )
+    if not finished:
+        lap_text = f" on lap {laps_done}" if laps_done else ""
+        return f"Retired{lap_text} ({status}) - no completed lap to analyse."
+    return "No lap data for this driver in this session."
+
+
 def _build_empty_payload(reason: str, driver_list: list) -> dict:
     """The honest payload when no telemetry could be produced."""
     return {
@@ -150,8 +174,12 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
 
     laps = safe_getattr(session, "laps")
     if laps is None or getattr(laps, "empty", True):
+        # The timing archive is missing this session entirely (13 of the 2026
+        # rounds so far), so no driver can produce telemetry. Saying "yet"
+        # implied the overlay might appear later; state the real blocker.
         return _build_empty_payload(
-            "No lap data is available for this session yet.",
+            "F1's official timing archive has no lap data for this race, "
+            "so lap telemetry cannot be built.",
             driver_list,
         )
 
@@ -161,24 +189,32 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
 
     all_drivers_set = set(laps["Driver"]) if "Driver" in laps.columns else set()
 
-    # Drivers who never took the start will never have lap telemetry; saying
-    # "did not start" is far clearer than the generic "no lap data" message.
-    dns_drivers = set()
+    # A driver with no timed lap still deserves a specific answer: "did not
+    # start"/"disqualified"/"retired" beats a vague "no lap data". FastF1 keeps
+    # Status + Laps for every result it can read, even when the timing data is
+    # missing, so a DNS or a lap-1 retirement can be named.
+    status_by_driver: dict[str, tuple[str, Optional[int]]] = {}
     results = safe_getattr(session, "results")
     if results is not None and not getattr(results, "empty", True):
         for _, row in results.iterrows():
-            status = str(row.get("Status", "") or "").lower()
             abbr = row.get("Abbreviation")
-            if "did not start" in status and pd.notna(abbr):
-                dns_drivers.add(str(abbr))
+            if pd.isna(abbr) or not abbr:
+                continue
+            status = str(row.get("Status", "") or "").strip()
+            raw_laps = row.get("Laps")
+            try:
+                laps_done = int(raw_laps) if pd.notna(raw_laps) else None
+            except (TypeError, ValueError):
+                laps_done = None
+            status_by_driver[str(abbr)] = (status, laps_done)
+
+    def no_lap_reason_for(drv: str) -> str:
+        """Why `drv` has no lap to analyse, in the driver's own terms."""
+        return _no_lap_reason(*status_by_driver.get(drv, ("", None)))
 
     # ── Per-driver isolation: one driver's failure never breaks another's ──
     for drv in driver_list:
-        no_lap_reason = (
-            "Did not start this race - no lap telemetry exists for this driver."
-            if drv in dns_drivers
-            else "No lap data for this driver in this session."
-        )
+        no_lap_reason = no_lap_reason_for(drv)
         try:
             drv_laps = laps[laps["Driver"] == drv] if drv in all_drivers_set else None
             if drv_laps is None or drv_laps.empty:
@@ -217,7 +253,11 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
             # Car channels + distance + X/Y. See _extract_lap_telemetry().
             tel, tel_err = _extract_lap_telemetry(target_lap, drv)
             if tel is None or tel_err:
-                unavailable[drv] = no_lap_reason
+                # The lap exists, so this is not a DNS/DNF story: the archive
+                # simply has no car channels for it.
+                unavailable[drv] = (
+                    "Lap telemetry is not published for this driver in this session."
+                )
                 continue
 
             tel = tel.copy()
@@ -258,7 +298,9 @@ def process_telemetry_compare(year: int, round_number: int, driver_list: list, l
                 f"Unexpected error processing {drv} at {year}/{round_number}: {e}",
                 exc_info=True,
             )
-            unavailable[drv] = no_lap_reason
+            unavailable[drv] = (
+                "Lap telemetry could not be processed for this driver."
+            )
             continue
 
     if not binned_dfs:

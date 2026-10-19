@@ -331,6 +331,18 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       ? telemetryData.message
       : null;
 
+  // When every requested driver failed for the same reason, that reason is a
+  // property of the session (e.g. "F1's archive has no lap data for this
+  // race"), not of each driver. Repeating it per driver buries the answer.
+  const unavailableDrivers = telemetryData?.unavailable_drivers ?? [];
+  const unavailableReasonList = unavailableDrivers.map(
+    (drv) => telemetryData?.unavailable_reasons?.[drv] || 'No data available'
+  );
+  const sharedUnavailableReason =
+    unavailableReasonList.length > 0 && new Set(unavailableReasonList).size === 1
+      ? unavailableReasonList[0]
+      : null;
+
   return (
     <div className="p-6">
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -459,11 +471,17 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           <Radio className="mx-auto text-neutral-600 mb-3" size={32} />
           <p className="text-sm font-semibold text-neutral-300">
             {emptyStateMessage ??
+              sharedUnavailableReason ??
               (telemetryData.unavailable_drivers?.length
                 ? 'Tidak ada data telemetry untuk driver berikut:'
                 : 'Tidak ada data telemetry tersedia untuk ronde yang dipilih.')}
           </p>
-          {!emptyStateMessage && telemetryData.unavailable_drivers && telemetryData.unavailable_drivers.length > 0 && (
+          {sharedUnavailableReason && unavailableDrivers.length > 0 && (
+            <p className="mt-2 text-xs font-medium text-neutral-500">
+              Driver: {unavailableDrivers.join(', ')}
+            </p>
+          )}
+          {!emptyStateMessage && !sharedUnavailableReason && telemetryData.unavailable_drivers && telemetryData.unavailable_drivers.length > 0 && (
             <ul className="mt-3 space-y-1 text-xs font-medium text-amber-300/90">
               {telemetryData.unavailable_drivers.map((drv: string) => (
                 <li key={drv}>

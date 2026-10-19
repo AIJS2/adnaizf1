@@ -114,11 +114,13 @@ describe('TelemetryTab with partial backend payloads', () => {
     render(<TelemetryTab year={2026} round={1} />);
     await selectDriverAndFetch();
 
-    // The warning banner must show the per-driver reason. Before the fix this
-    // threw "Cannot read properties of undefined" on the missing `drivers`
-    // array, because the render guard only checked the payload object itself.
+    // The whole session failed for the same reason, so it is reported once
+    // (with the affected drivers) instead of being repeated for each driver.
     await waitFor(() => {
-      expect(screen.getByText(/VER: Telemetry could not be processed/)).toBeInTheDocument();
+      expect(
+        screen.getByText('Telemetry could not be processed for this session.')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Driver: VER, NOR')).toBeInTheDocument();
     });
   });
 

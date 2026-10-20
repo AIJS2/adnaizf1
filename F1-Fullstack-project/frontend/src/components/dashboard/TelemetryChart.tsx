@@ -78,7 +78,7 @@ const TelemetryChart: React.FC<TelemetryChartProps> = ({
           {icon} {title}
         </h3>
         {activeDistance !== null && activeDistance !== undefined && (
-          <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-red-950/50 text-red-400 border border-red-500/30 flex items-center gap-1.5 shadow-sm">
+          <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-red-950/50 text-red-400 border border-red-500/30 flex items-center gap-1.5 shadow-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 motion-safe:animate-pulse" />
             TRACK {activeDistance.toLocaleString()} m
           </span>

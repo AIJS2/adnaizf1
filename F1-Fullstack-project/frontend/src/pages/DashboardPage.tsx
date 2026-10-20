@@ -131,7 +131,7 @@ function DashboardPage() {
         {/* 1. SEASON PULSE BAR */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-red-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
-            <div className="w-10 h-10 rounded-md bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 flex-shrink-0 group-hover:rotate-3 transition-ui">
+            <div className="w-10 h-10 rounded-md bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 shrink-0 group-hover:rotate-3 transition-ui">
               <Calendar size={18} />
             </div>
             <div className="min-w-0 relative z-10">
@@ -144,7 +144,7 @@ function DashboardPage() {
           </div>
 
           <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-yellow-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
-            <div className="w-10 h-10 rounded-md bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 flex-shrink-0 group-hover:-rotate-3 transition-ui">
+            <div className="w-10 h-10 rounded-md bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 shrink-0 group-hover:-rotate-3 transition-ui">
               <Crown size={18} />
             </div>
             <div className="min-w-0 relative z-10">
@@ -157,7 +157,7 @@ function DashboardPage() {
           </div>
 
           <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-cyan-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
-            <div className="w-10 h-10 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0 group-hover:rotate-3 transition-ui">
+            <div className="w-10 h-10 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0 group-hover:rotate-3 transition-ui">
               <Shield size={18} />
             </div>
             <div className="min-w-0 relative z-10">
@@ -170,7 +170,7 @@ function DashboardPage() {
           </div>
 
           <div className="relative overflow-hidden bg-neutral-900/60 hover:bg-neutral-900/80 border border-neutral-800/80 hover:border-orange-500/50 rounded-lg p-4 flex items-center gap-3.5 backdrop-blur-xl shadow-lg transition-ui duration-300 group cursor-default">
-            <div className="w-10 h-10 rounded-md bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 flex-shrink-0 group-hover:-rotate-3 transition-ui">
+            <div className="w-10 h-10 rounded-md bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shrink-0 group-hover:-rotate-3 transition-ui">
               <Flame size={18} />
             </div>
             <div className="min-w-0 relative z-10">
@@ -184,7 +184,7 @@ function DashboardPage() {
         </section>
 
         {/* 2. NEXT GRAND PRIX COMMAND CENTER HERO */}
-        <section className="relative bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 md:p-10 shadow-2xl overflow-hidden mb-8 group">
+        <section className="relative bg-linear-to-br from-neutral-900 via-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 md:p-10 shadow-2xl overflow-hidden mb-8 group">
 
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 relative z-10">
             <div className="max-w-xl">
@@ -248,7 +248,7 @@ function DashboardPage() {
 
             {/* Right side: Circuit Artwork */}
             {trackMapImg && (
-              <div className="flex flex-col items-center justify-center lg:items-end flex-shrink-0">
+              <div className="flex flex-col items-center justify-center lg:items-end shrink-0">
                 <div className="relative p-4 sm:p-6 bg-neutral-950/60 border border-neutral-800/80 rounded-lg backdrop-blur-xl shadow-2xl flex flex-col items-center">
                   <div className="absolute top-3 left-4 text-[11px] uppercase font-bold tracking-widest text-neutral-500 flex items-center gap-1.5">
                     <Activity size={12} className="text-red-500" /> Circuit Layout
@@ -374,7 +374,7 @@ function DashboardPage() {
                 >
                   <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" />
                 </div>
-                <div className="w-1 h-full bg-neutral-950 flex-shrink-0 z-10" />
+                <div className="w-1 h-full bg-neutral-950 shrink-0 z-10" />
                 <div 
                   className="h-full transition-ui duration-1000 relative" 
                   style={{ width: `${100 - p1DuelPct}%`, backgroundColor: teamColors[p2Driver.team] || '#666666' }} 
@@ -443,7 +443,7 @@ function DashboardPage() {
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <Link
             to="/races"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-red-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(239,68,68,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-xs border border-neutral-800 hover:border-red-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(239,68,68,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <Gauge size={80} className="absolute -right-6 -bottom-6 text-red-500/5 group-hover:text-red-500/10 transition-colors pointer-events-none" />
             <div className="relative z-10">
@@ -464,7 +464,7 @@ function DashboardPage() {
 
           <Link
             to="/compare"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-purple-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(168,85,247,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-xs border border-neutral-800 hover:border-purple-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(168,85,247,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <Swords size={80} className="absolute -right-6 -bottom-6 text-purple-500/5 group-hover:text-purple-500/10 transition-colors pointer-events-none" />
             <div className="relative z-10">
@@ -485,7 +485,7 @@ function DashboardPage() {
 
           <Link
             to="/simulator"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-emerald-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-xs border border-neutral-800 hover:border-emerald-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <FlaskConical size={80} className="absolute -right-6 -bottom-6 text-emerald-500/5 group-hover:text-emerald-500/10 transition-colors pointer-events-none" />
             <div className="relative z-10">
@@ -506,7 +506,7 @@ function DashboardPage() {
 
           <Link
             to="/stats"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-yellow-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(234,179,8,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-xs border border-neutral-800 hover:border-yellow-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(234,179,8,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <Crown size={80} className="absolute -right-6 -bottom-6 text-yellow-500/5 group-hover:text-yellow-500/10 transition-colors pointer-events-none" />
             <div className="relative z-10">
@@ -527,7 +527,7 @@ function DashboardPage() {
 
           <Link
             to="/races"
-            className="group relative bg-neutral-900/60 backdrop-blur-sm border border-neutral-800 hover:border-cyan-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(6,182,212,0.15)] flex flex-col justify-between overflow-hidden"
+            className="group relative bg-neutral-900/60 backdrop-blur-xs border border-neutral-800 hover:border-cyan-500/50 rounded-lg p-6 transition-ui duration-300 hover:shadow-[0_10px_30px_rgba(6,182,212,0.15)] flex flex-col justify-between overflow-hidden"
           >
             <FlagTriangleRight size={80} className="absolute -right-6 -bottom-6 text-cyan-500/5 group-hover:text-cyan-500/10 transition-colors pointer-events-none" />
             <div className="relative z-10">

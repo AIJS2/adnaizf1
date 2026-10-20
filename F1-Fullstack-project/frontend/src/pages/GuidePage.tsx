@@ -66,7 +66,7 @@ const GuideSection: React.FC<GuideSectionProps> = ({ id, title, icon, colorClass
           <div className={`w-14 h-14 rounded-lg border flex items-center justify-center transition-ui ${currentStyle.iconBg}`}>
             {icon}
           </div>
-          <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r transition-ui text-chalk text-chalk">
+          <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-linear-to-r transition-ui text-chalk text-chalk">
             {title}
           </h2>
         </div>
@@ -94,7 +94,7 @@ const GuidePage = () => {
       
       {/* Header */}
       <div className="relative py-8 md:py-12 xl:py-14 overflow-hidden border-b border-neutral-900/50">
-        <div className="absolute inset-0 xl:left-72 bg-gradient-to-b from-red-600/10 to-transparent blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute inset-0 xl:left-72 bg-linear-to-b from-red-600/10 to-transparent blur-[100px] rounded-full pointer-events-none" />
         <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold uppercase tracking-wider mb-6 ">
             <BookOpen size={16} /> Official Documentation
@@ -127,7 +127,7 @@ const GuidePage = () => {
                         href={`#${item.id}`}
                         className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-ui duration-300 ${
                           isActive 
-                            ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] border border-red-500/50' 
+                            ? 'bg-linear-to-r from-red-600 to-red-700 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] border border-red-500/50'
                             : 'text-neutral-400 hover:text-white hover:bg-neutral-800/80 border border-transparent'
                         }`}
                       >
@@ -163,10 +163,10 @@ const GuidePage = () => {
                   <Zap size={20} className="text-yellow-500"/> How to read it:
                 </h4>
                 <ul className="space-y-4 text-base list-none pl-0">
-                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-white bg-neutral-800 px-2 py-0.5 rounded">Flat / Horizontal Line:</strong> The driver is matching the leader's pace exactly.</span></li>
-                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-red-400 bg-red-900/20 px-2 py-0.5 rounded">Line Going Up:</strong> The driver is losing time to the leader (e.g. tyre degradation, stuck in traffic).</span></li>
-                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-green-400 bg-green-900/20 px-2 py-0.5 rounded">Line Going Down:</strong> The driver is catching the leader (setting faster lap times).</span></li>
-                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded">Sudden Sharp Spike Up:</strong> The driver made a Pit Stop (losing ~20-25 seconds).</span></li>
+                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-white bg-neutral-800 px-2 py-0.5 rounded-sm">Flat / Horizontal Line:</strong> The driver is matching the leader's pace exactly.</span></li>
+                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-red-400 bg-red-900/20 px-2 py-0.5 rounded-sm">Line Going Up:</strong> The driver is losing time to the leader (e.g. tyre degradation, stuck in traffic).</span></li>
+                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-green-400 bg-green-900/20 px-2 py-0.5 rounded-sm">Line Going Down:</strong> The driver is catching the leader (setting faster lap times).</span></li>
+                  <li className="flex gap-3"><span className="text-neutral-500 mt-1">▶</span> <span><strong className="text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded-sm">Sudden Sharp Spike Up:</strong> The driver made a Pit Stop (losing ~20-25 seconds).</span></li>
                 </ul>
               </div>
               <p className="border-l-4 border-red-500 pl-4 py-2 bg-red-500/5 rounded-r-md italic text-neutral-400">
@@ -268,9 +268,9 @@ const GuidePage = () => {
               <p className="text-lg">
                 Want to know if a driver can mathematically win the championship? Go to the <strong>Simulator</strong>. We fetch the live points standings and remaining races, and let you input custom race results (P1, P2, P3, Fastest Lap, etc.) for upcoming rounds.
               </p>
-              <div className="mt-8 p-6 bg-gradient-to-br from-emerald-900/20 to-neutral-900 border border-emerald-500/20 rounded-lg">
+              <div className="mt-8 p-6 bg-linear-to-br from-emerald-900/20 to-neutral-900 border border-emerald-500/20 rounded-lg">
                 <div className="flex items-start gap-4">
-                  <Calculator className="text-emerald-500 mt-1 flex-shrink-0" size={24} />
+                  <Calculator className="text-emerald-500 mt-1 shrink-0" size={24} />
                   <p className="text-emerald-100/70 text-lg leading-relaxed">
                     The tool instantly recalculates the championship points to show you if a comeback is mathematically possible based on the maximum points available in Sprints and Main races.
                   </p>
@@ -284,7 +284,7 @@ const GuidePage = () => {
 
       {/* Footer */}
       <footer className="border-t border-neutral-900 bg-tarmac py-12 px-6 text-center mt-12 relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-1 bg-linear-to-r from-transparent via-red-600 to-transparent" />
         <p className="text-neutral-500 text-sm font-bold uppercase tracking-wider mb-2">
           Formula 1 Analytics Hub &copy; {new Date().getFullYear()}
         </p>

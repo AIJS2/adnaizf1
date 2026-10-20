@@ -22,7 +22,7 @@ interface SummaryCardProps {
 // =======================================================================
 
 const SummaryCard = ({ title, icon, data, fallbackText }: SummaryCardProps) => (
-  <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 h-full shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_8px_30px_rgba(255,0,0,0.1)] hover:border-neutral-700 transition-ui duration-500 group relative overflow-hidden">
+  <div className="bg-linear-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 h-full shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_8px_30px_rgba(255,0,0,0.1)] hover:border-neutral-700 transition-ui duration-500 group relative overflow-hidden">
     <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-red-500/10 transition-colors"></div>
     <div className="flex justify-between items-center text-neutral-400 text-sm relative z-10">
       <span className="font-semibold uppercase tracking-wider">{title}</span>
@@ -41,7 +41,7 @@ const SummaryCard = ({ title, icon, data, fallbackText }: SummaryCardProps) => (
           </Link>
         </p>
         {title === 'Fastest Lap' && data.lap_number ? (
-          <p className="font-mono text-red-400 mt-2 text-sm font-bold bg-red-500/10 inline-block px-2 py-1 rounded">Lap {data.lap_number} <span className="text-neutral-300 ml-2">{data.lap_time}</span></p>
+          <p className="font-mono text-red-400 mt-2 text-sm font-bold bg-red-500/10 inline-block px-2 py-1 rounded-sm">Lap {data.lap_number} <span className="text-neutral-300 ml-2">{data.lap_time}</span></p>
         ) : (
           <p className="font-mono text-neutral-300 mt-2 font-bold text-lg">{data.time || data.lap_time}</p>
         )}

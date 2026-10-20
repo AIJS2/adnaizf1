@@ -53,7 +53,7 @@ const NavList: React.FC<{ isCollapsed?: boolean; onNavigate?: () => void }> = ({
           aria-label={isCollapsed ? label : undefined}
           onClick={onNavigate}
         >
-          <Icon size={19} className="flex-shrink-0" aria-hidden="true" />
+          <Icon size={19} className="shrink-0" aria-hidden="true" />
           {!isCollapsed && <span className="font-semibold whitespace-nowrap">{label}</span>}
         </NavLink>
       </li>
@@ -69,7 +69,7 @@ const SearchButton: React.FC<{ isMac: boolean; onClick: () => void }> = ({ isMac
   >
     <Search size={16} className="text-red-500" aria-hidden="true" />
     <span>Search drivers, teams, races…</span>
-    <kbd className="ml-auto px-1.5 py-0.5 text-[11px] bg-neutral-950 border border-neutral-800 rounded text-neutral-400 font-semibold">
+    <kbd className="ml-auto px-1.5 py-0.5 text-[11px] bg-neutral-950 border border-neutral-800 rounded-sm text-neutral-400 font-semibold">
       {isMac ? '⌘ K' : 'Ctrl K'}
     </kbd>
   </button>
@@ -131,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <div className={`flex items-center h-20 border-b border-neutral-900 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-5'}`}>
           {!isCollapsed && (
-            <NavLink to="/" className="rounded-sm" aria-label="Analyziz home">
+            <NavLink to="/" className="rounded-xs" aria-label="Analyziz home">
               <Wordmark />
             </NavLink>
           )}
@@ -174,7 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile drawer scrim */}
       <div
         className={`
-          fixed inset-0 z-40 bg-tarmac/70 backdrop-blur-sm xl:hidden
+          fixed inset-0 z-40 bg-tarmac/70 backdrop-blur-xs xl:hidden
           transition-opacity duration-200
           ${isMobileDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
         `}
@@ -196,7 +196,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         `}
       >
         <div className="flex items-center justify-between h-16 px-5 border-b border-neutral-900">
-          <NavLink to="/" onClick={onCloseMobileDrawer} className="rounded-sm" aria-label="Analyziz home">
+          <NavLink to="/" onClick={onCloseMobileDrawer} className="rounded-xs" aria-label="Analyziz home">
             <Wordmark />
           </NavLink>
           <button
@@ -242,7 +242,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ isMobileDrawerOpen, 
         >
           {isMobileDrawerOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>
-        <NavLink to="/" className="rounded-sm" aria-label="Analyziz home">
+        <NavLink to="/" className="rounded-xs" aria-label="Analyziz home">
           <Wordmark size="sm" />
         </NavLink>
         <div className="w-10" aria-hidden="true" />

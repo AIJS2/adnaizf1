@@ -24,10 +24,10 @@ const tokens = `
     --accent-amber: #FBBF24;
     --accent-yellow: #FDE047;
 
-    --radius-sm: 0.5rem;
-    --radius-md: 0.75rem;
-    --radius-lg: 1rem;
-    --radius-pill: 999px;
+    --sim-radius-sm: 0.5rem;
+    --sim-radius-md: 0.75rem;
+    --sim-radius-lg: 1rem;
+    --sim-radius-pill: 999px;
 
     --gap-section: 2rem;
     --gap-card: 1.5rem;
@@ -344,7 +344,7 @@ const SimulatorPage = () => {
                 Championship Simulator
               </span>
             </h1>
-            <p className="text-neutral-400 mt-4 text-base md:text-lg font-medium max-w-3xl leading-relaxed">
+            <p className="text-neutral-400 mt-4 text-base md:text-lg font-medium max-w-3xl leading-relaxed md:leading-7">
               Test "What-If" scenarios on the remaining rounds{remainingRaces.length > 0 && <> (R{remainingRaces[0].round}–R{remainingRaces[remainingRaces.length - 1].round})</>}. Pick a Grand Prix, predict the podium, fastest lap, and Sprint winner, then watch the championship standings recalculate in real time.
             </p>
           </div>
@@ -413,7 +413,7 @@ const SimulatorPage = () => {
                   value={selectedRound}
                   onChange={e => setSelectedRound(e.target.value === '' ? '' : Number(e.target.value))}
                   disabled={remainingRaces.length === 0}
-                  className="w-full bg-neutral-950/90 border border-white/10 hover:border-red-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-400/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-neutral-950/90 border border-white/10 hover:border-red-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-red-400 focus:ring-4 focus:ring-red-400/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {remainingRaces.length === 0 && <option value="">{loading ? 'Loading calendar…' : 'No remaining rounds'}</option>}
                   {remainingRaces.map(r => (
@@ -435,7 +435,7 @@ const SimulatorPage = () => {
                   <span className="flex items-center gap-1"><Trophy size={12} className="text-yellow-400" /> P1 Winner</span> <span className="text-yellow-400 ">+25 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P1 Winner" value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select aria-label="P1 Winner" value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P1 --</option>
                   {originalDrivers.map(d => <option key={`p1-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -447,7 +447,7 @@ const SimulatorPage = () => {
                   <span className="flex items-center gap-1"><Crosshair size={12} className="text-slate-300" /> P2 Runner-up</span> <span className="text-slate-300 ">+18 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-slate-300/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P2 Runner-up" value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select aria-label="P2 Runner-up" value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P2 --</option>
                   {originalDrivers.map(d => <option key={`p2-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -459,7 +459,7 @@ const SimulatorPage = () => {
                   <span className="flex items-center gap-1"><Activity size={12} className="text-amber-500" /> P3 Podium</span> <span className="text-amber-500 ">+15 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P3 Podium" value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select aria-label="P3 Podium" value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P3 --</option>
                   {originalDrivers.map(d => <option key={`p3-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -471,7 +471,7 @@ const SimulatorPage = () => {
                   <span className="flex items-center gap-1"><Zap size={12} className="text-purple-500" /> Fastest Lap</span> <span className="text-purple-400 ">+1 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="Fastest Lap" value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select aria-label="Fastest Lap" value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select Fastest Lap --</option>
                   {originalDrivers.map(d => <option key={`fl-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -486,7 +486,7 @@ const SimulatorPage = () => {
                     : <span className="text-neutral-600">NO SPRINT</span>}
                 </label>
                 <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="Sprint Winner" value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} disabled={!isSprintWeekend} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-md p-3.5 text-white font-bold focus:outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <select aria-label="Sprint Winner" value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} disabled={!isSprintWeekend} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   <option value="">-- Select Sprint Winner --</option>
                   {originalDrivers.map(d => <option key={`sw-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -516,7 +516,7 @@ const SimulatorPage = () => {
                         return (
                           <span key={tag} className="inline-flex items-center gap-1.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 rounded-full pl-1.5 pr-2.5 py-0.5 text-[11px] font-black">
                             <span className="bg-purple-500/30 rounded-full px-1.5 py-0.5 text-[10px]">{tag}</span>
-                            <span className="truncate max-w-[7rem] normal-case tracking-normal">{d?.name ?? '—'}</span>
+                            <span className="truncate max-w-28 normal-case tracking-normal">{d?.name ?? '—'}</span>
                             <span className="text-purple-200">+{pts}</span>
                           </span>
                         );
@@ -529,15 +529,15 @@ const SimulatorPage = () => {
                     onClick={runSimulation}
                     disabled={hasConflict || loading}
                     title="Recalculate the standings (or press Enter)"
-                    className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-red-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-red-600 disabled:hover:to-red-500"
+                    className="flex-1 bg-linear-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-red-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-red-600 disabled:hover:to-red-500"
                   >
                     <Calculator size={18} /> Compute
-                    <kbd className="hidden sm:inline text-[10px] font-black opacity-70 border border-white/25 rounded px-1.5 py-0.5">ENTER</kbd>
+                    <kbd className="hidden sm:inline text-[10px] font-black opacity-70 border border-white/25 rounded-sm px-1.5 py-0.5">ENTER</kbd>
                   </button>
                   <button
                     onClick={reset}
                     disabled={!hasPicks && drivers.length === originalDrivers.length}
-                    className="sm:w-1/3 bg-neutral-900/80 hover:bg-neutral-800 text-white font-bold py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-white/10 hover:border-white/30 backdrop-blur-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-neutral-900/80"
+                    className="sm:w-1/3 bg-neutral-900/80 hover:bg-neutral-800 text-white font-bold py-4 rounded-md transition-ui flex items-center justify-center gap-2 uppercase tracking-wider text-sm border border-white/10 hover:border-white/30 backdrop-blur-xs disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-neutral-900/80"
                   >
                     <RefreshCw size={16} /> Reset
                   </button>
@@ -699,9 +699,9 @@ const SimulatorPage = () => {
                           <span className="text-xl md:text-3xl font-black italic text-white ">{d.position}</span>
                           <div className="flex items-center justify-center mt-0.5">
                             {posChange > 0 ? (
-                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded border border-green-500/40 "><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
+                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded-sm border border-green-500/40 "><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
                             ) : posChange < 0 ? (
-                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40 "><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
+                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded-sm border border-red-500/40 "><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
                             ) : (
                               <span className="text-neutral-500 font-bold text-xs"><Minus size={12} strokeWidth={3} /></span>
                             )}
@@ -709,7 +709,7 @@ const SimulatorPage = () => {
                         </div>
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-sm group-hover:text-red-400 transition-colors flex items-center gap-2">
+                          <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-xs group-hover:text-red-400 transition-colors flex items-center gap-2">
                             {d.name}
                             {teamLogo && <img src={teamLogo} alt={d.team} className="h-4 md:h-5 object-contain opacity-70" />}
                           </h4>
@@ -723,7 +723,7 @@ const SimulatorPage = () => {
                         <div className="text-right flex items-center gap-4">
                           <div className="w-16 md:w-20 text-right">
                             {ptsGained > 0 && (
-                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded text-xs md:text-sm font-black tracking-wider motion-safe:animate-pulse ">
+                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded-sm text-xs md:text-sm font-black tracking-wider motion-safe:animate-pulse ">
                                 +{ptsGained}
                               </span>
                             )}
@@ -736,7 +736,7 @@ const SimulatorPage = () => {
                           </div>
                         </div>
                         {ptsGained > 0 && (
-                          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-[40px] rounded-full pointer-events-none"></div>
+                          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-2xl rounded-full pointer-events-none"></div>
                         )}
                       </div>
                     );
@@ -761,9 +761,9 @@ const SimulatorPage = () => {
                           <span className="text-xl md:text-3xl font-black italic text-white ">{team.position}</span>
                           <div className="flex items-center justify-center mt-0.5">
                             {posChange > 0 ? (
-                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded border border-green-500/40 "><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
+                              <span className="text-green-400 font-bold text-xs flex items-center bg-green-500/20 px-1.5 py-0.5 rounded-sm border border-green-500/40 "><ArrowUp size={12} strokeWidth={3} className="mr-0.5" /> {posChange}</span>
                             ) : posChange < 0 ? (
-                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40 "><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
+                              <span className="text-red-500 font-bold text-xs flex items-center bg-red-500/20 px-1.5 py-0.5 rounded-sm border border-red-500/40 "><ArrowDown size={12} strokeWidth={3} className="mr-0.5" /> {Math.abs(posChange)}</span>
                             ) : (
                               <span className="text-neutral-500 font-bold text-xs"><Minus size={12} strokeWidth={3} /></span>
                             )}
@@ -771,7 +771,7 @@ const SimulatorPage = () => {
                         </div>
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-sm group-hover:text-red-400 transition-colors flex items-center gap-3">
+                          <h4 className="text-lg md:text-2xl font-black uppercase italic truncate text-white drop-shadow-xs group-hover:text-red-400 transition-colors flex items-center gap-3">
                             {team.name} {logo && <img src={logo} alt={team.name} className="h-5 md:h-6 object-contain opacity-80" />}
                           </h4>
                           <span className="text-xs md:text-sm font-bold text-neutral-400 tracking-normal truncate">
@@ -782,7 +782,7 @@ const SimulatorPage = () => {
                         <div className="text-right flex items-center gap-4">
                           <div className="w-16 md:w-20 text-right">
                             {ptsGained > 0 && (
-                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded text-xs md:text-sm font-black tracking-wider motion-safe:animate-pulse ">
+                              <span className="inline-block bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2 py-0.5 rounded-sm text-xs md:text-sm font-black tracking-wider motion-safe:animate-pulse ">
                                 +{ptsGained}
                               </span>
                             )}
@@ -795,13 +795,13 @@ const SimulatorPage = () => {
                           </div>
                         </div>
                         {ptsGained > 0 && (
-                          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-[40px] rounded-full pointer-events-none"></div>
+                          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-2xl rounded-full pointer-events-none"></div>
                         )}
                       </div>
                     );
                   })}
                   
-                  <div className="pt-4 text-center border-t border-white/5 mt-6">
+                  <div className="pt-4 text-center border-t border-white/5">
                     <p className="text-neutral-500 text-xs font-bold tracking-normal pt-2">
                       * Showing top 10 simulated {viewMode} standings
                     </p>

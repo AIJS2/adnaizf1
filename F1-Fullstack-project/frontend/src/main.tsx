@@ -1,6 +1,13 @@
 // src/main
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
+import '@fontsource/titillium-web/latin-300.css';
+import '@fontsource/titillium-web/latin-400.css';
+import '@fontsource/titillium-web/latin-600.css';
+import '@fontsource/titillium-web/latin-700.css';
+import '@fontsource/titillium-web/latin-900.css';
+import '@fontsource/titillium-web/latin-400-italic.css';
+import '@fontsource/titillium-web/latin-700-italic.css';
 import './index.css';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from './components/layout/Layout';

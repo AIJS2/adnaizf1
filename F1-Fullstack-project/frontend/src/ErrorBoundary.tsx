@@ -48,7 +48,7 @@ export class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, Err
                 <summary className="cursor-pointer px-4 py-3 text-sm text-neutral-400 hover:text-chalk">
                   Error details
                 </summary>
-                <pre className="px-4 pb-4 text-xs text-red-300 whitespace-pre-wrap break-words overflow-auto max-h-80">
+                <pre className="px-4 pb-4 text-xs text-red-300 whitespace-pre-wrap wrap-break-word overflow-auto max-h-80">
                   {this.state.error.toString()}
                   {this.state.errorInfo?.componentStack}
                 </pre>

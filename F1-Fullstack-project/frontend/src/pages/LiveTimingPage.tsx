@@ -135,7 +135,7 @@ const LiveTimingPage: React.FC = () => {
         {/* Header Bar */}
         <div className="flex flex-col xl:flex-row xl:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
           <div>
-            <div className={`inline-flex items-center gap-2 border text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 ' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 ') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 '}`}>
+            <div className={`inline-flex items-center gap-2 border text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-xs mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 ' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 ') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 '}`}>
               <Activity size={12} className={connectionStatus === 'connected' ? '' : ''} />
               {connectionStatus === 'connecting' ? 'AWAITING CONNECTION…' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING…' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'NO LIVE SESSION'}
             </div>
@@ -156,7 +156,7 @@ const LiveTimingPage: React.FC = () => {
           {/* Main Timing Table (Left 3 cols) */}
           <div className="lg:col-span-3 bg-tarmac border border-[#1a1a1a] rounded-md overflow-hidden shadow-2xl flex flex-col relative min-w-0">
             {/* Glossy top highlight */}
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
+            <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
 
             <div className="overflow-auto flex-1 max-h-[calc(100vh-280px)]" style={{ overflowAnchor: 'none' }}>
               {hasNoSessionData ? (
@@ -180,7 +180,7 @@ const LiveTimingPage: React.FC = () => {
                   {targetCountdownDate && (
                     <div className="mt-8 flex flex-col items-center w-full max-w-lg">
                       {/* Event badge capsule */}
-                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-[11px] uppercase font-bold tracking-widest text-neutral-400 mb-5 shadow-sm">
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-[11px] uppercase font-bold tracking-widest text-neutral-400 mb-5 shadow-xs">
                         <span className="w-2 h-2 rounded-full bg-red-500 motion-safe:animate-ping" />
                         <span>NEXT UP: <span className="text-white font-black">{heroRaceName}</span></span>
                         {heroSessionName && (
@@ -192,7 +192,7 @@ const LiveTimingPage: React.FC = () => {
 
                       {/* HeroCountdown display card */}
                       <div className="relative p-5 sm:p-6 rounded-lg bg-tarmac border border-[#222] flex flex-col items-center w-full sm:w-auto">
-                        <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
+                        <div className="absolute top-0 left-1/4 right-1/4 h-px bg-linear-to-r from-transparent via-red-500/40 to-transparent" />
                         <HeroCountdown targetDate={targetCountdownDate} phase={heroPhase} />
                       </div>
 
@@ -205,7 +205,7 @@ const LiveTimingPage: React.FC = () => {
                 </div>
               ) : (
               <table className="w-full text-[13px] tracking-tight whitespace-nowrap min-w-[700px]">
-                <thead className="bg-neutral-950 text-neutral-500 font-black text-left border-b border-[#222] shadow-sm sticky top-0 z-10">
+                <thead className="bg-neutral-950 text-neutral-500 font-black text-left border-b border-[#222] shadow-xs sticky top-0 z-10">
                   <tr>
                     <th className="p-3 w-10 text-center border-r border-[#1a1a1a] sticky left-0 bg-neutral-950 z-20">P</th>
                     <th className="p-3 min-w-[140px] border-r border-[#1a1a1a] sticky left-10 bg-neutral-950 z-20">DRIVER</th>
@@ -222,16 +222,16 @@ const LiveTimingPage: React.FC = () => {
                 <tbody className="divide-y divide-[#151515]">
                   {connectionStatus === 'connecting' ? Array.from({length: 20}).map((_, i) => (
                     <tr key={`skel-${i}`} className="motion-safe:animate-pulse h-[36px]">
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-4 mx-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-neutral-850 rounded w-16"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-neutral-850 rounded w-10"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-12 ml-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 ml-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-14 ml-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 mx-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 mx-auto"></div></td>
-                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded w-10 mx-auto"></div></td>
-                      <td className="p-2"><div className="h-3 bg-neutral-850 rounded w-4 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded-sm w-4 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-neutral-850 rounded-sm w-16"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-4 bg-neutral-850 rounded-sm w-10"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded-sm w-12 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded-sm w-10 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded-sm w-14 ml-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded-sm w-10 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded-sm w-10 mx-auto"></div></td>
+                      <td className="p-2 border-r border-[#1a1a1a]"><div className="h-3 bg-neutral-850 rounded-sm w-10 mx-auto"></div></td>
+                      <td className="p-2"><div className="h-3 bg-neutral-850 rounded-sm w-4 mx-auto"></div></td>
                     </tr>
                   )) : sortedLines.length > 0 ? sortedLines.map((row) => (
                     <TimingRow key={row.driver} row={row} />
@@ -263,11 +263,11 @@ const LiveTimingPage: React.FC = () => {
 
             {/* Track Map */}
             <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
+              <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
               <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
                 <Activity size={14} /> Track Map Simulation
               </h3>
-              <div className="relative w-full aspect-[2/1] bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
+              <div className="relative w-full aspect-2/1 bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
                 <svg viewBox="0 0 300 150" className="w-full h-full">
                   {/* Track outline */}
                   <ellipse cx="150" cy="75" rx="120" ry="50" fill="none" stroke="#111" strokeWidth="12" />
@@ -305,7 +305,7 @@ const LiveTimingPage: React.FC = () => {
 
             {/* Track Status */}
             <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
+              <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
               <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
                 <Flag size={14} /> Track Status
               </h3>
@@ -316,24 +316,24 @@ const LiveTimingPage: React.FC = () => {
 
             {/* Weather */}
             <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
+              <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
               <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
                 <CloudRain size={14} /> Local Conditions
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">AIR TEMP</div>
                   <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-red-500"/> {data.weather.air}</div>
                 </div>
-                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">TRACK TEMP</div>
                   <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-orange-500"/> {data.weather.track}</div>
                 </div>
-                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">HUMIDITY</div>
                   <div className="font-bold flex items-center gap-2 text-md"><Wind size={14} className="text-blue-500"/> {data.weather.humidity}</div>
                 </div>
-                <div className="bg-tarmac p-3 rounded border border-[#151515]">
+                <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">RAIN RISK</div>
                   <div className="font-bold flex items-center gap-2 text-md"><CloudRain size={14} className="text-cyan-500"/> {data.weather.rain}</div>
                 </div>
@@ -350,13 +350,13 @@ const LiveTimingPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           {/* Race Control Messages */}
           <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-4 flex flex-col shadow-xl min-h-[300px] relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent"></div>
+            <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
             <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-2">
               <Radio size={14} /> Race Control Log
             </h3>
             <div className="flex-1 overflow-y-auto pr-3 space-y-2 font-mono text-[11px] custom-scrollbar">
               {data.messages.length > 0 ? data.messages.map((m, idx) => (
-                <div key={idx} className="flex flex-col py-1.5 border-b border-[#151515] last:border-0 group hover:bg-tarmac transition-colors rounded px-1">
+                <div key={idx} className="flex flex-col py-1.5 border-b border-[#151515] last:border-0 group hover:bg-tarmac transition-colors rounded-sm px-1">
                   <span className="text-neutral-600 font-bold">{m.time}</span>
                   <span className={`font-black tracking-wide ${m.type === 'pit' ? 'text-blue-400' : m.type === 'flag' ? 'text-yellow-400' : 'text-neutral-300'}`}>
                     {m.msg}
@@ -391,16 +391,16 @@ const TimingRow = memo<TimingRowProps>(({ row }) => {
       <td className="p-2.5 text-center font-black text-neutral-500 border-r border-[#151515] sticky left-0 bg-tarmac group-hover:bg-neutral-950 z-10 tabular-nums">{row.position}</td>
 
       <td className="p-2.5 font-black text-white text-[14px] border-r border-[#151515] flex items-center gap-2 sticky left-10 bg-tarmac group-hover:bg-neutral-950 z-10">
-        <div className="w-1 h-5 rounded-sm shadow-sm" style={{ backgroundColor: teamColor }}></div>
+        <div className="w-1 h-5 rounded-xs shadow-xs" style={{ backgroundColor: teamColor }}></div>
         {row.driver}
         {row.status === 'PIT' && (
-          <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[11px] rounded-sm motion-safe:animate-pulse uppercase tracking-wider">
+          <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[11px] rounded-xs motion-safe:animate-pulse uppercase tracking-wider">
             IN PIT
           </span>
         )}
         {row.status !== 'PIT' && isIntervalClose && (
           <span
-            className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[11px] rounded-sm uppercase tracking-wider "
+            className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[11px] rounded-xs uppercase tracking-wider "
             title="Manual Override Available"
           >
             OVR

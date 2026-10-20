@@ -714,7 +714,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Verstappen, Ferrari, Monaco, Compare…"
-            className="w-full bg-transparent text-chalk text-base placeholder-neutral-500 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+            className="w-full bg-transparent text-chalk text-base placeholder-neutral-500 focus:outline-hidden [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -726,7 +726,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
               <X size={16} aria-hidden="true" />
             </button>
           )}
-          <span className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-mono font-bold bg-neutral-800 text-neutral-400 rounded border border-neutral-700">
+          <span className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-mono font-bold bg-neutral-800 text-neutral-400 rounded-sm border border-neutral-700">
             ESC
           </span>
         </div>
@@ -739,7 +739,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
               onClick={() => setSelectedCategory(cat)}
               className={`px-3 py-1 rounded-full font-medium transition-ui duration-150 shrink-0 ${
                 selectedCategory === cat 
-                  ? 'bg-red-600 text-white shadow-sm shadow-red-600/30 font-semibold' 
+                  ? 'bg-red-600 text-white shadow-xs shadow-red-600/30 font-semibold'
                   : 'bg-neutral-800/70 text-neutral-400 hover:text-white hover:bg-neutral-700/60'
               }`}
             >
@@ -813,13 +813,13 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
                           {item.title}
                         </span>
                         {item.code && (
-                          <span className="px-1.5 py-0.2 text-[11px] font-mono font-bold bg-neutral-800 text-neutral-300 rounded border border-neutral-700">
+                          <span className="px-1.5 py-0.2 text-[11px] font-mono font-bold bg-neutral-800 text-neutral-300 rounded-sm border border-neutral-700">
                             {item.code}
                           </span>
                         )}
                         {item.number !== undefined && (
                           <span 
-                            className="px-1.5 py-0.2 text-[11px] font-mono font-bold rounded"
+                            className="px-1.5 py-0.2 text-[11px] font-mono font-bold rounded-sm"
                             style={{ 
                               backgroundColor: `${accentColor}25`, 
                               color: accentColor,
@@ -855,16 +855,16 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
         <div className="px-4 py-2.5 bg-neutral-950/80 border-t border-neutral-800 text-neutral-400 text-[11px] flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">↑</kbd>
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">↓</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded-sm text-neutral-300 font-mono text-[11px]">↑</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded-sm text-neutral-300 font-mono text-[11px]">↓</kbd>
               <span>to navigate</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">↵</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded-sm text-neutral-300 font-mono text-[11px]">↵</kbd>
               <span>to select</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[11px]">ESC</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded-sm text-neutral-300 font-mono text-[11px]">ESC</kbd>
               <span>to close</span>
             </span>
           </div>

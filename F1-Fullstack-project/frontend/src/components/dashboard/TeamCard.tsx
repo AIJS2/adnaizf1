@@ -34,7 +34,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
 
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="font-mono text-xs font-black text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800 shrink-0">
+          <span className="font-mono text-xs font-black text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded-sm border border-neutral-800 shrink-0">
             P{index + 1}
           </span>
           <span className="font-extrabold text-neutral-300 group-hover:text-red-400 transition-colors uppercase tracking-wider text-sm truncate">

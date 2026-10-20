@@ -55,7 +55,7 @@ const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; pha
     return (
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-red-500 motion-safe:animate-pulse" />
-        <span className="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-widest">
+        <span className="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded-sm text-[11px] font-black uppercase tracking-widest">
           LIVE NOW
         </span>
       </div>
@@ -66,17 +66,17 @@ const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; pha
   if (phase === 'race_day') {
     return (
       <div className="flex flex-col gap-1">
-        <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-widest w-fit">
+        <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2 py-0.5 rounded-sm text-[11px] font-black uppercase tracking-widest w-fit">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 motion-safe:animate-pulse" /> TODAY
         </span>
         <div className="flex items-center gap-1.5">
           <Timer size={12} className="text-amber-400" />
           <div className="flex gap-1 text-[11px] font-mono font-bold tracking-wider">
             {timeLeft.days > 0 && (
-              <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">{timeLeft.days}d</span>
+              <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-sm">{timeLeft.days}d</span>
             )}
-            <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded">{timeLeft.hours}h</span>
-            <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded">{timeLeft.mins}m</span>
+            <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded-sm">{timeLeft.hours}h</span>
+            <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded-sm">{timeLeft.mins}m</span>
           </div>
         </div>
       </div>
@@ -88,10 +88,10 @@ const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; pha
       <Timer size={12} className="text-red-400" />
       <div className="flex gap-1 text-[11px] font-mono font-bold tracking-wider">
         {timeLeft.days > 0 && (
-          <span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">{timeLeft.days}d</span>
+          <span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-sm">{timeLeft.days}d</span>
         )}
-        <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded">{timeLeft.hours}h</span>
-        <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded">{timeLeft.mins}m</span>
+        <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded-sm">{timeLeft.hours}h</span>
+        <span className="bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded-sm">{timeLeft.mins}m</span>
       </div>
     </div>
   );
@@ -104,7 +104,7 @@ const SeasonProgress = ({ completed, total }: { completed: number; total: number
     <div className="flex items-center gap-4 w-full max-w-md">
       <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden relative">
         <div
-          className="h-full bg-gradient-to-r from-red-600 via-red-500 to-orange-400 rounded-full transition-ui duration-1000 ease-out relative"
+          className="h-full bg-linear-to-r from-red-600 via-red-500 to-orange-400 rounded-full transition-ui duration-1000 ease-out relative"
           style={{ width: `${pct}%` }}
         >
           <div className="absolute inset-0 bg-white/10 rounded-full" />
@@ -142,7 +142,7 @@ const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (k
             }`}>
           <t.icon size={14} className={active === t.key ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'} />
           {t.label}
-          <span className={`ml-1 px-1.5 py-0.5 rounded text-[11px] font-mono ${active === t.key ? 'bg-white/20 text-white' : 'bg-neutral-800 text-neutral-500'}`}>
+          <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[11px] font-mono ${active === t.key ? 'bg-white/20 text-white' : 'bg-neutral-800 text-neutral-500'}`}>
             {t.count}
           </span>
         </button>
@@ -155,7 +155,7 @@ const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (k
 const MonthDivider = ({ month, year, raceCount }: { month: string; year: number; raceCount: number }) => (
   <div className="col-span-full flex items-center gap-4 py-4">
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-md bg-gradient-to-br from-red-600/20 to-red-900/20 border border-red-500/20 flex items-center justify-center">
+      <div className="w-10 h-10 rounded-md bg-linear-to-br from-red-600/20 to-red-900/20 border border-red-500/20 flex items-center justify-center">
         <Calendar size={18} className="text-red-500" />
       </div>
       <div>
@@ -163,7 +163,7 @@ const MonthDivider = ({ month, year, raceCount }: { month: string; year: number;
         <span className="text-[11px] font-mono text-neutral-500 tracking-widest">{raceCount} RACE{raceCount > 1 ? 'S' : ''} · {year}</span>
       </div>
     </div>
-    <div className="flex-1 h-px bg-gradient-to-r from-neutral-800 via-neutral-800 to-transparent" />
+    <div className="flex-1 h-px bg-linear-to-r from-neutral-800 via-neutral-800 to-transparent" />
   </div>
 );
 
@@ -238,7 +238,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
             <div className="flex justify-between items-start mb-5">
               <div className="max-w-[70%]">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <div className=" rounded-sm overflow-hidden">
+                  <div className=" rounded-xs overflow-hidden">
                     {flagCode ? (
                       <CountryFlag
                         code={flagCode}
@@ -249,7 +249,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                       <div className="w-8 h-5 bg-neutral-800" />
                     )}
                   </div>
-                  <h3 className="font-black text-white text-lg md:text-xl leading-tight uppercase italic tracking-tight group-hover:text-red-400 transition-colors">
+                  <h3 className="font-black text-white text-lg md:text-xl leading-tight md:leading-7 uppercase italic tracking-tight group-hover:text-red-400 transition-colors">
                     {race.name}
                   </h3>
                 </div>
@@ -259,7 +259,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
               </div>
               
               {/* Skewed Round Badge */}
-              <div className="flex-shrink-0 bg-red-600 transform -skew-x-12 px-3 py-1.5 border border-red-500">
+              <div className="shrink-0 bg-red-600 transform -skew-x-12 px-3 py-1.5 border border-red-500">
                 <div className="transform skew-x-12 text-white font-black text-xs tracking-normal">
                   R{String(race.round).padStart(2, '0')}
                 </div>
@@ -290,13 +290,13 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
                 <>
                   <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Race Winner</div>
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-md bg-gradient-to-br from-yellow-500/20 to-yellow-700/20 border border-yellow-500/30 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-md bg-linear-to-br from-yellow-500/20 to-yellow-700/20 border border-yellow-500/30 flex items-center justify-center">
                       <Trophy size={16} className="text-yellow-500 " />
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-black text-white text-base md:text-lg uppercase italic leading-none">{race.winner}</span>
+                      <span className="font-black text-white text-base md:text-lg uppercase italic leading-none md:leading-7">{race.winner}</span>
                       <div className="flex items-center gap-1.5 mt-1">
-                        <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: winnerTeamColor }} />
+                        <div className="w-2 h-2 rounded-full shadow-xs" style={{ backgroundColor: winnerTeamColor }} />
                         <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">{race.winner_team}</span>
                       </div>
                     </div>
@@ -449,7 +449,7 @@ const RacesPage = () => {
       {/* Backgrounds */}
       <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.08] pointer-events-none mix-blend-luminosity" />
       <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-linear-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none" />
 
       
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
@@ -491,12 +491,12 @@ const RacesPage = () => {
         {/* Next Race Hero Banner (only in "all" view) */}
         {nextRace && filter === 'all' && (
           <section className="mb-10" ref={nextRaceRef}>
-            <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-red-950/50 via-neutral-900/80 to-neutral-950/80 backdrop-blur-xl border border-red-500/20 p-6 md:p-8">
+            <div className="relative overflow-hidden rounded-lg bg-linear-to-r from-red-950/50 via-neutral-900/80 to-neutral-950/80 backdrop-blur-xl border border-red-500/20 p-6 md:p-8">
               {/* Track bg */}
               {nextRaceTrackImg && (
                 <img src={nextRaceTrackImg} alt="" className="absolute right-4 top-1/2 -translate-y-1/2 w-48 md:w-64 opacity-[0.07] invert pointer-events-none" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-linear-to-r from-red-600/5 to-transparent pointer-events-none" />
               
               <div className="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
                 <div className="flex items-center gap-5 min-w-0">
@@ -507,7 +507,7 @@ const RacesPage = () => {
                     <div className={`text-[11px] font-bold uppercase tracking-[0.2em] mb-1 ${nextRace.phase === 'live' ? 'text-red-400' : nextRace.phase === 'race_day' ? 'text-amber-400' : 'text-red-400'}`}>
                       {nextRace.phase === 'live' ? 'Live Now' : nextRace.phase === 'race_day' ? 'Race Day · Today' : 'Next Up'} · Round {nextRace.round}
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight break-words pr-1">{nextRace.name}</h2>
+                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight wrap-break-word pr-1">{nextRace.name}</h2>
                     <div className="flex flex-wrap items-center gap-3 mt-1.5 text-neutral-400 text-sm">
                       <div className="flex items-center gap-1.5">
                         <MapPin size={13} /> {nextRace.location}

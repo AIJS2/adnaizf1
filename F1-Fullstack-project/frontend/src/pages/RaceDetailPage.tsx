@@ -179,24 +179,24 @@ function RaceDetailPage() {
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
         <div className="flex flex-col sm:flex-row justify-between sm:items-end mb-8 gap-4">
           <div>
-            <div className="h-4 w-40 bg-neutral-800 rounded mb-4"></div>
-            <div className="h-12 w-64 md:w-96 bg-neutral-800 rounded"></div>
+            <div className="h-4 w-40 bg-neutral-800 rounded-sm mb-4"></div>
+            <div className="h-12 w-64 md:w-96 bg-neutral-800 rounded-sm"></div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            <div className="h-10 w-24 bg-neutral-800 rounded"></div>
-            <div className="h-10 w-32 bg-neutral-800 rounded"></div>
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="h-10 w-24 bg-neutral-800 rounded-sm"></div>
+            <div className="h-10 w-32 bg-neutral-800 rounded-sm"></div>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
           {[1, 2, 3].map(i => (
             <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 h-32">
-              <div className="h-4 w-24 bg-neutral-800 rounded mb-4"></div>
-              <div className="h-6 w-32 bg-neutral-800 rounded mb-2"></div>
-              <div className="h-4 w-48 bg-neutral-800 rounded"></div>
+              <div className="h-4 w-24 bg-neutral-800 rounded-sm mb-4"></div>
+              <div className="h-6 w-32 bg-neutral-800 rounded-sm mb-2"></div>
+              <div className="h-4 w-48 bg-neutral-800 rounded-sm"></div>
             </div>
           ))}
         </div>
-        <div className="h-10 w-full bg-neutral-800 rounded mb-4"></div>
+        <div className="h-10 w-full bg-neutral-800 rounded-sm mb-4"></div>
         <div className="h-64 w-full bg-neutral-900 border border-neutral-800 rounded-lg"></div>
         <div className="mt-4 text-center text-neutral-500">
           Fetching comprehensive F1 data… this might take 1-2 minutes if cache is cold.
@@ -315,7 +315,7 @@ function RaceDetailPage() {
       {/* Backgrounds */}
       <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.08] pointer-events-none mix-blend-luminosity"></div>
       <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay"></div>
-      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none"></div>
+      <div className="fixed inset-0 xl:left-72 bg-linear-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none"></div>
 
       
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
@@ -333,12 +333,12 @@ function RaceDetailPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm shrink-0">
             {((isFetching && Boolean(data)) || raceData?._cache_state === 'revalidating') && (
-              <div className="flex items-center gap-2 py-2 px-3 bg-red-950/40 border border-red-800/40 rounded-md text-xs font-mono font-bold text-red-400 shadow-lg backdrop-blur">
+              <div className="flex items-center gap-2 py-2 px-3 bg-red-950/40 border border-red-800/40 rounded-md text-xs font-mono font-bold text-red-400 shadow-lg backdrop-blur-sm">
                 <span className="w-2 h-2 rounded-full bg-red-500 motion-safe:animate-ping"></span>
                 <span>Syncing live telemetry…</span>
               </div>
             )}
-            <div className="flex items-center gap-2 py-2.5 px-4 bg-neutral-900/80 backdrop-blur border border-neutral-700/50 rounded-md font-mono font-bold shadow-lg">
+            <div className="flex items-center gap-2 py-2.5 px-4 bg-neutral-900/80 backdrop-blur-sm border border-neutral-700/50 rounded-md font-mono font-bold shadow-lg">
               <Calendar size={16} className="text-red-500" />
               <span className="text-neutral-400">Season</span>
               <span className="text-white">{year}</span>
@@ -348,7 +348,7 @@ function RaceDetailPage() {
                 onChange={handleRaceChange}
                 value={round}
                 aria-label="Select Race Round"
-                className="bg-neutral-900/80 backdrop-blur border border-neutral-700/50 py-2.5 pl-4 pr-10 rounded-md font-bold appearance-none cursor-pointer shadow-lg focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-ui text-white"
+                className="bg-neutral-900/80 backdrop-blur-sm border border-neutral-700/50 py-2.5 pl-4 pr-10 rounded-md font-bold appearance-none cursor-pointer shadow-lg focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-ui text-white"
               >
                 {schedule.map((race: Race) => (
                   <option key={race.round} value={race.round}>{race.location}</option>
@@ -364,8 +364,8 @@ function RaceDetailPage() {
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
             {/* Winner Card */}
             {raceWinnerData && (
-              <div className="bg-gradient-to-br from-amber-950/40 to-neutral-900/60 backdrop-blur border border-amber-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="bg-linear-to-br from-amber-950/40 to-neutral-900/60 backdrop-blur-sm border border-amber-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="absolute inset-0 bg-linear-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <Trophy size={18} className="text-amber-500" />
@@ -379,8 +379,8 @@ function RaceDetailPage() {
 
             {/* Pole Position */}
             {poleSitterData && (
-              <div className="bg-gradient-to-br from-red-950/40 to-neutral-900/60 backdrop-blur border border-red-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="bg-linear-to-br from-red-950/40 to-neutral-900/60 backdrop-blur-sm border border-red-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="absolute inset-0 bg-linear-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <Flag size={18} className="text-red-500" />
@@ -394,8 +394,8 @@ function RaceDetailPage() {
 
             {/* Fastest Lap */}
             {fastestLapData && (
-              <div className="bg-gradient-to-br from-purple-950/40 to-neutral-900/60 backdrop-blur border border-purple-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="bg-linear-to-br from-purple-950/40 to-neutral-900/60 backdrop-blur-sm border border-purple-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="absolute inset-0 bg-linear-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock size={18} className="text-purple-500" />
@@ -408,7 +408,7 @@ function RaceDetailPage() {
             )}
 
             {/* Race Status */}
-            <div className="bg-gradient-to-br from-neutral-900/60 to-neutral-900/80 backdrop-blur border border-neutral-700/50 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+            <div className="bg-linear-to-br from-neutral-900/60 to-neutral-900/80 backdrop-blur-sm border border-neutral-700/50 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar size={18} className="text-neutral-400" />
@@ -441,10 +441,10 @@ function RaceDetailPage() {
         <section className="mb-6 space-y-4">
           {/* Keyboard hint */}
           {availableTabs.length > 1 && (
-            <div className="flex items-center justify-end gap-2 text-[10px] text-neutral-500 font-mono mb-2">
+            <div className="flex items-center justify-end gap-2 text-[10px] text-neutral-500 font-mono mb-4">
               <span>Navigate:</span>
-              <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded text-neutral-400">←</kbd>
-              <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded text-neutral-400">→</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded-sm text-neutral-400">←</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded-sm text-neutral-400">→</kbd>
             </div>
           )}
 
@@ -460,7 +460,7 @@ function RaceDetailPage() {
                       onClick={() => setActiveTab(tab)}
                       className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg ${
                         isActive
-                          ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
+                          ? 'bg-linear-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
                           : 'text-neutral-400 hover:bg-neutral-800/80 hover:text-white'
                       }`}
                     >
@@ -485,7 +485,7 @@ function RaceDetailPage() {
                       onClick={() => setActiveTab(tab)}
                       className={`group flex items-center gap-2 py-2 px-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg ${
                         isActive
-                          ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
+                          ? 'bg-linear-to-r from-red-600 to-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
                           : 'text-neutral-400 hover:bg-neutral-800/80 hover:text-white'
                       }`}
                     >

@@ -28,7 +28,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 - Every router in `routers/` is mounted in `main.py`, including `team_radio.py` → `GET /api/team_radio` works (not a 404).
 - SlowAPI rate limiting is active; FastF1 keeps an on-disk cache at `Backend/cache/` (~500 calls/hour — repeated uncached refreshes are rate-limited).
 - `GET /api/clear_cache/{year}` is the only destructive endpoint; it requires an `X-API-Key` header matching `API_KEY` (`utils/auth.py`). Public read endpoints stay open.
-- No pytest suite exists. Edge-case sweep: `python tests_chaos_probe.py` (standalone TestClient, not pytest; hits the network and FastF1 — 429s are notes, not failures).
+- API contract tests: `python -m unittest discover -s tests -v` (offline, mocks cache/services; covers core routes, CORS, auth, 404 envelope, and the idle live-timing WebSocket). Edge-case sweep: `python tests_chaos_probe.py` (standalone TestClient; hits the network and FastF1 — 429s are notes, not failures).
 - `Backend/scripts/seed_standings.py` writes `f1_stats.db` (gitignored); not used by the running app.
 - Race details are two-sourced: FastF1 first, then `services/openf1_lap_fallback.py` fills every lap-derived block FastF1 left empty (fastest lap, tyre strategy, speed/sectors, weather, lap/position/gap charts, practice + sprint-qualifying tables) when its timing archive has no laps for the session ("No data for this session!"). FastF1 output is never replaced, and the fallback only runs in that gap.
 - `services/fastf1_safe.py` also bounds FastF1's HTTP calls (10s connect / 30s read). FastF1 passes no timeout of its own, so one stalled upstream read otherwise hangs `session.load()` — and the request that triggered it — forever.
@@ -63,9 +63,9 @@ Swagger UI: `http://localhost:8000/docs`. App: `http://localhost:5173`.
 cd F1-Fullstack-project/frontend
 npm run typecheck && npm run lint && npm run test   # same order as CI
 ```
-Backend: start uvicorn and check `GET /health`.
+Backend: `python -m unittest discover -s tests -v`, then start uvicorn and check `GET /health`.
 
 ## CI
 `.github/workflows/ci.yml` lives at the repo root (`adnaizf1/.github/workflows/` — GitHub only reads workflows there) and runs on push/PR to `main`:
 - **frontend** job (`working-directory: ./F1-Fullstack-project/frontend`): Node 20 → `npm ci` → lint → typecheck → test → build
-- **backend** job (`working-directory: ./F1-Fullstack-project/Backend`): Python 3.11 → `ruff` → `compileall` (syntax) → `ruff check --select E9,F63,F7,F82`
+- **backend** job (`working-directory: ./F1-Fullstack-project/Backend`): Python 3.11 → `pip install -r requirements.txt` → `ruff` → `compileall` (syntax) → `ruff check --select E9,F63,F7,F82` → `unittest` API contract tests

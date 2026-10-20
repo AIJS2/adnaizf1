@@ -43,7 +43,7 @@ jobs:
         run: npm run build
 
   backend:
-    name: Backend (syntax + lint)
+    name: Backend (lint + API tests)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -58,6 +58,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
       - name: Install Ruff
         run: pip install ruff
 
@@ -66,3 +69,6 @@ jobs:
 
       - name: Lint (critical errors only)
         run: ruff check --select E9,F63,F7,F82 .
+
+      - name: API contract tests
+        run: python -m unittest discover -s tests -v

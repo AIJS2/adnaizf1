@@ -113,7 +113,7 @@ const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
               onClick={() => toggleDriver(drv)}
               className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-ui flex items-center gap-1.5 border ${
                 isSelected 
-                  ? 'bg-neutral-900 text-white border-neutral-600 shadow' 
+                  ? 'bg-neutral-900 text-white border-neutral-600 shadow-sm'
                   : 'bg-transparent text-neutral-500 border-neutral-800 opacity-50 hover:opacity-100'
               }`}
             >

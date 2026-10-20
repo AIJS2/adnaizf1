@@ -91,7 +91,7 @@ function TeamsPage() {
             autoComplete="off"
             spellCheck={false}
             placeholder="Search by team name…"
-            className="w-full bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 rounded-sm py-4 pl-12 pr-4 text-white focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-ui font-medium"
+            className="w-full bg-neutral-900/80 backdrop-blur-xs border border-neutral-800 rounded-xs py-4 pl-12 pr-4 text-white focus:outline-hidden focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-ui font-medium"
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={22} />
@@ -119,11 +119,11 @@ function TeamsPage() {
                   />
 
                   {/* Kartu Utama */}
-                  <div className={`relative flex items-stretch bg-neutral-900/90 backdrop-blur-md border rounded-r-lg rounded-l-sm overflow-hidden transition-ui duration-300 group-hover:border-neutral-500 ${isP1 ? 'border-yellow-500/50' : 'border-neutral-800'}`}>
+                  <div className={`relative flex items-stretch bg-neutral-900/90 backdrop-blur-md border rounded-r-lg rounded-l-xs overflow-hidden transition-ui duration-300 group-hover:border-neutral-500 ${isP1 ? 'border-yellow-500/50' : 'border-neutral-800'}`}>
 
                     {/* Kotak Posisi */}
                     <div
-                      className="w-16 md:w-20 flex items-center justify-center flex-shrink-0 z-20 shadow-[5px_0_15px_rgba(0,0,0,0.5)]"
+                      className="w-16 md:w-20 flex items-center justify-center shrink-0 z-20 shadow-[5px_0_15px_rgba(0,0,0,0.5)]"
                       style={{ backgroundColor: teamColor }}
                     >
                       <span className="text-3xl md:text-4xl font-black italic text-neutral-950 tracking-tighter">
@@ -132,7 +132,7 @@ function TeamsPage() {
                     </div>
 
                     {/* Info Tim */}
-                    <div className="flex-grow min-w-0 flex items-center p-4 md:p-6 z-10 relative overflow-hidden">
+                    <div className="grow min-w-0 flex items-center p-4 md:p-6 z-10 relative overflow-hidden">
                       {logo && (
                         <img
                           src={logo}
@@ -154,7 +154,7 @@ function TeamsPage() {
                     </div>
 
                     {/* Statistik Kanan */}
-                    <div className="flex items-center gap-6 md:gap-10 pr-4 md:pr-8 py-4 z-20 bg-gradient-to-l from-neutral-900 via-neutral-900/80 to-transparent pl-8">
+                    <div className="flex items-center gap-6 md:gap-10 pr-4 md:pr-8 py-4 z-20 bg-linear-to-l from-neutral-900 via-neutral-900/80 to-transparent pl-8">
                       <div className="hidden sm:flex flex-col items-end">
                         <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Wins</span>
                         <span className="text-xl font-bold text-neutral-300">{team.wins}</span>
@@ -168,7 +168,7 @@ function TeamsPage() {
                         <div className="flex flex-col items-end leading-none">
                           <span className="text-4xl md:text-5xl font-black italic text-white tracking-tighter">{team.points}</span>
                           {(team.points_last_race || 0) > 0 && (
-                            <span className="text-green-500 text-xs font-bold flex items-center gap-0.5 mt-2 bg-green-500/10 px-1.5 py-0.5 rounded-sm">
+                            <span className="text-green-500 text-xs font-bold flex items-center gap-0.5 mt-2 bg-green-500/10 px-1.5 py-0.5 rounded-xs">
                               <ArrowUp size={12} strokeWidth={3} /> {(team.points_last_race || 0)}
                             </span>
                           )}

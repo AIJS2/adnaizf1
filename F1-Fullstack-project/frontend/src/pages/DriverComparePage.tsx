@@ -219,7 +219,7 @@ const DriverComparePage = () => {
     const pct1 = total > 0 ? (num1 / total) * 100 : 50;
 
     return (
-      <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-4 shadow-sm hover:border-neutral-700 transition-colors">
+      <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-4 shadow-xs hover:border-neutral-700 transition-colors">
         <div className="flex justify-between items-center text-xs mb-2">
           <span className={`font-black text-sm font-mono ${d1IsBetter ? 'text-white' : 'text-neutral-500'}`}>
             {displayVal1}{!format && unit}
@@ -253,7 +253,7 @@ const DriverComparePage = () => {
     <div className="bg-neutral-950 min-h-screen text-white font-sans selection:bg-red-600 relative">
       {/* Backgrounds */}
       <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-neutral-950 via-neutral-950/95 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-linear-to-b from-neutral-950 via-neutral-950/95 to-neutral-950 pointer-events-none" />
 
       
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">
@@ -285,7 +285,7 @@ const DriverComparePage = () => {
                 aria-label="Driver 1"
                 value={driver1Id}
                 onChange={(e) => setDriver1Id(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-md p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 focus:outline-none transition-ui hover:border-neutral-600 cursor-pointer"
+                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-md p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 focus:outline-hidden transition-ui hover:border-neutral-600 cursor-pointer"
                 style={{ borderLeftWidth: '5px', borderLeftColor: d1Color }}
               >
                 {driversList.map(d => (
@@ -302,7 +302,7 @@ const DriverComparePage = () => {
               type="button"
               aria-label="Swap drivers"
               title="Swap Drivers"
-              className="w-12 h-12 rounded-lg bg-gradient-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-ui active:scale-95 flex-shrink-0 shadow-lg hover:shadow-xl group"
+              className="w-12 h-12 rounded-lg bg-linear-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-ui active:scale-95 shrink-0 shadow-lg hover:shadow-xl group"
             >
               <ArrowLeftRight size={20} className="group-hover:rotate-180 transition-transform duration-300" />
             </button>
@@ -316,7 +316,7 @@ const DriverComparePage = () => {
                 aria-label="Driver 2"
                 value={driver2Id}
                 onChange={(e) => setDriver2Id(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-md p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 focus:outline-none transition-ui hover:border-neutral-600 cursor-pointer"
+                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-md p-3.5 text-sm font-bold focus:ring-2 focus:ring-red-500 focus:outline-hidden transition-ui hover:border-neutral-600 cursor-pointer"
                 style={{ borderLeftWidth: '5px', borderLeftColor: d2Color }}
               >
                 {driversList.map(d => (
@@ -338,7 +338,7 @@ const DriverComparePage = () => {
 
         {error && (
           <div className="bg-red-950/40 border border-red-500/50 text-red-400 p-5 rounded-lg mb-8 flex items-center gap-3">
-            <AlertTriangle size={24} className="flex-shrink-0" />
+            <AlertTriangle size={24} className="shrink-0" />
             <span className="font-semibold text-sm">{error}</span>
           </div>
         )}
@@ -386,7 +386,7 @@ const DriverComparePage = () => {
                 
                 {/* Driver 1 Card */}
                 <div
-                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
+                  className="xl:col-span-5 bg-linear-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
                   style={{ borderLeftWidth: '6px', borderLeftColor: d1Color }}
                 >
                   {/* Big number watermark */}
@@ -399,7 +399,7 @@ const DriverComparePage = () => {
                   <div className="flex items-center gap-3 mb-3">
                     {teamLogos[profile1.team] && <img src={teamLogos[profile1.team]} alt={profile1.team} className="h-5 w-auto object-contain opacity-70" />}
                     <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">{profile1.team}</span>
-                    <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded text-neutral-300 flex items-center gap-1">
+                    <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded-sm text-neutral-300 flex items-center gap-1">
                       <Hash size={10} />{profile1.driver_number}
                     </span>
                   </div>
@@ -424,7 +424,7 @@ const DriverComparePage = () => {
 
                 {/* VS Center Badge */}
                 <div className="xl:col-span-1 flex flex-col items-center justify-center text-center py-2">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-red-600 to-orange-500 font-black text-white flex items-center justify-center shadow-lg shadow-red-600/30 text-base font-mono tracking-tighter relative">
+                  <div className="w-14 h-14 rounded-full bg-linear-to-tr from-red-600 to-orange-500 font-black text-white flex items-center justify-center shadow-lg shadow-red-600/30 text-base font-mono tracking-tighter relative">
                     <Swords size={22} />
                     <div className="absolute inset-0 rounded-full bg-red-500/20 motion-safe:animate-ping" />
                   </div>
@@ -440,7 +440,7 @@ const DriverComparePage = () => {
 
                 {/* Driver 2 Card */}
                 <div
-                  className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
+                  className="xl:col-span-5 bg-linear-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
                   style={{ borderRightWidth: '6px', borderRightColor: d2Color }}
                 >
                   <div className="absolute left-4 -bottom-6 text-[8rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none" style={{ color: d2Color }}>
@@ -451,7 +451,7 @@ const DriverComparePage = () => {
                   <div className="flex items-center gap-3 mb-3 justify-end xl:justify-start">
                     {teamLogos[profile2.team] && <img src={teamLogos[profile2.team]} alt={profile2.team} className="h-5 w-auto object-contain opacity-70" />}
                     <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">{profile2.team}</span>
-                    <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded text-neutral-300 flex items-center gap-1">
+                    <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded-sm text-neutral-300 flex items-center gap-1">
                       <Hash size={10} />{profile2.driver_number}
                     </span>
                   </div>

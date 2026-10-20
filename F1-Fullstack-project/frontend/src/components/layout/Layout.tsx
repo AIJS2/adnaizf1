@@ -26,7 +26,7 @@ const Layout: React.FC = () => {
     <div className="flex min-h-screen bg-tarmac text-chalk overflow-x-hidden">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-red-600 focus:px-4 focus:py-2 focus:font-bold focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-100 focus:rounded-md focus:bg-red-600 focus:px-4 focus:py-2 focus:font-bold focus:text-white"
       >
         Skip to Content
       </a>
@@ -49,7 +49,7 @@ const Layout: React.FC = () => {
         ref={mainRef}
         tabIndex={-1}
         className={`
-          flex-1 min-h-screen min-w-0 outline-none
+          flex-1 min-h-screen min-w-0 outline-hidden
           pt-16 xl:pt-0
           transition-[margin] duration-200 ease-pit
           ${isLandingPage ? 'ml-0' : isCollapsed ? 'ml-0 xl:ml-20' : 'ml-0 xl:ml-72'}

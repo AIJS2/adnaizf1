@@ -57,8 +57,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
     <div className="flex items-start gap-1 sm:gap-2" role="timer" aria-label="Time until the next session">
       {timeKeys.map((interval, index) => (
         <React.Fragment key={interval}>
-          <div className="flex flex-col items-center min-w-[2.75rem] sm:min-w-[3.5rem]">
-            <span className="text-3xl sm:text-4xl font-black text-chalk leading-none tabular-nums">
+          <div className="flex flex-col items-center min-w-11 sm:min-w-14">
+            <span className="text-3xl sm:text-4xl font-black text-chalk leading-none sm:leading-10 tabular-nums">
               {String(timeLeft[interval] ?? 0).padStart(2, '0')}
             </span>
             <span className="mt-1.5 text-[11px] font-semibold text-neutral-500" aria-hidden="true">
@@ -66,7 +66,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
             </span>
           </div>
           {index < timeKeys.length - 1 && (
-            <span className="text-2xl sm:text-3xl font-light leading-none text-neutral-700" aria-hidden="true">:</span>
+            <span className="text-2xl sm:text-3xl font-light leading-none sm:leading-9 text-neutral-700" aria-hidden="true">:</span>
           )}
         </React.Fragment>
       ))}

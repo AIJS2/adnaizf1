@@ -85,7 +85,7 @@ const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, phase = 'futu
           key={item.label}
           className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 sm:px-4 sm:py-2.5 text-center min-w-[58px] sm:min-w-[68px]"
         >
-          <div className="font-black text-2xl sm:text-3xl text-chalk leading-none tabular-nums">
+          <div className="font-black text-2xl sm:text-3xl text-chalk leading-none sm:leading-9 tabular-nums">
             {String(item.val).padStart(2, '0')}
           </div>
           <div className="text-[10px] tracking-wide text-neutral-500 font-bold mt-1.5">

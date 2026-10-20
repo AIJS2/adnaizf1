@@ -45,6 +45,7 @@ npm run test -- src/App.test.tsx   # single test file
 npm run test -- --watch | --coverage
 ```
 - `src/config.ts`: `VITE_API_URL` env var, fallback `http://127.0.0.1:8000` in dev.
+- Tailwind v4: theme lives in `src/index.css` (`@theme`) and PostCSS uses `@tailwindcss/postcss`. The compatibility overrides at the bottom keep the v3 palette, absolute line-heights, sRGB gradients and placeholder colours — keep them unless intentionally restyling.
 - Tests are colocated (`*.test.tsx`, `__tests__/` dirs).
 
 ## Running the stack

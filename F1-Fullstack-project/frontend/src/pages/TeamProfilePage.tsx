@@ -121,16 +121,16 @@ const TeamProfilePage = () => {
         <section className="relative rounded-lg p-8 md:p-12 mb-10 overflow-hidden bg-neutral-900/40 border border-neutral-800 backdrop-blur-md">
           {/* Neon Glow Effects based on Team Color */}
           <div 
-            className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 pointer-events-none"
+            className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 pointer-events-none"
             style={{ backgroundColor: teamColor }}
           />
           <div 
-            className="absolute -bottom-[20%] -left-[10%] w-[400px] h-[400px] rounded-full blur-[100px] opacity-10 pointer-events-none"
+            className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] rounded-full blur-[100px] opacity-10 pointer-events-none"
             style={{ backgroundColor: teamColor }}
           />
           
           {/* Watermark Team Initial */}
-          <div className="absolute right-4 bottom-[-10%] text-[10rem] md:text-[18rem] font-black text-white/[0.02] leading-none select-none pointer-events-none italic transform -skew-x-12 whitespace-nowrap">
+          <div className="absolute right-4 bottom-[-10%] text-[10rem] md:text-[18rem] font-black text-white/2 leading-none select-none pointer-events-none italic transform -skew-x-12 whitespace-nowrap">
             {profile.name?.substring(0, 3).toUpperCase()}
           </div>
           

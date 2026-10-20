@@ -113,7 +113,7 @@ function NextRacePanel({ nextRace }: { nextRace: ResolvedNextRace | null }) {
   return (
     <section
       aria-label="Next race"
-      className="hero-rise relative min-h-[148px] rounded-lg bg-neutral-950/80 border border-neutral-800 p-5 sm:p-6 backdrop-blur"
+      className="hero-rise relative min-h-[148px] rounded-lg bg-neutral-950/80 border border-neutral-800 p-5 sm:p-6 backdrop-blur-sm"
       style={{ animationDelay: '0.35s' }}
       aria-live="polite"
     >
@@ -134,7 +134,7 @@ function NextRacePanel({ nextRace }: { nextRace: ResolvedNextRace | null }) {
         ) : (
           <>
             {isRaceDay && (
-              <span className="mb-4 inline-flex items-center rounded bg-amber-400/10 border border-amber-400/30 px-2.5 py-1 text-xs font-bold text-amber-300">
+              <span className="mb-4 inline-flex items-center rounded-sm bg-amber-400/10 border border-amber-400/30 px-2.5 py-1 text-xs font-bold text-amber-300">
                 Today: race starts soon
               </span>
             )}
@@ -171,7 +171,7 @@ function LandingPage() {
       {/* Desktop top bar. Below xl the shared mobile header handles nav. */}
       <header className="relative z-20 hidden xl:block">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-8">
-          <Link to="/" className="flex items-center gap-2 rounded-sm" aria-label="Analyziz home" translate="no">
+          <Link to="/" className="flex items-center gap-2 rounded-xs" aria-label="Analyziz home" translate="no">
             <span aria-hidden="true" className="h-5 w-2 -skew-x-12 bg-red-600" />
             <span className="text-xl font-black italic tracking-tight">Analyziz</span>
           </Link>
@@ -192,7 +192,7 @@ function LandingPage() {
             >
               <Search size={15} aria-hidden="true" />
               Search
-              <kbd className="ml-1 rounded border border-neutral-800 px-1.5 text-[11px] text-neutral-500">Ctrl&nbsp;K</kbd>
+              <kbd className="ml-1 rounded-sm border border-neutral-800 px-1.5 text-[11px] text-neutral-500">Ctrl&nbsp;K</kbd>
             </button>
           </nav>
         </div>
@@ -242,7 +242,7 @@ function LandingPage() {
             >
               <Search size={17} aria-hidden="true" />
               Search Drivers
-              <kbd className="ml-1 rounded border border-neutral-700 px-1.5 text-xs font-semibold text-neutral-500">Ctrl&nbsp;K</kbd>
+              <kbd className="ml-1 rounded-sm border border-neutral-700 px-1.5 text-xs font-semibold text-neutral-500">Ctrl&nbsp;K</kbd>
             </button>
           </div>
         </div>
@@ -270,14 +270,14 @@ function LandingPage() {
                   aria-hidden="true"
                   className="absolute left-0 top-0 h-full w-[3px] origin-top scale-y-0 bg-red-600 transition-transform duration-200 ease-pit group-hover:scale-y-100 group-focus-visible:scale-y-100"
                 />
-                <span className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-neutral-900 text-neutral-300 group-hover:text-red-500 transition-colors duration-150">
+                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-neutral-900 text-neutral-300 group-hover:text-red-500 transition-colors duration-150">
                   <Icon size={20} aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-lg font-bold text-chalk">{title}</span>
                   <span className="mt-1 block text-sm leading-relaxed text-neutral-400">{desc}</span>
                 </span>
-                <ChevronRight size={18} className="mt-1 flex-shrink-0 text-neutral-600 group-hover:text-chalk transition-colors duration-150" aria-hidden="true" />
+                <ChevronRight size={18} className="mt-1 shrink-0 text-neutral-600 group-hover:text-chalk transition-colors duration-150" aria-hidden="true" />
               </Link>
             </li>
           ))}

@@ -28,7 +28,7 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
       </Link>
     </div>
 
-    <div className="space-y-1.5 flex-grow relative z-10">
+    <div className="space-y-1.5 grow relative z-10">
       {drivers.map((driver, index) => {
         const logo = teamLogos[driver.team];
         const teamColor = teamColors[driver.team] || '#EF4444';
@@ -56,19 +56,19 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
               }`}>
                 {index + 1}
               </span>
-              <span className="w-1.5 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: teamColor, boxShadow: `0 0 8px ${teamColor}80` }} />
-              {logo ? <img src={logo} alt={driver.team} className="h-3.5 w-auto object-contain flex-shrink-0 opacity-90 group-hover:opacity-100" /> : <div className="w-3.5" />}
+              <span className="w-1.5 h-4 rounded-full shrink-0" style={{ backgroundColor: teamColor, boxShadow: `0 0 8px ${teamColor}80` }} />
+              {logo ? <img src={logo} alt={driver.team} className="h-3.5 w-auto object-contain shrink-0 opacity-90 group-hover:opacity-100" /> : <div className="w-3.5" />}
               <span className="font-bold text-white group-hover:text-red-400 uppercase tracking-tight transition-colors truncate">
                 {driver.name}
               </span>
               {isLeader && (
-                <span className="hidden sm:inline-block bg-yellow-500/20 text-yellow-400 text-[11px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40 uppercase ">
+                <span className="hidden sm:inline-block bg-yellow-500/20 text-yellow-400 text-[11px] font-black px-1.5 py-0.5 rounded-sm border border-yellow-500/40 uppercase ">
                   <Crown size={10} className="inline-block mr-1 -mt-0.5" />P1
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0 font-mono">
+            <div className="flex items-center gap-2 shrink-0 font-mono">
               <span className="font-extrabold text-white text-base">{parseInt(String(driver.points), 10)}</span>
               <span className="text-[11px] text-neutral-500 uppercase font-sans font-bold">PTS</span>
               <ChevronRight size={14} className="text-neutral-600 group-hover:text-white transition-colors ml-1" />

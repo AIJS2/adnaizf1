@@ -193,7 +193,7 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
           onClick={togglePlay}
           disabled={hasError}
           aria-label={isPlaying ? 'Pause team radio' : 'Play team radio'}
-          className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-ui shadow-lg ${
+          className={`w-12 h-12 shrink-0 flex items-center justify-center rounded-xl transition-ui shadow-lg ${
             hasError
               ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
               : isPlaying
@@ -214,19 +214,19 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
         <button
           onClick={cyclePlaybackRate}
           disabled={hasError}
-          className="w-12 h-6 flex-shrink-0 flex items-center justify-center rounded-md bg-neutral-800 hover:bg-neutral-700 text-white text-[11px] font-bold font-mono transition-ui disabled:opacity-30"
+          className="w-12 h-6 shrink-0 flex items-center justify-center rounded-md bg-neutral-800 hover:bg-neutral-700 text-white text-[11px] font-bold font-mono transition-ui disabled:opacity-30"
           title="Cycle playback speed"
         >
           {playbackRate}x
         </button>
       </div>
 
-      <div className="flex-grow min-w-0">
+      <div className="grow min-w-0">
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 min-w-0">
             {/* Driver Number Badge with Team Color */}
             <span
-              className="font-mono text-xs font-black px-2 py-0.5 rounded border flex-shrink-0"
+              className="font-mono text-xs font-black px-2 py-0.5 rounded-sm border shrink-0"
               style={{
                 borderColor: `${teamColor}60`,
                 backgroundColor: `${teamColor}18`,
@@ -243,10 +243,10 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Waveform Equalizer Animation */}
             {isPlaying && (
-              <div className="flex items-center gap-1.5 px-1 bg-red-950/40 border border-red-500/30 rounded px-1.5 py-0.5" title="Transmission Active">
+              <div className="flex items-center gap-1.5 px-1 bg-red-950/40 border border-red-500/30 rounded-sm px-1.5 py-0.5" title="Transmission Active">
                 <Radio size={11} className="text-red-400" />
                 <div className="flex items-end gap-0.5 h-3">
                   <span className="w-1 rounded-full bg-red-500 motion-safe:animate-pulse h-2" style={{ animationDuration: '450ms' }} />
@@ -270,7 +270,7 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
           title="Click to seek"
         >
           <div
-            className="h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full transition-ui duration-100 ease-linear"
+            className="h-full bg-linear-to-r from-red-600 to-red-500 rounded-full transition-ui duration-100 ease-linear"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -350,7 +350,7 @@ export default function TeamRadioSection() {
             aria-label="Filter radio by driver"
             value={driverFilter}
             onChange={(e) => setDriverFilter(e.target.value)}
-            className="bg-neutral-900 border border-neutral-800 text-sm rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500 font-medium"
+            className="bg-neutral-900 border border-neutral-800 text-sm rounded-lg px-3 py-2 text-white focus:outline-hidden focus:border-red-500 font-medium"
           >
             <option value="all">All Drivers ({sortedDriverEntries.length})</option>
             {sortedDriverEntries.map(([num, info]) => (

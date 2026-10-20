@@ -240,7 +240,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
         Color-coded segments show which driver was fastest at each part of the track
       </p>
       <div
-        className="w-full h-[400px] bg-gradient-to-br from-neutral-950 to-neutral-900 rounded-lg p-4 flex items-center justify-center overflow-hidden border border-neutral-800/50 relative"
+        className="w-full h-[400px] bg-linear-to-br from-neutral-950 to-neutral-900 rounded-lg p-4 flex items-center justify-center overflow-hidden border border-neutral-800/50 relative"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >

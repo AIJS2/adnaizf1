@@ -83,7 +83,7 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
 
   return (
     <Link to={linkTo} className="block group">
-      <div className={`relative bg-gradient-to-br ${cfg.bg} to-neutral-950/90 backdrop-blur-xl border ${cfg.border} rounded-lg p-5 shadow-2xl ${cfg.shadow} overflow-hidden transition-ui duration-300 h-full`}>
+      <div className={`relative bg-linear-to-br ${cfg.bg} to-neutral-950/90 backdrop-blur-xl border ${cfg.border} rounded-lg p-5 shadow-2xl ${cfg.shadow} overflow-hidden transition-ui duration-300 h-full`}>
         {/* Pit-Wall Laser bar */}
         <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: teamColor, boxShadow: `0 0 10px ${teamColor}` }} />
         
@@ -101,11 +101,11 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
             <RankIcon size={12} /> {cfg.label}
           </div>
           {gap !== null ? (
-            <span className="text-[11px] font-mono text-red-400 font-bold bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+            <span className="text-[11px] font-mono text-red-400 font-bold bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-sm flex items-center gap-1">
               <TrendingDown size={10} /> -{gap} PTS
             </span>
           ) : (
-            <span className="text-[11px] font-mono text-yellow-400 font-bold bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+            <span className="text-[11px] font-mono text-yellow-400 font-bold bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-sm flex items-center gap-1">
               <Sparkles size={10} /> +0 GAP
             </span>
           )}
@@ -117,7 +117,7 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
             <>
               <div className="flex items-center gap-2">
                 {entry.driverNumber && (
-                  <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+                  <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded-sm bg-neutral-800 text-neutral-300 border border-neutral-700">
                     #{entry.driverNumber}
                   </span>
                 )}
@@ -127,7 +127,7 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
                   </span>
                 )}
               </div>
-              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight mt-1">
+              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight md:leading-8 mt-1">
                 {entry.name}
               </h3>
               <div className="flex items-center gap-2 mt-1.5">
@@ -142,7 +142,7 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
               {teamLogos[entry.name] && (
                 <img src={teamLogos[entry.name]} alt={entry.name} className="h-8 w-auto object-contain" style={logoNeedsBrightening ? { filter: 'drop-shadow(0px 0px 3px rgba(255,255,255,0.8))' } : { filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
               )}
-              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic group-hover:text-red-400 transition-colors leading-tight md:leading-8">
                 {entry.name}
               </h3>
             </div>
@@ -341,8 +341,8 @@ const StatsPage = () => {
   return (
     <div className="bg-tarmac min-h-screen text-white font-sans relative selection:bg-red-500 selection:text-white">
       {/* Background Pit-Wall Grid & Holographic Glows */}
-      <div className="fixed inset-0 xl:left-72 bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
-      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-950/20 via-neutral-950/90 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-[radial-gradient(#1f2937_1px,transparent_1px)] bg-size-[24px_24px] opacity-15 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-linear-to-b from-red-950/20 via-neutral-950/90 to-neutral-950 pointer-events-none" />
       <div className="fixed top-0 left-1/4 xl:left-[35%] w-96 h-96 bg-red-600/10 blur-[130px] rounded-full pointer-events-none" />
       <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/5 blur-[140px] rounded-full pointer-events-none" />
 
@@ -381,12 +381,12 @@ const StatsPage = () => {
                 <GitCompareArrows size={15} className="text-red-500" /> H2H Compare
               </Link>
 
-              <div className="flex bg-neutral-900/90 backdrop-blur border border-neutral-800 p-1 rounded-md shadow-xl">
+              <div className="flex bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 p-1 rounded-md shadow-xl">
                 <button
                   onClick={() => { setActiveTab('drivers'); setSearchTerm(''); }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black font-mono uppercase tracking-wider transition-ui ${
                     activeTab === 'drivers'
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
+                      ? 'bg-linear-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
                       : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
                   }`}
                 >
@@ -396,7 +396,7 @@ const StatsPage = () => {
                   onClick={() => { setActiveTab('constructors'); setSearchTerm(''); }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black font-mono uppercase tracking-wider transition-ui ${
                     activeTab === 'constructors'
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
+                      ? 'bg-linear-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
                       : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
                   }`}
                 >
@@ -406,7 +406,7 @@ const StatsPage = () => {
                   onClick={() => { setActiveTab('progression'); setSearchTerm(''); }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black font-mono uppercase tracking-wider transition-ui ${
                     activeTab === 'progression'
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
+                      ? 'bg-linear-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30'
                       : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
                   }`}
                 >
@@ -420,8 +420,8 @@ const StatsPage = () => {
         {/* Quick Pit-Wall HUD Telemetry Gauges */}
         {!loading && !error && activeTab !== 'progression' && (
           <section className="mb-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="bg-neutral-950/80 backdrop-blur-sm border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0">
                 <Crown size={18} className="text-yellow-400" />
               </div>
               <div className="min-w-0">
@@ -432,8 +432,8 @@ const StatsPage = () => {
               </div>
             </div>
 
-            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="bg-neutral-950/80 backdrop-blur-sm border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
                 <Star size={18} className="text-red-400" />
               </div>
               <div className="min-w-0">
@@ -444,8 +444,8 @@ const StatsPage = () => {
               </div>
             </div>
 
-            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="bg-neutral-950/80 backdrop-blur-sm border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
                 <Trophy size={18} className="text-emerald-400" />
               </div>
               <div className="min-w-0">
@@ -454,8 +454,8 @@ const StatsPage = () => {
               </div>
             </div>
 
-            <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="bg-neutral-950/80 backdrop-blur-sm border border-neutral-800/80 rounded-md p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                 <Medal size={18} className="text-amber-400" />
               </div>
               <div className="min-w-0">
@@ -468,7 +468,7 @@ const StatsPage = () => {
 
         {/* Error Notification */}
         {error && (
-          <div className="bg-red-950/40 backdrop-blur border border-red-500/50 rounded-lg p-8 text-center mb-8 max-w-lg mx-auto ">
+          <div className="bg-red-950/40 backdrop-blur-sm border border-red-500/50 rounded-lg p-8 text-center mb-8 max-w-lg mx-auto ">
             <AlertTriangle className="text-red-500 mx-auto mb-4" size={40} />
             <h3 className="font-black text-red-400 text-xl uppercase tracking-wider">Failed to load statistics</h3>
             <p className="text-neutral-300 text-sm mt-2 mb-6">{error?.message}</p>
@@ -536,7 +536,7 @@ const StatsPage = () => {
                       placeholder={activeTab === 'drivers' ? 'Filter by driver, team, or number (#12)…' : 'Filter by constructor…'}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full bg-neutral-900/80 backdrop-blur border border-neutral-800 rounded-md py-2.5 pl-10 pr-4 text-white placeholder-neutral-500 text-xs font-mono font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-ui shadow-inner"
+                      className="w-full bg-neutral-900/80 backdrop-blur-sm border border-neutral-800 rounded-md py-2.5 pl-10 pr-4 text-white placeholder-neutral-500 text-xs font-mono font-medium focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-ui shadow-inner"
                     />
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-red-500 transition-colors" size={15} />
                     {searchTerm && (
@@ -551,21 +551,21 @@ const StatsPage = () => {
 
                   <div className="flex items-center gap-2 text-xs font-mono text-neutral-400 self-end sm:self-auto">
                     <span>SHOWING:</span>
-                    <span className="font-black text-white px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800">
+                    <span className="font-black text-white px-2 py-0.5 rounded-sm bg-neutral-900 border border-neutral-800">
                       {sortedEntries.length} {activeTab === 'drivers' ? 'DRIVERS' : 'CONSTRUCTORS'}
                     </span>
                   </div>
                 </div>
 
                 {/* SLEEK PIT-WALL INTERACTIVE LEADERBOARD TABLE */}
-                <div className="bg-neutral-950/80 backdrop-blur border border-neutral-800/90 rounded-lg overflow-hidden shadow-2xl">
+                <div className="bg-neutral-950/80 backdrop-blur-sm border border-neutral-800/90 rounded-lg overflow-hidden shadow-2xl">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
                       <thead>
                         <tr className="border-b border-neutral-800/90 bg-neutral-900/70 text-[11px] font-mono font-black uppercase tracking-wider text-neutral-400 select-none">
                           <th
                             onClick={() => handleSort('position')}
-                            className="py-3.5 px-3 cursor-pointer hover:text-white transition-colors w-14 min-w-[56px] max-w-[56px] sticky left-0 z-20 bg-neutral-900/95 backdrop-blur"
+                            className="py-3.5 px-3 cursor-pointer hover:text-white transition-colors w-14 min-w-[56px] max-w-[56px] sticky left-0 z-20 bg-neutral-900/95 backdrop-blur-sm"
                           >
                             <div className="flex items-center gap-1">
                               POS
@@ -574,7 +574,7 @@ const StatsPage = () => {
                               ) : <ArrowUpDown size={11} className="text-neutral-600" />}
                             </div>
                           </th>
-                          <th className="py-3.5 px-4 sticky left-[56px] z-20 bg-neutral-900/95 backdrop-blur shadow-[4px_0_8px_rgba(0,0,0,0.4)] min-w-[180px]">
+                          <th className="py-3.5 px-4 sticky left-[56px] z-20 bg-neutral-900/95 backdrop-blur-sm shadow-[4px_0_8px_rgba(0,0,0,0.4)] min-w-[180px]">
                             {activeTab === 'drivers' ? 'DRIVER & TEAM' : 'CONSTRUCTOR'}
                           </th>
                           <th
@@ -666,7 +666,7 @@ const StatsPage = () => {
                                 className="group hover:bg-neutral-900/60 transition-colors relative"
                               >
                                 {/* Position Column - Sticky on mobile */}
-                                <td className="py-3 px-3 relative sticky left-0 z-10 bg-neutral-950/95 backdrop-blur w-14 min-w-[56px] max-w-[56px]">
+                                <td className="py-3 px-3 relative sticky left-0 z-10 bg-neutral-950/95 backdrop-blur-sm w-14 min-w-[56px] max-w-[56px]">
                                   {/* Team laser color indicator */}
                                   <div
                                     className="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-ui"
@@ -698,12 +698,12 @@ const StatsPage = () => {
                                 </td>
 
                                 {/* Name & Team - Sticky on mobile */}
-                                <td className="py-3 px-4 sticky left-[56px] z-10 bg-neutral-950/95 backdrop-blur shadow-[4px_0_8px_rgba(0,0,0,0.4)] min-w-[180px]">
+                                <td className="py-3 px-4 sticky left-[56px] z-10 bg-neutral-950/95 backdrop-blur-sm shadow-[4px_0_8px_rgba(0,0,0,0.4)] min-w-[180px]">
                                   <Link to={linkTo} className="flex items-center gap-3 group-hover:text-red-400 transition-colors">
                                     {activeTab === 'drivers' ? (
                                       <>
                                         {entry.driverNumber && (
-                                          <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800 hidden sm:inline-block">
+                                          <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded-sm bg-neutral-900 text-neutral-400 border border-neutral-800 hidden sm:inline-block">
                                             #{entry.driverNumber}
                                           </span>
                                         )}
@@ -757,7 +757,7 @@ const StatsPage = () => {
                                 {/* Gap to Leader */}
                                 <td className="py-3 px-4 text-right hidden sm:table-cell font-mono text-xs">
                                   {isP1 ? (
-                                    <span className="text-yellow-400 font-bold bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">
+                                    <span className="text-yellow-400 font-bold bg-yellow-500/10 px-1.5 py-0.5 rounded-sm border border-yellow-500/20">
                                       LEADER
                                     </span>
                                   ) : (

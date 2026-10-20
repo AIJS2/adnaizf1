@@ -152,13 +152,13 @@ const DriverSelector = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-neutral-900/90 hover:bg-neutral-850 border border-neutral-800 rounded-md text-left transition-ui shadow-lg group focus:outline-none focus:border-neutral-600"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-neutral-900/90 hover:bg-neutral-850 border border-neutral-800 rounded-md text-left transition-ui shadow-lg group focus:outline-hidden focus:border-neutral-600"
         style={{ borderLeftColor: accentColor, borderLeftWidth: '4px' }}
       >
         {selectedDriver ? (
           <div className="flex items-center gap-3 min-w-0">
             {selectedDriver.driverNumber && (
-              <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+              <span className="font-mono text-xs font-black px-1.5 py-0.5 rounded-sm bg-neutral-800 text-neutral-300 border border-neutral-700">
                 #{selectedDriver.driverNumber}
               </span>
             )}
@@ -179,10 +179,10 @@ const DriverSelector = ({
         ) : (
           <span className="text-neutral-500 text-sm font-mono">Select driver…</span>
         )}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {selectedDriver && (
             <span
-              className="text-[11px] font-mono font-black px-2 py-0.5 rounded"
+              className="text-[11px] font-mono font-black px-2 py-0.5 rounded-sm"
               style={{
                 backgroundColor: `${accentColor}20`,
                 color: accentColor,
@@ -215,7 +215,7 @@ const DriverSelector = ({
               placeholder="Search driver, team, or #…"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-red-500"
+              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 font-mono focus:outline-hidden focus:border-red-500"
               autoFocus
             />
           </div>
@@ -243,7 +243,7 @@ const DriverSelector = ({
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span
-                      className="w-2 h-6 rounded-full flex-shrink-0"
+                      className="w-2 h-6 rounded-full shrink-0"
                       style={{ backgroundColor: teamCol }}
                     />
                     {driver.driverNumber && (
@@ -261,9 +261,9 @@ const DriverSelector = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     {isOther && (
-                      <span className="text-[11px] font-mono text-neutral-500 uppercase bg-neutral-900 px-1.5 py-0.5 rounded">
+                      <span className="text-[11px] font-mono text-neutral-500 uppercase bg-neutral-900 px-1.5 py-0.5 rounded-sm">
                         Rival
                       </span>
                     )}
@@ -339,7 +339,7 @@ const ComparativeMetricBar = ({ metric, driver1, driver2 }: ComparativeMetricBar
   }
 
   return (
-    <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-4 shadow-sm hover:border-neutral-700 transition-colors">
+    <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-lg p-4 shadow-xs hover:border-neutral-700 transition-colors">
       <div className="flex justify-between items-center text-xs mb-2">
         <span className={`font-black text-sm font-mono ${winner === 1 ? 'text-white' : 'text-neutral-500'}`}>
           {display1}
@@ -704,8 +704,8 @@ const ComparePage = () => {
 
   return (
     <div className="bg-tarmac min-h-screen text-white font-sans relative selection:bg-red-500 selection:text-white">
-      <div className="fixed inset-0 xl:left-72 bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
-      <div className="fixed inset-0 xl:left-72 bg-gradient-to-b from-red-950/20 via-neutral-950/95 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-[radial-gradient(#1f2937_1px,transparent_1px)] bg-size-[24px_24px] opacity-15 pointer-events-none" />
+      <div className="fixed inset-0 xl:left-72 bg-linear-to-b from-red-950/20 via-neutral-950/95 to-neutral-950 pointer-events-none" />
 
       {driver1 && (
         <div
@@ -802,7 +802,7 @@ const ComparePage = () => {
                   type="button"
                   aria-label="Swap drivers"
                   title="Swap Drivers"
-                  className="w-12 h-12 rounded-lg bg-gradient-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-ui active:scale-95 flex-shrink-0 shadow-lg hover:shadow-xl group"
+                  className="w-12 h-12 rounded-lg bg-linear-to-tr from-neutral-800 to-neutral-900 hover:from-neutral-700 hover:to-neutral-800 border border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-white transition-ui active:scale-95 shrink-0 shadow-lg hover:shadow-xl group"
                 >
                   <ArrowLeftRight size={20} className="group-hover:rotate-180 transition-transform duration-300" />
                 </button>
@@ -828,7 +828,7 @@ const ComparePage = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-11 gap-4 items-stretch">
               <div
-                className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
+                className="xl:col-span-5 bg-linear-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group"
                 style={{ borderLeftWidth: '6px', borderLeftColor: d1Color }}
               >
                 <div className="absolute right-4 -bottom-6 text-[8rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none" style={{ color: d1Color }}>
@@ -839,7 +839,7 @@ const ComparePage = () => {
                 <div className="flex items-center gap-3 mb-3">
                   {teamLogos[driver1.team] && <img src={teamLogos[driver1.team]} alt={driver1.team} className="h-5 w-auto object-contain opacity-70" />}
                   <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">{driver1.team}</span>
-                  <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded text-neutral-300 flex items-center gap-1">
+                  <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded-sm text-neutral-300 flex items-center gap-1">
                     <Hash size={10} />{driver1.driverNumber}
                   </span>
                 </div>
@@ -863,7 +863,7 @@ const ComparePage = () => {
               </div>
 
               <div className="xl:col-span-1 flex flex-col items-center justify-center text-center py-2">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-red-600 to-orange-500 font-black text-white flex items-center justify-center shadow-lg shadow-red-600/30 text-base font-mono tracking-tighter relative">
+                <div className="w-14 h-14 rounded-full bg-linear-to-tr from-red-600 to-orange-500 font-black text-white flex items-center justify-center shadow-lg shadow-red-600/30 text-base font-mono tracking-tighter relative">
                   <Swords size={22} />
                   <div className="absolute inset-0 rounded-full bg-red-500/20 motion-safe:animate-ping" />
                 </div>
@@ -881,7 +881,7 @@ const ComparePage = () => {
               </div>
 
               <div
-                className="xl:col-span-5 bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
+                className="xl:col-span-5 bg-linear-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-6 sm:p-8 shadow-2xl relative overflow-hidden group text-right xl:text-left"
                 style={{ borderRightWidth: '6px', borderRightColor: d2Color }}
               >
                 <div className="absolute left-4 -bottom-6 text-[8rem] font-black opacity-[0.04] pointer-events-none select-none font-mono leading-none" style={{ color: d2Color }}>
@@ -892,7 +892,7 @@ const ComparePage = () => {
                 <div className="flex items-center gap-3 mb-3 justify-end xl:justify-start">
                   {teamLogos[driver2.team] && <img src={teamLogos[driver2.team]} alt={driver2.team} className="h-5 w-auto object-contain opacity-70" />}
                   <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">{driver2.team}</span>
-                  <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded text-neutral-300 flex items-center gap-1">
+                  <span className="font-mono text-xs font-bold bg-neutral-800 px-2 py-0.5 rounded-sm text-neutral-300 flex items-center gap-1">
                     <Hash size={10} />{driver2.driverNumber}
                   </span>
                 </div>

@@ -44,7 +44,7 @@ const IncidentBreakdownModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -113,11 +113,11 @@ const IncidentBreakdownModal = ({
               {/* Session badge + status + grid */}
               <div className="flex items-center gap-3 shrink-0">
                 {incident.session_type === 'Sprint' ? (
-                  <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-orange-500/15 text-orange-400 border border-orange-500/40">
+                  <span className="px-2 py-0.5 rounded-sm text-[11px] font-black uppercase tracking-wider bg-orange-500/15 text-orange-400 border border-orange-500/40">
                     Sprint
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/40">
+                  <span className="px-2 py-0.5 rounded-sm text-[11px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/40">
                     Grand Prix
                   </span>
                 )}

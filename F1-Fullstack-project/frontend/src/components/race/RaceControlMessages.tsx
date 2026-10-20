@@ -67,13 +67,13 @@ const RaceControlMessagesComponent: React.FC<RaceControlFeed> = ({ messages, sta
               
               <div className="flex flex-col gap-2 pl-2">
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-400 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
+                  <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-400 bg-neutral-950 px-2 py-0.5 rounded-sm border border-neutral-800">
                     {getCategoryIcon(msg.category)}
                     {msg.category}
                   </span>
                   
                   {msg.flag && (
-                    <span className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider rounded border border-black/20 ${getFlagColor(msg.flag)}`}>
+                    <span className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider rounded-sm border border-black/20 ${getFlagColor(msg.flag)}`}>
                       {msg.flag} FLAG
                     </span>
                   )}

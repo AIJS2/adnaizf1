@@ -33,7 +33,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         className={`flex items-center gap-3 px-4 py-3 text-sm text-neutral-500 italic ${className}`}
         role="status"
       >
-        {Icon && <Icon className="w-4 h-4 flex-shrink-0 text-neutral-600" aria-hidden="true" />}
+        {Icon && <Icon className="w-4 h-4 shrink-0 text-neutral-600" aria-hidden="true" />}
         <span>{title}</span>
       </div>
     );

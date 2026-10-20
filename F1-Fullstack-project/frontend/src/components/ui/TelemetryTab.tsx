@@ -125,8 +125,8 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
   const visibleLaps = getVisibleLaps();
 
   return (
-    <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72 shrink-0">
-      <div className="absolute top-0 w-3/4 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent"></div>
+    <div className="bg-linear-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 flex flex-col items-center relative overflow-hidden shadow-2xl w-full md:w-72 shrink-0">
+      <div className="absolute top-0 w-3/4 h-1 bg-linear-to-r from-transparent via-red-600 to-transparent"></div>
       
       <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
         <Crosshair size={12} className="text-red-500" /> Lap Selector
@@ -362,8 +362,8 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
       <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl mb-8 flex flex-col xl:flex-row gap-6 items-stretch">
         
         {/* Drivers Box */}
-        <div className="flex-1 min-w-0 bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 relative overflow-hidden shadow-2xl flex flex-col">
-          <div className="absolute top-0 w-3/4 left-0 h-1 bg-gradient-to-r from-transparent via-blue-600 to-transparent"></div>
+        <div className="flex-1 min-w-0 bg-linear-to-b from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-4 relative overflow-hidden shadow-2xl flex flex-col">
+          <div className="absolute top-0 w-3/4 left-0 h-1 bg-linear-to-r from-transparent via-blue-600 to-transparent"></div>
           
           <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
             <Radio size={12} className="text-blue-500" /> Select Drivers (Max 10)
@@ -391,7 +391,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                   {d.abbreviation}
                   {isDidNotStart(d.status) && (
                     <span
-                      className="ml-0.5 px-1 py-px rounded text-[11px] leading-none font-black bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                      className="ml-0.5 px-1 py-px rounded-sm text-[11px] leading-none font-black bg-amber-500/20 text-amber-400 border border-amber-500/40"
                       title="Did not start - no telemetry available for this driver"
                     >
                       DNS
@@ -408,7 +408,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
               the driver grid into a sliver. */}
           {selectedDrivers.length > 0 && !telemetryData && (
             <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-start gap-2 text-xs font-bold text-amber-400">
-              <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 <span className="block">{selectedDrivers.length} driver dipilih — klik <b>Run Analysis</b> untuk memuat telemetry.</span>
                 {selectedWithoutData.length > 0 && (
@@ -427,7 +427,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           <button 
             onClick={fetchTelemetry}
             disabled={loading || selectedDrivers.length === 0}
-            className="w-full xl:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-8 rounded-lg transition-ui shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50 text-sm h-[48px] xl:h-full xl:min-h-[140px]"
+            className="w-full xl:w-auto bg-linear-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-8 rounded-lg transition-ui shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50 text-sm h-[48px] xl:h-full xl:min-h-[140px]"
           >
             <div className="flex xl:flex-col items-center gap-2">
               {loading ? <RefreshCw className="animate-spin" size={24} /> : <Zap size={24} />}
@@ -439,14 +439,14 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
       {error && (
         <div className="bg-red-950/40 border border-red-500/50 text-red-400 p-5 rounded-lg mb-8 flex items-center gap-3">
-          <AlertTriangle size={24} className="flex-shrink-0" />
+          <AlertTriangle size={24} className="shrink-0" />
           <span className="font-semibold text-sm">{error}</span>
         </div>
       )}
 
       {warning && warning.length > 0 && !error && telemetryData && telemetryData.drivers.length > 0 && (
         <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-lg p-4 mb-6 flex items-start gap-3">
-          <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" />
+          <AlertTriangle size={20} className="shrink-0 mt-0.5" />
           <div className="text-sm">
             <p className="font-bold">Tanpa data telemetry:</p>
             <ul className="mt-1 space-y-0.5 font-medium">
@@ -534,7 +534,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                 const logo = teamLogos[info.team];
                 
                 return (
-                  <div key={drv} className="bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-5 shadow-xl relative overflow-hidden group" style={{ borderTopWidth: '4px', borderTopColor: teamCol }}>
+                  <div key={drv} className="bg-linear-to-br from-neutral-900 to-neutral-950 border border-neutral-800 rounded-lg p-5 shadow-xl relative overflow-hidden group" style={{ borderTopWidth: '4px', borderTopColor: teamCol }}>
                     <div className="absolute -right-4 -bottom-6 text-7xl font-black opacity-5 pointer-events-none font-mono" style={{ color: teamCol }}>
                       {drv}
                     </div>

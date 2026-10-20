@@ -368,7 +368,7 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
           ].map(t => (
             <div key={t.id} className="flex items-center gap-1.5 px-2">
               <span 
-                className="w-5 h-5 flex items-center justify-center rounded text-[11px] font-black border border-black/10 shadow-sm" 
+                className="w-5 h-5 flex items-center justify-center rounded-sm text-[11px] font-black border border-black/10 shadow-xs"
                 style={{ backgroundColor: t.color, color: t.text }}
               >
                 {t.id}
@@ -388,13 +388,13 @@ const TyreStrategyTable: React.FC<TyreStrategyTableProps> = ({ tyreData }) => {
               </span>
               <span>{data.driver}</span>
             </div>
-            <div className="flex-1 flex gap-1 h-9 rounded-lg overflow-hidden bg-neutral-900/80 shadow-inner border border-neutral-800/80 p-1 backdrop-blur-sm relative">
+            <div className="flex-1 flex gap-1 h-9 rounded-lg overflow-hidden bg-neutral-900/80 shadow-inner border border-neutral-800/80 p-1 backdrop-blur-xs relative">
               {data.stints?.map((stint: TyreStint, idx) => {
                 const stintLaps = Number(stint.laps) || 0;
                 return (
                 <div 
                   key={idx} 
-                  className="h-full flex items-center justify-center rounded shadow-sm transition-ui duration-300 hover:brightness-110 hover:z-10 cursor-crosshair relative group/stint border border-black/10 overflow-hidden"
+                  className="h-full flex items-center justify-center rounded-sm shadow-xs transition-ui duration-300 hover:brightness-110 hover:z-10 cursor-crosshair relative group/stint border border-black/10 overflow-hidden"
                   style={{ 
                     flexGrow: stintLaps > 0 ? stintLaps : 1, 
                     backgroundColor: getCompoundColor(stint.compound),
@@ -462,14 +462,14 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                   <div key={d.driver} className="relative flex items-center justify-between p-2 rounded-lg hover:bg-neutral-800/50 transition-colors group z-0">
                     {/* Background Bar */}
                     <div 
-                      className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-neutral-800/30 to-red-500/10 rounded-lg -z-10 transition-ui duration-500"
+                      className="absolute left-0 top-0 bottom-0 bg-linear-to-r from-neutral-800/30 to-red-500/10 rounded-lg -z-10 transition-ui duration-500"
                       style={{ width: `${percentage}%` }}
                     />
                     
                     <div className="flex items-center gap-3">
                       <span className="w-5 text-center text-xs font-bold text-neutral-500">{i + 1}</span>
                       <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: teamColors[d.team_name] || '#666' }}></span>
+                        <span className="w-1.5 h-4 rounded-xs" style={{ backgroundColor: teamColors[d.team_name] || '#666' }}></span>
                         <span className="font-bold text-sm text-white">{d.driver}</span>
                       </div>
                     </div>
@@ -498,12 +498,12 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                       <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Fastest Sector {idx + 1}</span>
                       {best ? (
                         <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-3 rounded-sm" style={{ backgroundColor: teamColors[best.team_name] || '#666' }}></span>
+                          <span className="w-1.5 h-3 rounded-xs" style={{ backgroundColor: teamColors[best.team_name] || '#666' }}></span>
                           <span className="text-sm font-bold text-white">{best.driver}</span>
                         </div>
                       ) : <span className="text-sm text-neutral-500">-</span>}
                     </div>
-                    {best && <span className="font-mono text-sm font-black text-purple-400 bg-purple-900/20 px-2 py-1 rounded border border-purple-500/30 ">{String(best[sector] ?? '-')}</span>}
+                    {best && <span className="font-mono text-sm font-black text-purple-400 bg-purple-900/20 px-2 py-1 rounded-sm border border-purple-500/30 ">{String(best[sector] ?? '-')}</span>}
                   </div>
                 );
               })}
@@ -535,24 +535,24 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                   <tr key={d.driver} className="hover:bg-neutral-800/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-2 font-bold text-white">
-                        <span className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: teamColors[d.team_name] || '#666' }}></span>
+                        <span className="w-1.5 h-4 rounded-xs" style={{ backgroundColor: teamColors[d.team_name] || '#666' }}></span>
                         {d.driver}
                       </div>
                     </td>
                     
                     {/* Sectors with Pills */}
                     <td className="p-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s1_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
+                      <span className={`inline-block px-2 py-1 rounded-sm text-xs font-mono font-bold border ${d.s1_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
                         {d.s1}
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s2_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
+                      <span className={`inline-block px-2 py-1 rounded-sm text-xs font-mono font-bold border ${d.s2_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
                         {d.s2}
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold border ${d.s3_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
+                      <span className={`inline-block px-2 py-1 rounded-sm text-xs font-mono font-bold border ${d.s3_purple ? 'bg-purple-900/30 text-purple-400 border-purple-500/50 ' : 'bg-neutral-800/50 text-neutral-300 border-neutral-700'}`}>
                         {d.s3}
                       </span>
                     </td>
@@ -565,7 +565,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                       {d.actual_lap}
                     </td>
                     <td className="p-4 text-right">
-                      <span className="inline-block px-2 py-0.5 rounded bg-red-900/20 text-red-400 border border-red-900/30 font-mono text-xs font-bold">
+                      <span className="inline-block px-2 py-0.5 rounded-sm bg-red-900/20 text-red-400 border border-red-900/30 font-mono text-xs font-bold">
                         +{d.potential_gain}s
                       </span>
                     </td>

@@ -3,7 +3,6 @@ import os
 import json
 import time
 import asyncio
-from datetime import timedelta
 from typing import Any, Optional, List
 
 import fastf1

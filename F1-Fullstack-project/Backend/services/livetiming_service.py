@@ -4,7 +4,6 @@ format expected by the LiveTimingPage frontend component.
 """
 from __future__ import annotations
 
-import json
 import logging
 import threading
 from datetime import datetime, timezone
@@ -231,7 +230,6 @@ class LiveTimingState:
             for num in driver_keys:
                 td = self.timing_data.get(num, {})
                 dl = self.driver_list.get(num, {})
-                ts = self.timing_stats.get(num, {})
                 ta = self.timing_app_data.get(num, {})
 
                 abbr = dl.get("Tla", dl.get("RacingNumber", num))
@@ -242,9 +240,6 @@ class LiveTimingState:
                 s0 = sectors.get("0", {}) if isinstance(sectors, dict) else {}
                 s1 = sectors.get("1", {}) if isinstance(sectors, dict) else {}
                 s2 = sectors.get("2", {}) if isinstance(sectors, dict) else {}
-
-                # Best lap from TimingStats
-                best_lap_time = ts.get("PersonalBestLapTime", {})
 
                 # Current stint / tyre from TimingAppData
                 stints_raw = ta.get("Stints", {})

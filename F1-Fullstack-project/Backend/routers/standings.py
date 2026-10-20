@@ -1,4 +1,3 @@
-import logging
 import asyncio
 from fastapi import APIRouter, Request
 from config.limiter import limiter

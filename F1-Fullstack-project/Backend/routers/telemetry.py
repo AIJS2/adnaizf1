@@ -36,7 +36,7 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
     )
     cached_data = get_advanced_cache(CACHE_FILE, hours=24)  # Telemetry cached longer
     if cached_data:
-        print(f"o. Menyajikan data dari REDIS/CACHE (Telemetry).")
+        print("o. Menyajikan data dari REDIS/CACHE (Telemetry).")
         return cached_data
 
     try:

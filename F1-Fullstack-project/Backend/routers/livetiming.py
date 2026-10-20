@@ -141,7 +141,7 @@ def _start_signalr() -> None:
 
         is_connected = False
 
-        def on_open():
+        def on_open(connection=connection):
             nonlocal is_connected, backoff
             is_connected = True
             backoff = 2.0  # reset backoff on successful connect
@@ -307,7 +307,7 @@ async def _broadcast_loop(initial_is_live: bool) -> None:
                 *[ws.send_text(msg_bytes) for ws in clients],
                 return_exceptions=True
             )
-            disconnected = {ws for ws, res in zip(clients, results) if isinstance(res, Exception)}
+            disconnected = {ws for ws, res in zip(clients, results, strict=False) if isinstance(res, Exception)}
             if disconnected:
                 _connected_clients.difference_update(disconnected)
 

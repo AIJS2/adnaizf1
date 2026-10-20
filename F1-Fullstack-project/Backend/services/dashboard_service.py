@@ -1,6 +1,5 @@
 import logging
 import pandas as pd
-import fastf1
 
 from services.fastf1_safe import (
     has_rows,

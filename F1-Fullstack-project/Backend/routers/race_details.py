@@ -1,7 +1,6 @@
 import logging
 import asyncio
 import time
-from typing import Optional
 from fastapi import APIRouter, Request, BackgroundTasks
 from config.cache import get_advanced_cache_with_meta, set_advanced_cache
 from services.race_details_service import compute_fastf1_race_details

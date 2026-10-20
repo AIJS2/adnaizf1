@@ -1,5 +1,4 @@
 import pandas as pd
-import fastf1
 import logging
 from datetime import timedelta
 from config.cache import set_advanced_cache
@@ -585,7 +584,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
 
                     stints = []
                     current_stint = None
-                    for stint_num, compound, lap_num in zip(stint_nums, compounds, lap_nums):
+                    for stint_num, compound, lap_num in zip(stint_nums, compounds, lap_nums, strict=False):
                         stint_no = int(stint_num) if pd.notna(stint_num) else 1
                         comp = str(compound if pd.notna(compound) else 'UNKNOWN').upper()
                         lap_no = int(lap_num) if pd.notna(lap_num) else 0

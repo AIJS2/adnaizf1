@@ -14,12 +14,18 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import RacesPage from './pages/RacesPage';
+import { dayKey } from './utils/nextRace';
 
-/** Anchored to "now" so the test is not date-sensitive. */
+/**
+ * Anchored to "now" so the test is not date-sensitive.
+ * Uses local calendar-day keys (not `toISOString()`, which is UTC) so the
+ * fixtures still line up with the page between 00:00 and the UTC offset.
+ */
 const now = new Date();
-const TODAY = now.toISOString().slice(0, 10);
-const NEXT_WEEKEND = new Date(now.getTime() + 14 * 864e5).toISOString().slice(0, 10);
-const LAST_WEEK = new Date(now.getTime() - 7 * 864e5).toISOString().slice(0, 10);
+const TODAY = dayKey(now);
+const NEXT_WEEKEND = dayKey(new Date(now.getTime() + 14 * 864e5));
+const LAST_WEEK = dayKey(new Date(now.getTime() - 7 * 864e5));
+const IN_THREE_WEEKS = dayKey(new Date(now.getTime() + 21 * 864e5));
 
 /**
  * Race-day calendar: last week's race is finished, today's race is Ongoing,
@@ -36,7 +42,7 @@ const RACE_DAY_CALENDAR = [
   { round: 16, name: 'Italian Grand Prix', date: LAST_WEEK, location: 'Monza', status: 'Finished', winner: 'Andrea Kimi Antonelli', winner_team: 'Mercedes' },
   { round: 17, name: 'Singapore Grand Prix', date: TODAY, location: 'Marina Bay', status: 'Ongoing', winner: null },
   { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, location: 'Austin', status: 'Upcoming', winner: null },
-  { round: 19, name: 'Mexico City Grand Prix', date: new Date(now.getTime() + 21 * 864e5).toISOString().slice(0, 10), location: 'Mexico City', status: 'Upcoming', winner: null },
+  { round: 19, name: 'Mexico City Grand Prix', date: IN_THREE_WEEKS, location: 'Mexico City', status: 'Upcoming', winner: null },
 ];
 
 function mockRacesFetch(payload: unknown) {
@@ -125,7 +131,7 @@ describe('RacesPage "Next Up" hero banner', () => {
     const midSeason = [
       { round: 3, name: 'Japanese Grand Prix', date: LAST_WEEK, location: 'Suzuka', status: 'Finished', winner: 'Max Verstappen', winner_team: 'Red Bull Racing' },
       { round: 4, name: 'Miami Grand Prix', date: NEXT_WEEKEND, location: 'Miami Gardens', status: 'Upcoming', winner: null },
-      { round: 5, name: 'Canadian Grand Prix', date: new Date(now.getTime() + 21 * 864e5).toISOString().slice(0, 10), location: 'Montréal', status: 'Upcoming', winner: null },
+      { round: 5, name: 'Canadian Grand Prix', date: IN_THREE_WEEKS, location: 'Montréal', status: 'Upcoming', winner: null },
     ];
     globalThis.fetch = mockRacesFetch(midSeason);
 

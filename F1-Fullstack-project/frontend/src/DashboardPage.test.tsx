@@ -9,6 +9,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import DashboardPage from './pages/DashboardPage';
+import { dayKey } from './utils/nextRace';
 
 /** Payload for a season that has not started: no standings, no calendar. */
 const PRE_SEASON = {
@@ -162,10 +163,17 @@ describe('DashboardPage next-race name/countdown sync', () => {
    * the US GP (next weekend) as "Upcoming".
    */
   const now = new Date();
-  const TODAY = now.toISOString().slice(0, 10);
-  const NEXT_WEEKEND = new Date(now.getTime() + 14 * 864e5).toISOString().slice(0, 10);
+  const TODAY = dayKey(now);
+  const NEXT_WEEKEND = dayKey(new Date(now.getTime() + 14 * 864e5));
+  // Local-day boundaries as absolute instants, so the LIVE / RACE DAY cases
+  // hold at any hour and in any UTC offset.
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 0);
   // Start time already in the past today -> the race is genuinely live.
-  const TODAY_T20 = `${TODAY}T00:00:00Z`;
+  const TODAY_T20 = startOfToday.toISOString();
+  const TODAY_BEFORE_START = endOfToday.toISOString();
 
   const RACE_DAY = {
     year: 2025,
@@ -214,7 +222,7 @@ describe('DashboardPage next-race name/countdown sync', () => {
     // the future) has not arrived yet. The hero must NOT read LIVE.
     const beforeStart = {
       ...RACE_DAY,
-      next_race_event: { name: 'Singapore Grand Prix - Race', date: `${TODAY}T23:59:00Z` },
+      next_race_event: { name: 'Singapore Grand Prix - Race', date: TODAY_BEFORE_START },
     };
     globalThis.fetch = mockFetchOnce(beforeStart);
 

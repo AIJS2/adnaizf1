@@ -26,16 +26,25 @@ export function todayKey(now: Date = new Date()): string {
 }
 
 /**
- * Return the date part only (time set to 00:00:00) for calendar-day comparisons.
- * Accepts both "YYYY-MM-DD" and "YYYY-MM-DDTHH:MM:SSZ" strings.
+ * Return a Date at local midnight for the event's **local** calendar day.
+ * Accepts both "YYYY-MM-DD" and full ISO timestamps.
+ *
+ * Date-only strings carry no instant, so they name a local calendar day
+ * directly. Full timestamps are real instants: take the local Y/M/D from the
+ * parsed date. Slicing the UTC date prefix (`dateStr.slice(0, 10)`) would shift
+ * the day for users whose UTC offset crosses midnight: a 23:59 local start in
+ * UTC-12 is already the next UTC day, and would be treated as "tomorrow".
  */
 function toDay(r: NextRaceCandidate): Date | null {
   if (!r.date) return null;
   const dateStr = r.date;
-  const d = /^\d{4}-\d{2}-\d{2}/.test(dateStr)
-    ? new Date(`${dateStr.slice(0, 10)}T00:00:00`)
-    : new Date(dateStr);
-  return Number.isNaN(d.getTime()) ? null : d;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const d = new Date(`${dateStr}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
 /**

@@ -6,10 +6,22 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import LandingPage from './pages/LandingPage';
+import { dayKey } from './utils/nextRace';
 
+// Local calendar-day keys: the page compares local dates, so UTC keys break
+// between 00:00 and the UTC offset (e.g. 00:00-07:00 in UTC+7).
 const now = new Date();
-const TODAY = now.toISOString().slice(0, 10);
-const NEXT_WEEKEND = new Date(now.getTime() + 14 * 864e5).toISOString().slice(0, 10);
+const TODAY = dayKey(now);
+const NEXT_WEEKEND = dayKey(new Date(now.getTime() + 14 * 864e5));
+
+// Local-day boundaries as absolute instants: "started" and "not started yet"
+// stay true no matter what hour or UTC offset the test runs at.
+const startOfToday = new Date(now);
+startOfToday.setHours(0, 0, 0, 0);
+const endOfToday = new Date(now);
+endOfToday.setHours(23, 59, 59, 0);
+const TODAY_STARTED = startOfToday.toISOString();
+const TODAY_BEFORE_START = endOfToday.toISOString();
 
 function mockFetchOnce(payload: unknown) {
   return vi.fn(async (): Promise<Response> => ({
@@ -69,7 +81,7 @@ describe('LandingPage next-race badge', () => {
         { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, status: 'Upcoming' },
       ],
       // Start time already in the past -> genuinely live.
-      next_race_event: { name: 'Singapore Grand Prix - Race', date: `${TODAY}T00:00:00Z` },
+      next_race_event: { name: 'Singapore Grand Prix - Race', date: TODAY_STARTED },
     });
 
     renderLanding();
@@ -87,9 +99,8 @@ describe('LandingPage next-race badge', () => {
         { round: 17, name: 'Singapore Grand Prix', date: TODAY, status: 'Ongoing' },
         { round: 18, name: 'United States Grand Prix', date: NEXT_WEEKEND, status: 'Upcoming' },
       ],
-      // Start time far in the future today (e.g. 19:00 local = ~12:00Z) ->
-      // still waiting, must NOT read LIVE.
-      next_race_event: { name: 'Singapore Grand Prix - Race', date: `${TODAY}T23:59:00Z` },
+      // Start time at the end of today -> still waiting, must NOT read LIVE.
+      next_race_event: { name: 'Singapore Grand Prix - Race', date: TODAY_BEFORE_START },
     });
 
     renderLanding();

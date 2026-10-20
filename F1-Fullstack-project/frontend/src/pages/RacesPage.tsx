@@ -507,7 +507,7 @@ const RacesPage = () => {
                     <div className={`text-[11px] font-bold uppercase tracking-[0.2em] mb-1 ${nextRace.phase === 'live' ? 'text-red-400' : nextRace.phase === 'race_day' ? 'text-amber-400' : 'text-red-400'}`}>
                       {nextRace.phase === 'live' ? 'Live Now' : nextRace.phase === 'race_day' ? 'Race Day · Today' : 'Next Up'} · Round {nextRace.round}
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight truncate">{nextRace.name}</h2>
+                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tight break-words pr-1">{nextRace.name}</h2>
                     <div className="flex flex-wrap items-center gap-3 mt-1.5 text-neutral-400 text-sm">
                       <div className="flex items-center gap-1.5">
                         <MapPin size={13} /> {nextRace.location}

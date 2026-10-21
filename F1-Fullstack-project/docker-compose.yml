@@ -4,8 +4,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: f1-redis
-    ports:
-      - "6379:6379"
+    # Redis tidak diexpose ke host.
+    # Untuk debug lokal sementara, bisa tambah mapping ports berikut:
+    # ports:
+    #   - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped

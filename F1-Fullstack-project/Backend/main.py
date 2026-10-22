@@ -45,10 +45,10 @@ _extra_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 origins = list(
     dict.fromkeys(
         [
-            "http://localhost:5173",   # Vite default
-            "http://localhost:5174",   # Vite alternate port
+            "http://localhost:5173",  # Vite default
+            "http://localhost:5174",  # Vite alternate port
             "http://127.0.0.1:5173",
-            *_extra_origins,           # From environment variable
+            *_extra_origins,  # From environment variable
         ]
     )
 )
@@ -66,6 +66,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ---------------------------------------------------------------------------
 # Health check — reports Redis cache connectivity so orchestrators and the
@@ -101,6 +102,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 
 
 from starlette.exceptions import HTTPException as StarletteHTTPException  # noqa: E402
+
 
 async def _http_exception_handler(request: Request, exc: StarletteHTTPException):
     """Keep 404s machine-readable for the frontend's not-found states."""

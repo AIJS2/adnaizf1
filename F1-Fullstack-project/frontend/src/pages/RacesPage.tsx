@@ -7,7 +7,7 @@ import { CountryFlag } from '../components/ui/CountryFlag';
 import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { getTrackMap, getCountryCode } from '../data/trackData';
-import { teamColors } from '../data/teamData';
+import { getTeamColor } from '../data/teamData';
 import { resolveNextRace, countdownTarget } from '../utils/nextRace';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -173,7 +173,7 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
   const flagCode = getCountryCode(race);
-  const winnerTeamColor = race.winner_team ? (teamColors[race.winner_team] || '#666') : '#333';
+  const winnerTeamColor = race.winner_team ? getTeamColor(race.winner_team) : '#333';
 
   // The next-race card reflects the resolved lifecycle phase, so on race day
   // before the start it reads TODAY (not LIVE). Only when the caller resolves

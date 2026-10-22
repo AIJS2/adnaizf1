@@ -298,7 +298,7 @@ function RaceDetailPage() {
       case 'Qualifying':        return raceData?.qualifying_results       ? <QualifyingResultTable data={raceData.qualifying_results} />            : noData('Qualifying');
       case 'Starting Grid':     return raceData?.starting_grid           ? <GridTable data={raceData.starting_grid} />                             : noData('Starting Grid');
       case 'Race':              return raceData?.results                  ? <RaceResultTable data={raceData.results} />                             : noData('Race');
-      case 'Lap Telemetry':     return <TelemetryTab year={year || ''} round={round || ''} />;
+      case 'Lap Telemetry':     return <TelemetryTab year={year || ''} round={round || ''} raceInfo={raceData?.race_info} />;
       case 'Lap Chart':         return raceData?.lap_chart                ? <LapChartComponent lapChart={raceData.lap_chart} results={raceData.results} /> : noData('Lap Chart');
       case 'Race Progression':  return raceData?.gap_chart                ? <GapChartComponent gapChart={raceData.gap_chart} results={raceData.results} /> : noData('Race Progression');
       case 'Lap Times':         return raceData?.lap_times_chart          ? <LapTimesChartComponent lapTimesChart={raceData.lap_times_chart} results={raceData.results} /> : noData('Lap Times');

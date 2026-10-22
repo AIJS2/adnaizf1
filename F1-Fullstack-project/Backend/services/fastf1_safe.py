@@ -22,6 +22,7 @@ envelope, so they are handled once here:
 (2) into `None`. Callers decide whether that means "empty payload" or
 "pre-season", so no endpoint has to invent data to fill the gap.
 """
+
 from __future__ import annotations
 
 import functools
@@ -38,6 +39,7 @@ logger = logging.getLogger(__name__)
 # still matches the base Exception.
 try:  # pragma: no cover - depends on the installed fastf1 version
     from fastf1._api import SessionNotAvailableError as _SNA
+
     SESSION_NOT_AVAILABLE: tuple[type[BaseException], ...] = (_SNA,)
 except Exception:  # pragma: no cover
     SESSION_NOT_AVAILABLE = ()
@@ -104,27 +106,31 @@ def sanitize_event_schedule(schedule: Any) -> Any:
 
     for fix in _CORRUPT_EVENT_FIXES:
         try:
-            rows = (
-                schedule["EventName"].astype(str).str.lower()
-                .str.contains(fix["name_contains"], na=False)
-                & schedule["Location"].astype(str).str.lower()
-                .str.contains(fix["location_contains"], na=False)
+            rows = schedule["EventName"].astype(str).str.lower().str.contains(
+                fix["name_contains"], na=False
+            ) & schedule["Location"].astype(str).str.lower().str.contains(
+                fix["location_contains"], na=False
             )
             if not rows.any():
                 continue
             for column in ("EventName", "Location", "Country"):
                 if column in schedule.columns:
                     schedule.loc[rows, column] = fix[column]
-            if "OfficialEventName" in schedule.columns and fix.get("official_name_strip"):
+            if "OfficialEventName" in schedule.columns and fix.get(
+                "official_name_strip"
+            ):
                 schedule.loc[rows, "OfficialEventName"] = (
-                    schedule.loc[rows, "OfficialEventName"].astype(str)
+                    schedule.loc[rows, "OfficialEventName"]
+                    .astype(str)
                     .str.replace(fix["official_name_strip"], "", regex=True)
                 )
             logger.warning(
                 "Sanitised corrupt event metadata for round(s) %s: location "
                 "'%s' -> '%s', event '%s'.",
                 schedule.loc[rows, "RoundNumber"].tolist(),
-                fix["location_contains"], fix["Location"], fix["EventName"],
+                fix["location_contains"],
+                fix["Location"],
+                fix["EventName"],
             )
         except Exception as e:  # noqa: BLE001 - never fail a load over a fixup
             logger.warning(f"Could not sanitise schedule metadata: {e}")
@@ -154,6 +160,7 @@ def _patch_fastf1_http_timeouts() -> None:
         return
     try:
         import fastf1.req
+
         for name in ("requests_get", "requests_post"):
             original = fastf1.req.Cache.__dict__[name].__func__
 
@@ -182,14 +189,16 @@ def _ensure_fastf1_cache() -> None:
         return
     try:
         from config.cache import _FASTF1_CACHE_DIR  # local import avoids cycles
+
         fastf1.Cache.enable_cache(_FASTF1_CACHE_DIR)
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Could not enable the FastF1 cache: {e}")
     _CACHE_ENSURE_DONE = True
 
 
-def load_session_safe(year: int, round_number: int, session_type: str,
-                      **load_kwargs: Any) -> Optional[Any]:
+def load_session_safe(
+    year: int, round_number: int, session_type: str, **load_kwargs: Any
+) -> Optional[Any]:
     """
     Build and load a FastF1 session, or return None on any failure.
 
@@ -203,9 +212,7 @@ def load_session_safe(year: int, round_number: int, session_type: str,
         session = fastf1.get_session(year, round_number, session_type)
     except ValueError as e:
         # Expected: 'Sprint' missing at that event, or an invalid round.
-        logger.info(
-            f"Session {year}/{round_number}/{session_type} not available: {e}"
-        )
+        logger.info(f"Session {year}/{round_number}/{session_type} not available: {e}")
         return None
     except Exception as e:  # noqa: BLE001
         logger.warning(

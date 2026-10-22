@@ -6,7 +6,7 @@ import {
   Radio, Flag, ChevronLeft, ChevronRight, Crosshair
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { teamColors, teamLogos } from '../../data/teamData';
+import { teamColors, teamLogos, DRIVER_TEAM_COLORS_2026, getTeamColor, getDriverColor } from '../../data/teamData';
 
 import TrackDominationMap from './TrackDominationMap';
 import SpeedChart from '../dashboard/SpeedChart';
@@ -197,7 +197,17 @@ const LapRuler = ({ lap, setLap }: { lap: string; setLap: (lap: string) => void 
   );
 };
 
-const TelemetryTab = ({ year, round }: { year: string | number; round: string | number }) => {
+interface TelemetryTabProps {
+  year: string | number;
+  round: string | number;
+  raceInfo?: {
+    location?: string;
+    country?: string;
+    name?: string;
+  } | null;
+}
+
+const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
   const [availableDrivers, setAvailableDrivers] = useState<TelemetryDriverOption[]>([]);
   const [lap, setLap] = useState<string>('');
@@ -208,15 +218,19 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
   const [warning, setWarning] = useState<{ driver: string; reason: string }[] | null>(null);
 
   const defaultDrivers = [
-    'VER', 'NOR', 'LEC', 'HAM', 'RUS', 'PIA', 'SAI', 'PER', 'ALO', 'STR',
-    'GAS', 'OCO', 'ALB', 'TSU', 'HUL', 'BOT', 'ANT', 'BEA', 'COL', 'LAW'
+    'VER', 'HAD', 'NOR', 'PIA', 'LEC', 'HAM', 'RUS', 'ANT', 'ALO', 'STR',
+    'ALB', 'SAI', 'GAS', 'COL', 'LAW', 'LIN', 'HUL', 'BOR', 'OCO', 'BEA',
+    'PER', 'BOT'
   ];
 
   useEffect(() => {
     if (!round || !year) return;
-    fetch(`${API_URL}/api/telemetry-drivers/${year}/${round}`)
+    let isMounted = true;
+    const controller = new AbortController();
+    fetch(`${API_URL}/api/telemetry-drivers/${year}/${round}`, { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
+        if (!isMounted) return;
         if (Array.isArray(data) && data.length > 0) {
           setAvailableDrivers(data);
           setSelectedDrivers([]); // No drivers selected initially
@@ -224,9 +238,14 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
           setAvailableDrivers(defaultDrivers.map(d => ({ abbreviation: d, full_name: d, team_name: '' })));
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        if (!isMounted || err?.name === 'AbortError') return;
         setAvailableDrivers(defaultDrivers.map(d => ({ abbreviation: d, full_name: d, team_name: '' })));
       });
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [year, round]);
 
   const toggleDriver = (drv: string) => {
@@ -373,7 +392,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
             {availableDrivers.map(d => {
               const isSelected = selectedDrivers.includes(d.abbreviation);
               const isDisabled = !isSelected && selectedDrivers.length >= 10;
-              const color = teamColors[d.team_name ?? ''] || '#888888';
+              const color = getDriverColor(d.abbreviation, d.team_name);
               return (
                 <button
                   key={d.abbreviation}
@@ -523,6 +542,12 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
               drivers={telemetryData.drivers} 
               driver_info={telemetryData.driver_info} 
               activeDistance={activeDistance}
+              circuitInfo={{
+                round,
+                country: raceInfo?.country,
+                location: raceInfo?.location,
+                name: raceInfo?.name,
+              }}
             />
 
             {/* Stats Cards */}
@@ -543,7 +568,13 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
                         <h4 className="text-2xl font-black text-white">{drv}</h4>
                         <p className="text-xs text-neutral-400 font-bold">{info.name}</p>
                       </div>
-                      {logo && <img src={logo} alt={info.team} className="h-6 object-contain drop-shadow-md" />}
+                      {logo && (
+                        <img
+                          src={logo}
+                          alt={info.team}
+                          className={`h-6 object-contain drop-shadow-md ${/audi/i.test(info.team || '') ? 'brightness-0 invert' : ''}`}
+                        />
+                      )}
                     </div>
                     
                     <div className="space-y-3 relative z-10">
@@ -579,7 +610,7 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
               // First pass: group drivers by team
               telemetryData.drivers.forEach(drv => {
-                const team = telemetryData.driver_info[drv]?.team;
+                const team = telemetryData.driver_info[drv]?.team || '';
                 if (!teamDrivers[team]) {
                   teamDrivers[team] = [];
                 }
@@ -588,29 +619,22 @@ const TelemetryTab = ({ year, round }: { year: string | number; round: string | 
 
               // Second pass: assign colors with smart differentiation
               telemetryData.drivers.forEach(drv => {
-                const team = telemetryData.driver_info[drv]?.team;
+                const team = telemetryData.driver_info[drv]?.team || '';
                 if (!teamCounts[team]) teamCounts[team] = 0;
 
                 const index = teamCounts[team];
                 const teamSize = teamDrivers[team]?.length || 1;
                 teamCounts[team]++;
 
-                const baseColor = teamColors[team] || '#fff';
-
-                let color: string;
+                const drvConfig = DRIVER_TEAM_COLORS_2026[drv];
+                let color = drvConfig?.primary ?? getTeamColor(team);
                 let strokeDasharray: string | undefined = undefined;
 
-                if (teamSize === 1) {
-                  // Single driver from this team - use base color
-                  color = baseColor;
-                } else {
-                  // Multiple drivers from same team - generate distinct colors
-                  const teammateColors = generateTeammateColors(baseColor, teamSize);
-                  color = teammateColors[index] || baseColor;
-
-                  // Also add dash pattern for extra differentiation
-                  if (index === 1) strokeDasharray = "5 5";
-                  else if (index === 2) strokeDasharray = "3 3";
+                if (teamSize > 1) {
+                  if (drvConfig?.isTeammate2 || index > 0) {
+                    color = drvConfig?.secondary ?? generateTeammateColors(color, teamSize)[index] ?? color;
+                    strokeDasharray = index === 1 ? "5 5" : "3 3";
+                  }
                 }
 
                 driverStyles[drv] = {

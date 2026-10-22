@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { teamLogos, teamColors } from '../data/teamData';
+import { teamLogos, getDriverColor } from '../data/teamData';
 import { Trophy, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag, Zap } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { fetchDriverProfile } from '../services/api';
@@ -67,7 +67,7 @@ const DriverProfilePage = () => {
   // Which incident breakdown modal is open ('dnf' / 'dns'), if any.
   const [incidentModal, setIncidentModal] = useState<'dnf' | 'dns' | null>(null);
 
-  const teamColor = profile ? (teamColors[profile.team] || '#EF4444') : '#EF4444';
+  const teamColor = profile ? getDriverColor(profile.name, profile.team) : '#EF4444';
   const teamLogo = profile ? teamLogos[profile.team] : null;
 
   if (loading) {

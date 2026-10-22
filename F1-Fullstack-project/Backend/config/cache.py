@@ -46,8 +46,20 @@ os.environ.setdefault("FASTF1_CACHE", _FASTF1_CACHE_DIR)
 
 CACHE_DURATION_HOURS = 6
 
+# ---------------------------------------------------------------------------
+# Stale-While-Revalidate (SWR) policy.
+#
+# SOFT_TTL:  data is still served immediately from cache, but a background
+#            task is allowed to revalidate it.
+# HARD_TTL:  data is considered completely expired — a miss falls back to a
+#            blocking refresh.
+# Overridable via env for deployments that need tighter / looser windows.
+# ---------------------------------------------------------------------------
+SWR_SOFT_TTL_SECONDS = int(os.environ.get("SWR_SOFT_TTL_SECONDS", str(15 * 60)))
+SWR_HARD_TTL_SECONDS = int(os.environ.get("SWR_HARD_TTL_SECONDS", str(24 * 3600)))
+
 # Modern Redis configuration with connection pooling
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.environ.get("REDIS_URL", "").strip()
 
 # Circuit breaker settings. Once a Redis call fails we stop hammering it and
 # only retry after this cooldown, so a Redis outage degrades to "no cache"
@@ -59,7 +71,9 @@ _redis_last_failure: float = 0.0
 
 
 def _build_client() -> Optional["redis.Redis"]:
-    """Create a pooled Redis client, or None when Redis is unreachable."""
+    """Create a pooled Redis client, or None when Redis is unconfigured or unreachable."""
+    if not REDIS_URL or REDIS_URL.lower() in ("none", "disabled", "false"):
+        return None
     try:
         pool = redis.ConnectionPool.from_url(
             REDIS_URL,
@@ -67,7 +81,7 @@ def _build_client() -> Optional["redis.Redis"]:
             socket_timeout=5,
             socket_connect_timeout=5,
             retry_on_timeout=True,
-            health_check_interval=30
+            health_check_interval=30,
         )
         client = redis.Redis(connection_pool=pool)
         client.ping()  # fail fast rather than on the first real command
@@ -77,7 +91,7 @@ def _build_client() -> Optional["redis.Redis"]:
         )
         return client
     except Exception as e:
-        logging.error(f"Failed to connect to Redis at {REDIS_URL}: {e}")
+        logging.warning(f"Failed to connect to Redis at {REDIS_URL}: {e}")
         return None
 
 
@@ -95,7 +109,10 @@ def _get_redis() -> Optional["redis.Redis"]:
         return redis_client
 
     now = time.monotonic()
-    if _redis_last_failure and (now - _redis_last_failure) < _REDIS_RETRY_COOLDOWN_SECONDS:
+    if (
+        _redis_last_failure
+        and (now - _redis_last_failure) < _REDIS_RETRY_COOLDOWN_SECONDS
+    ):
         return None  # still inside the cooldown window
 
     redis_client = _build_client()
@@ -123,7 +140,11 @@ def redis_status() -> dict:
             _invalidate_redis()
     return {
         "connected": connected,
-        "url": REDIS_URL.split("@")[-1] if "@" in REDIS_URL else REDIS_URL,
+        "url": (
+            (REDIS_URL.split("@")[-1] if "@" in REDIS_URL else REDIS_URL)
+            if REDIS_URL
+            else "disabled (in-memory/file cache fallback)"
+        ),
     }
 
 
@@ -133,11 +154,93 @@ redis_client = _build_client()
 if redis_client is None:
     _redis_last_failure = time.monotonic()
 
+# In-memory dedup guard for background revalidation tasks, so a burst of
+# concurrent SWR requests for the same key schedules exactly one refresh.
+_refresh_in_flight: set[str] = set()
+_refreshes_guard = asyncio.Lock()
+
+
+async def get_advanced_cache_swr(
+    key: str,
+    fetch: Any,
+    soft_ttl: int = SWR_SOFT_TTL_SECONDS,
+    hard_ttl: int = SWR_HARD_TTL_SECONDS,
+    hours: int = CACHE_DURATION_HOURS,
+) -> tuple[Any, str]:
+    """
+    Stale-While-Revalidate read.
+
+    Returns (data, state) where state is one of:
+      - "fresh":        younger than the soft TTL, served directly.
+      - "revalidating": stale but still inside the hard TTL — served in 0ms
+                        while a background task refreshes it.
+      - "cold":        missing / past the hard TTL — blocks on fetch().
+
+    Per-key ``asyncio.Lock`` (via ``_get_cache_lock``) guards the write, and
+    the ``_refresh_in_flight`` dedup guard guarantees at most one background
+    revalidation per key — a classic cache-stampede countermeasure.
+
+    ``fetch`` must be an async callable taking no arguments that returns the
+    payload to store.
+    """
+    data = await asyncio.to_thread(get_advanced_cache_with_meta, key)
+    payload = data.get("data") if isinstance(data, dict) else None
+    mtime = data.get("mtime", 0.0) if isinstance(data, dict) else 0.0
+
+    if payload is not None:
+        age = time.time() - mtime if mtime > 0 else 0.0
+        if age <= hard_ttl:
+            if age <= soft_ttl:
+                return payload, "fresh"
+
+            # Stale (soft-TTL passed) -> serve instantly, refresh in background.
+            async with _refreshes_guard:
+                should_refresh = key not in _refresh_in_flight
+                if should_refresh:
+                    _refresh_in_flight.add(key)
+            if should_refresh:
+                asyncio.create_task(_background_refresh(key, fetch, hours))
+            return payload, "revalidating"
+
+    # Cold miss (no cache, or past the hard TTL) -> block on a fetch.
+    lock = await _get_cache_lock(key)
+    async with lock:
+        # Re-check after acquiring the lock: another task may have finished
+        # its refresh while we were waiting (classic double-fetch guard).
+        fresh = await asyncio.to_thread(get_advanced_cache, key)
+        if fresh is not None:
+            return fresh, "fresh"
+
+        result = await fetch()
+        if result is not None:
+            await set_advanced_cache_async(key, result, hours=hours)
+            return result, "fresh"
+        return None, "cold"
+
+
+async def _background_refresh(
+    key: str, fetch: Any, hours: int = CACHE_DURATION_HOURS
+) -> None:
+    """Background SWR revalidation; failure keeps the stale copy in place."""
+    lock = await _get_cache_lock(key)
+    try:
+        async with lock:
+            result = await fetch()
+            if result is not None:
+                await set_advanced_cache_async(key, result, hours=hours)
+                logging.info(f"[SWR] background revalidation complete for '{key}'")
+    except Exception as e:
+        # Keep the stale data rather than evict it on a failed refresh.
+        logging.warning(f"[SWR] background revalidation failed for '{key}': {e}")
+    finally:
+        async with _refreshes_guard:
+            _refresh_in_flight.discard(key)
+
+
 def _get_file_cache_path(key: str) -> str:
-    """Return an absolute path inside _CACHE_DIR for the file-based fallback cache."""
     clean_name = os.path.basename(key)
-    if not clean_name.endswith('.json'):
-        clean_name += '.json'
+    if not clean_name.endswith(".json"):
+        clean_name += ".json"
     return os.path.join(_CACHE_DIR, clean_name)
 
 
@@ -160,7 +263,7 @@ def get_advanced_cache(key: str, hours: int = CACHE_DURATION_HOURS) -> Optional[
     try:
         filepath = _get_file_cache_path(key)
         if os.path.exists(filepath):
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
     except Exception as e:
         logging.warning(f"Error reading from file cache for key '{key}': {e}")
@@ -184,10 +287,7 @@ def get_advanced_cache_with_meta(key: str) -> Optional[dict]:
     except Exception:
         pass
 
-    return {
-        "data": data,
-        "mtime": mtime
-    }
+    return {"data": data, "mtime": mtime}
 
 
 async def set_advanced_cache_async(
@@ -267,7 +367,7 @@ def clear_advanced_cache(keys: Optional[List[str]] = None) -> None:
                     os.remove(fpath)
         else:
             for fname in os.listdir(_CACHE_DIR):
-                if fname.endswith('.json'):
+                if fname.endswith(".json"):
                     try:
                         os.remove(os.path.join(_CACHE_DIR, fname))
                     except Exception:

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { DriverProfile, TeamProgressionEntry } from '../types/f1';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { teamLogos, teamColors } from '../data/teamData';
+import { teamLogos, getTeamColor } from '../data/teamData';
 import { Trophy, Award, ArrowLeft, AlertTriangle, Users, TrendingUp, Flag, ChevronRight, PieChart, Ban } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
@@ -38,7 +38,7 @@ const TeamProfilePage = () => {
   // Which incident breakdown modal is open ('dnf' / 'dns'), if any.
   const [incidentModal, setIncidentModal] = useState<'dnf' | 'dns' | null>(null);
 
-  const teamColor = profile?.name ? (teamColors[profile.name] || '#EF4444') : '#EF4444';
+  const teamColor = profile?.name ? getTeamColor(profile.name) : '#EF4444';
   const teamLogo = profile?.name ? teamLogos[profile.name] : null;
 
   if (loading) {

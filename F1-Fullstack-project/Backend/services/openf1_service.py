@@ -101,7 +101,10 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
                 delay = _retry_delay(response, attempt)
                 logger.info(
                     "OpenF1 %s rate limited, retrying in %.1fs (attempt %d/%d)",
-                    path, delay, attempt + 1, MAX_RETRIES,
+                    path,
+                    delay,
+                    attempt + 1,
+                    MAX_RETRIES,
                 )
                 time.sleep(delay)
                 continue
@@ -111,7 +114,9 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
             # 4xx other than 429 is a permanent answer for this request.
             logger.warning(
                 "OpenF1 %s -> HTTP %s: %s",
-                path, e.response.status_code, e.response.text[:200],
+                path,
+                e.response.status_code,
+                e.response.text[:200],
             )
             return None
         except httpx.HTTPError as e:
@@ -119,7 +124,10 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
             last_error = f"{type(e).__name__}: {e}"
             logger.warning(
                 "OpenF1 %s failed (%s), retrying (attempt %d/%d)",
-                path, last_error, attempt + 1, MAX_RETRIES,
+                path,
+                last_error,
+                attempt + 1,
+                MAX_RETRIES,
             )
             time.sleep(RETRY_BACKOFF * (attempt + 1))
             continue
@@ -131,11 +139,15 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
             # see when the UA is refused rather than a genuine server error.
             logger.warning(
                 "OpenF1 %s returned non-JSON (status %s): %s",
-                path, response.status_code, e,
+                path,
+                response.status_code,
+                e,
             )
             return None
 
-    logger.warning("OpenF1 %s gave up after %d attempts: %s", path, MAX_RETRIES, last_error)
+    logger.warning(
+        "OpenF1 %s gave up after %d attempts: %s", path, MAX_RETRIES, last_error
+    )
     return None
 
 
@@ -410,7 +422,10 @@ def fetch_classification(
     if not rows:
         logger.info(
             "OpenF1 has no session_result for %s/%s/%s (key=%s)",
-            year, round_number, session_type, session_key,
+            year,
+            round_number,
+            session_type,
+            session_key,
         )
         return None
 
@@ -445,23 +460,29 @@ def fetch_classification(
             # else: retired car with no time recorded -> gap stays ""
 
         position = row.get("position")
-        mapped.append({
-            "position": _classify_position(row) if position is not None else 0,
-            "driver_number": _int_or_zero(row.get("driver_number")),
-            "full_name": info.get("full_name") or "Unknown driver",
-            "team_name": info.get("team_name") or "",
-            "abbreviation": info.get("name_acronym", ""),
-            "status": _status_for(row),
-            "points": _int_or_zero(row.get("points")),
-            "laps": _int_or_zero(row.get("number_of_laps")),
-            "time": "",
-            "gap_to_leader": gap,
-            "interval": gap,
-        })
+        mapped.append(
+            {
+                "position": _classify_position(row) if position is not None else 0,
+                "driver_number": _int_or_zero(row.get("driver_number")),
+                "full_name": info.get("full_name") or "Unknown driver",
+                "team_name": info.get("team_name") or "",
+                "abbreviation": info.get("name_acronym", ""),
+                "status": _status_for(row),
+                "points": _int_or_zero(row.get("points")),
+                "laps": _int_or_zero(row.get("number_of_laps")),
+                "time": "",
+                "gap_to_leader": gap,
+                "interval": gap,
+            }
+        )
 
     logger.info(
         "OpenF1 fallback supplied %d rows for %s/%s/%s (key=%s)",
-        len(mapped), year, round_number, session_type, session_key,
+        len(mapped),
+        year,
+        round_number,
+        session_type,
+        session_key,
     )
     return mapped
 
@@ -490,13 +511,13 @@ def session_key_for(
         return None
 
     matches = [
-        s for s in sessions
-        if s.get("session_name") == wanted and s.get("session_key")
+        s for s in sessions if s.get("session_name") == wanted and s.get("session_key")
     ]
     if circuit:
         needle = circuit.strip().lower()
         narrowed = [
-            s for s in matches
+            s
+            for s in matches
             if needle in str(s.get("location", "")).lower()
             or needle in str(s.get("circuit_short_name", "")).lower()
         ]
@@ -505,14 +526,19 @@ def session_key_for(
         if len(narrowed) > 1:
             logger.warning(
                 "OpenF1: %d '%s' sessions match circuit %r in %s",
-                len(narrowed), wanted, circuit, year,
+                len(narrowed),
+                wanted,
+                circuit,
+                year,
             )
         matches = narrowed or matches
 
     if len(matches) != 1:
         logger.debug(
             "OpenF1: %d '%s' sessions in %s (need circuit to disambiguate)",
-            len(matches), wanted, year,
+            len(matches),
+            wanted,
+            year,
         )
         return None
     return matches[0]["session_key"]

@@ -9,7 +9,7 @@ import {
   Calendar, ChevronRight, Flag, Gauge, Zap, Activity, MapPin, Calculator, Swords, Crown, Target, Shield, Flame,
   FlaskConical, FlagTriangleRight
 } from 'lucide-react';
-import { teamLogos, teamColors } from '../data/teamData';
+import { teamLogos, getDriverColor } from '../data/teamData';
 import { getTrackMap } from '../data/trackData';
 import HeroCountdown from '../components/ui/HeroCountdown';
 import TeamCard, { TeamStanding } from '../components/dashboard/TeamCard';
@@ -268,121 +268,132 @@ function DashboardPage() {
         </section>
 
         {/* 3. WORLD CHAMPIONSHIP TITLE FIGHT (P1 vs P2) */}
-        {p1Driver && p2Driver && (
-          <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 md:p-8 shadow-2xl mb-8 relative overflow-hidden">
-            {/* Title Fight dramatic background gradients */}
-            <div className="absolute top-0 left-0 w-1/3 h-full opacity-20 pointer-events-none blur-3xl transition-colors duration-1000" style={{ backgroundColor: teamColors[p1Driver.team] || '#EF4444' }} />
-            <div className="absolute top-0 right-0 w-1/3 h-full opacity-20 pointer-events-none blur-3xl transition-colors duration-1000" style={{ backgroundColor: teamColors[p2Driver.team] || '#3B82F6' }} />
+        {p1Driver && p2Driver && (() => {
+          const p1TeamColor = getDriverColor(p1Name, p1Driver.team);
+          let p2TeamColor = getDriverColor(p2Name, p2Driver.team);
+          if (p1Driver.team && p2Driver.team && (p1Driver.team === p2Driver.team || p1TeamColor.toLowerCase() === p2TeamColor.toLowerCase())) {
+            p2TeamColor = getDriverColor(p2Name, p2Driver.team, true);
+            if (p1TeamColor.toLowerCase() === p2TeamColor.toLowerCase()) {
+              p2TeamColor = '#FACC15';
+            }
+          }
 
-            <div className="flex items-center justify-between mb-6 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-md bg-red-600/10 border border-red-500/30 flex items-center justify-center text-red-500 ">
-                  <Swords size={20} className="" />
-                </div>
-                <div>
-                  <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
-                    Title Fight <span className="text-red-500">Battle</span>
-                  </h2>
-                  <p className="text-xs text-neutral-400 font-medium">Head-to-head championship showdown</p>
-                </div>
-              </div>
-              <Link to="/simulator" className="text-xs uppercase font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 group bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 transition-colors">
-                <Calculator size={14} />
-                Predict <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
+          return (
+            <section className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 md:p-8 shadow-2xl mb-8 relative overflow-hidden">
+              {/* Title Fight dramatic background gradients */}
+              <div className="absolute top-0 left-0 w-1/3 h-full opacity-20 pointer-events-none blur-3xl transition-colors duration-1000" style={{ backgroundColor: p1TeamColor }} />
+              <div className="absolute top-0 right-0 w-1/3 h-full opacity-20 pointer-events-none blur-3xl transition-colors duration-1000" style={{ backgroundColor: p2TeamColor }} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 relative z-10">
-              {/* P1 Driver Card */}
-              <Link
-                to={`/driver/${p1Name ? p1Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
-                className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-lg p-5 transition-ui duration-300 flex items-center justify-between relative overflow-hidden shadow-lg"
-              >
-                <div 
-                  className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-ui duration-300" 
-                  style={{ backgroundColor: teamColors[p1Driver.team] || '#EF4444', boxShadow: `0 0 15px ${teamColors[p1Driver.team]}80` }} 
-                />
-                <div className="flex items-center gap-4 ml-2">
-                  <div className="text-4xl font-black font-mono drop-shadow-md italic pr-1 text-chalk">P1</div>
+              <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-md bg-red-600/10 border border-red-500/30 flex items-center justify-center text-red-500 ">
+                    <Swords size={20} className="" />
+                  </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
-                        {p1Name || 'Unknown Driver'}
-                      </h3>
-                      <span className="text-[11px] font-bold bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 flex items-center gap-1">
-                        <Crown size={10} /> LEADER
-                      </span>
-                    </div>
-                    <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
-                      {teamLogos[p1Driver.team ?? ''] && <img src={teamLogos[p1Driver.team ?? '']} alt={p1Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
-                      <span className="font-semibold uppercase tracking-wider">{p1Driver.team || 'Unknown Team'}</span>
-                    </div>
+                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
+                      Title Fight <span className="text-red-500">Battle</span>
+                    </h2>
+                    <p className="text-xs text-neutral-400 font-medium">Head-to-head championship showdown</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-4xl font-black font-mono text-white tracking-tighter">{Math.round(p1Points)}</div>
-                  <span className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest">PTS</span>
-                </div>
-              </Link>
-
-              {/* P2 Driver Card */}
-              <Link
-                to={`/driver/${p2Name ? p2Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
-                className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-lg p-5 transition-ui duration-300 flex items-center justify-between relative overflow-hidden shadow-lg"
-              >
-                <div 
-                  className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-ui duration-300" 
-                  style={{ backgroundColor: teamColors[p2Driver.team] || '#3B82F6', boxShadow: `0 0 15px ${teamColors[p2Driver.team]}80` }} 
-                />
-                <div className="flex items-center gap-4 ml-2">
-                  <div className="text-4xl font-black font-mono drop-shadow-md italic pr-1 text-chalk">P2</div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
-                        {p2Name || 'Unknown Driver'}
-                      </h3>
-                      <span className="text-[11px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 flex items-center gap-1">
-                        <Target size={10} /> HUNTING
-                      </span>
-                    </div>
-                    <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
-                      {teamLogos[p2Driver.team ?? ''] && <img src={teamLogos[p2Driver.team ?? '']} alt={p2Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
-                      <span className="font-semibold uppercase tracking-wider">{p2Driver.team || 'Unknown Team'}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-4xl font-black font-mono text-white tracking-tighter">{Math.round(p2Points)}</div>
-                  <span className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest">PTS</span>
-                </div>
-              </Link>
-            </div>
-
-            {/* Duel Gap Bar */}
-            <div className="bg-neutral-950/90 border border-neutral-800 rounded-lg p-4 md:p-5 relative z-10 shadow-inner">
-              <div className="flex justify-between items-center text-xs font-mono text-neutral-300 mb-3">
-                <span className="font-black text-white text-sm tracking-tight">{p1Name || 'Unknown Driver'} <span className="text-neutral-500 ml-1">({p1DuelPct}%)</span></span>
-                <span className="bg-neutral-900 text-red-500 border border-red-500/30 px-3 py-1 rounded-full font-black text-[11px] tracking-widest ">
-                  GAP: {titleGap} PTS
-                </span>
-                <span className="font-black text-white text-sm tracking-tight"><span className="text-neutral-500 mr-1">({100 - p1DuelPct}%)</span> {p2Name || 'Unknown Driver'}</span>
+                <Link to="/simulator" className="text-xs uppercase font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 group bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 transition-colors">
+                  <Calculator size={14} />
+                  Predict <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
               </div>
-              <div className="w-full bg-neutral-900 rounded-full h-3 overflow-hidden flex border border-neutral-800">
-                <div 
-                  className="h-full transition-ui duration-1000 relative" 
-                  style={{ width: `${p1DuelPct}%`, backgroundColor: teamColors[p1Driver.team] || '#EF4444' }} 
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 relative z-10">
+                {/* P1 Driver Card */}
+                <Link
+                  to={`/driver/${p1Name ? p1Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
+                  className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-lg p-5 transition-ui duration-300 flex items-center justify-between relative overflow-hidden shadow-lg"
                 >
-                  <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" />
-                </div>
-                <div className="w-1 h-full bg-neutral-950 shrink-0 z-10" />
-                <div 
-                  className="h-full transition-ui duration-1000 relative" 
-                  style={{ width: `${100 - p1DuelPct}%`, backgroundColor: teamColors[p2Driver.team] || '#666666' }} 
-                />
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-ui duration-300" 
+                    style={{ backgroundColor: p1TeamColor, boxShadow: `0 0 15px ${p1TeamColor}80` }} 
+                  />
+                  <div className="flex items-center gap-4 ml-2">
+                    <div className="text-4xl font-black font-mono drop-shadow-md italic pr-1 text-chalk">P1</div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
+                          {p1Name || 'Unknown Driver'}
+                        </h3>
+                        <span className="text-[11px] font-bold bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 flex items-center gap-1">
+                          <Crown size={10} /> LEADER
+                        </span>
+                      </div>
+                      <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
+                        {teamLogos[p1Driver.team ?? ''] && <img src={teamLogos[p1Driver.team ?? '']} alt={p1Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
+                        <span className="font-semibold uppercase tracking-wider">{p1Driver.team || 'Unknown Team'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-4xl font-black font-mono text-white tracking-tighter">{Math.round(p1Points)}</div>
+                    <span className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest">PTS</span>
+                  </div>
+                </Link>
+
+                {/* P2 Driver Card */}
+                <Link
+                  to={`/driver/${p2Name ? p2Name.toLowerCase().replace(/\s+/g, '_') : 'unknown'}`}
+                  className="group bg-neutral-950/70 hover:bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-600 rounded-lg p-5 transition-ui duration-300 flex items-center justify-between relative overflow-hidden shadow-lg"
+                >
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-2 group-hover:w-3 transition-ui duration-300" 
+                    style={{ backgroundColor: p2TeamColor, boxShadow: `0 0 15px ${p2TeamColor}80` }} 
+                  />
+                  <div className="flex items-center gap-4 ml-2">
+                    <div className="text-4xl font-black font-mono drop-shadow-md italic pr-1 text-chalk">P2</div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
+                          {p2Name || 'Unknown Driver'}
+                        </h3>
+                        <span className="text-[11px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 flex items-center gap-1">
+                          <Target size={10} /> HUNTING
+                        </span>
+                      </div>
+                      <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
+                        {teamLogos[p2Driver.team ?? ''] && <img src={teamLogos[p2Driver.team ?? '']} alt={p2Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
+                        <span className="font-semibold uppercase tracking-wider">{p2Driver.team || 'Unknown Team'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-4xl font-black font-mono text-white tracking-tighter">{Math.round(p2Points)}</div>
+                    <span className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest">PTS</span>
+                  </div>
+                </Link>
               </div>
-            </div>
-          </section>
-        )}
+
+              {/* Duel Gap Bar */}
+              <div className="bg-neutral-950/90 border border-neutral-800 rounded-lg p-4 md:p-5 relative z-10 shadow-inner">
+                <div className="flex justify-between items-center text-xs font-mono text-neutral-300 mb-3">
+                  <span className="font-black text-white text-sm tracking-tight">{p1Name || 'Unknown Driver'} <span className="text-neutral-500 ml-1">({p1DuelPct}%)</span></span>
+                  <span className="bg-neutral-900 text-red-500 border border-red-500/30 px-3 py-1 rounded-full font-black text-[11px] tracking-widest ">
+                    GAP: {titleGap} PTS
+                  </span>
+                  <span className="font-black text-white text-sm tracking-tight"><span className="text-neutral-500 mr-1">({100 - p1DuelPct}%)</span> {p2Name || 'Unknown Driver'}</span>
+                </div>
+                <div className="w-full bg-neutral-900 rounded-full h-3 overflow-hidden flex border border-neutral-800">
+                  <div 
+                    className="h-full transition-ui duration-1000 relative" 
+                    style={{ width: `${p1DuelPct}%`, backgroundColor: p1TeamColor }} 
+                  >
+                    <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" />
+                  </div>
+                  <div className="w-1 h-full bg-neutral-950 shrink-0 z-10" />
+                  <div 
+                    className="h-full transition-ui duration-1000 relative" 
+                    style={{ width: `${100 - p1DuelPct}%`, backgroundColor: p2TeamColor }} 
+                  />
+                </div>
+              </div>
+            </section>
+          );
+        })()}
 
         {/* 4. TOP CONSTRUCTORS SHOWCASE */}
         <section className="mb-8">

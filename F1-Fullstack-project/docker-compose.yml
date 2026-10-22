@@ -18,12 +18,14 @@ services:
       retries: 5
 
   backend:
-    build: 
+    build:
       context: ./Backend
       dockerfile: Dockerfile
     container_name: f1-backend
-    ports:
-      - "8000:8000"
+    # Port 8000 hanya dipakai internal oleh Docker network.
+    # Akses publik lewat nginx (frontend container) di port 80.
+    expose:
+      - "8000"
     env_file:
       - ./Backend/.env
     environment:
@@ -40,11 +42,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Menghubungkan frontend build argument agar fetching data mengarah ke exposed localhost backend
-        - VITE_API_URL=http://localhost:8000
+        # Frontend fetches /api/ + /ws/ secara relative; nginx akan proxy ke backend.
+        - VITE_API_URL=http://localhost:5173
     container_name: f1-frontend
     ports:
-      - "5173:80" # Nginx jalan di port 80, di-expose ke 5173 di host mesin lo
+      - "5173:80"
     depends_on:
       - backend
     restart: unless-stopped

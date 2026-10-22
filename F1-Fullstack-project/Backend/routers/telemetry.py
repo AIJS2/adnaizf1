@@ -4,7 +4,10 @@ import os
 from fastapi import APIRouter, Request
 
 from config.cache import get_advanced_cache, set_advanced_cache
-from services.telemetry_service import process_telemetry_compare, get_telemetry_drivers_list
+from services.telemetry_service import (
+    process_telemetry_compare,
+    get_telemetry_drivers_list,
+)
 from config.limiter import limiter
 
 router = APIRouter()
@@ -14,7 +17,13 @@ MAX_TELEMETRY_DRIVERS = 10
 
 @router.get("/api/telemetry/{year}/{round_number}")
 @limiter.limit("100/minute")
-async def get_telemetry_compare(request: Request, year: int, round_number: int, drivers: str = "VER,NOR", lap: int = None):
+async def get_telemetry_compare(
+    request: Request,
+    year: int,
+    round_number: int,
+    drivers: str = "VER,NOR",
+    lap: int = None,
+):
     driver_list = [d.strip().upper() for d in drivers.split(",") if d.strip()]
     driver_list = driver_list[:MAX_TELEMETRY_DRIVERS]
 
@@ -32,7 +41,8 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
         }
 
     CACHE_FILE = os.path.join(
-        "cache", f"telemetry_v2_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json"
+        "cache",
+        f"telemetry_v2_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json",
     )
     cached_data = get_advanced_cache(CACHE_FILE, hours=24)  # Telemetry cached longer
     if cached_data:
@@ -41,11 +51,7 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
 
     try:
         result = await asyncio.to_thread(
-            process_telemetry_compare,
-            year,
-            round_number,
-            driver_list,
-            lap
+            process_telemetry_compare, year, round_number, driver_list, lap
         )
         set_advanced_cache(CACHE_FILE, result)
         return result
@@ -57,7 +63,8 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
             "telemetry": [],
             "unavailable_drivers": driver_list,
             "unavailable_reasons": {
-                d: "Telemetry could not be processed for this session." for d in driver_list
+                d: "Telemetry could not be processed for this session."
+                for d in driver_list
             },
         }
 
@@ -66,11 +73,7 @@ async def get_telemetry_compare(request: Request, year: int, round_number: int, 
 @limiter.limit("200/minute")
 async def get_telemetry_drivers(request: Request, year: int, round_number: int):
     try:
-        return await asyncio.to_thread(
-            get_telemetry_drivers_list,
-            year,
-            round_number
-        )
+        return await asyncio.to_thread(get_telemetry_drivers_list, year, round_number)
     except Exception as e:
         logging.error(f"Error getting telemetry drivers: {e}", exc_info=True)
         return []

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { teamColors } from '../data/teamData';
+import { getDriverColor, getTeamColor } from '../data/teamData';
 import { DriverProfile, SessionResultEntry, TeamProfile } from '../types/f1';
 import { TrendingUp, Users, Factory } from 'lucide-react';
 import { safeMax, toNumber } from '../utils/data';
@@ -52,7 +52,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
         return {
           key: driver,
           name: dObj?.abbreviation || driver,
-          color: teamColors[dObj?.team || ''] || '#ffffff'
+          color: dObj ? getDriverColor(dObj.abbreviation || dObj.name, dObj.team) : '#ffffff'
         };
       });
 
@@ -79,7 +79,7 @@ const ChampionshipWorm: React.FC<ChampionshipWormProps> = ({ sessionResults = []
       const lines: ChampionshipLine[] = allTeams.map(team => ({
         key: team,
         name: team,
-        color: teamColors[team] || '#ffffff'
+        color: getTeamColor(team)
       }));
 
       const maxPts = safeMax(allTeams.map(t => toNumber(data[data.length - 1]?.[t])), 100);

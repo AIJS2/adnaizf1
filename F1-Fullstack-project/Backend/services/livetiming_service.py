@@ -2,6 +2,7 @@
 Service layer that parses raw F1 SignalR messages into the structured
 format expected by the LiveTimingPage frontend component.
 """
+
 from __future__ import annotations
 
 import logging
@@ -13,21 +14,36 @@ logger = logging.getLogger(__name__)
 
 # 2026 grid – kept in sync with the frontend teamColors map
 TEAM_LOOKUP: dict[str, str] = {
-    "1": "Red Bull Racing", "61": "Red Bull Racing",      # VER, HAD
-    "4": "McLaren", "81": "McLaren",                       # NOR, PIA
-    "16": "Ferrari", "44": "Ferrari",                      # LEC, HAM
-    "63": "Mercedes", "12": "Mercedes",                    # RUS, ANT
-    "14": "Aston Martin", "18": "Aston Martin",            # ALO, STR
-    "31": "Haas F1 Team", "87": "Haas F1 Team",            # OCO, BEA
-    "55": "Williams", "23": "Williams",                    # SAI, ALB
-    "10": "Alpine", "27": "Alpine",                        # GAS, COL (placeholder)
-    "20": "Audi", "5": "Audi",                             # HUL, BOR (placeholder)
-    "22": "Racing Bulls", "30": "Racing Bulls",            # TSU, LAW
-    "77": "Cadillac", "11": "Cadillac",                    # BOT, PER
+    "1": "Red Bull Racing",
+    "61": "Red Bull Racing",  # VER, HAD
+    "4": "McLaren",
+    "81": "McLaren",  # NOR, PIA
+    "16": "Ferrari",
+    "44": "Ferrari",  # LEC, HAM
+    "63": "Mercedes",
+    "12": "Mercedes",  # RUS, ANT
+    "14": "Aston Martin",
+    "18": "Aston Martin",  # ALO, STR
+    "31": "Haas F1 Team",
+    "87": "Haas F1 Team",  # OCO, BEA
+    "55": "Williams",
+    "23": "Williams",  # SAI, ALB
+    "10": "Alpine",
+    "27": "Alpine",  # GAS, COL (placeholder)
+    "20": "Audi",
+    "5": "Audi",  # HUL, BOR (placeholder)
+    "22": "Racing Bulls",
+    "30": "Racing Bulls",  # TSU, LAW
+    "77": "Cadillac",
+    "11": "Cadillac",  # BOT, PER
 }
 
 TYRE_COMPOUND_MAP: dict[int, str] = {
-    1: "S", 2: "M", 3: "H", 4: "I", 5: "W",
+    1: "S",
+    2: "M",
+    3: "H",
+    4: "I",
+    5: "W",
     # Also accept string keys from some feeds
 }
 
@@ -53,8 +69,8 @@ class LiveTimingState:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self.driver_list: dict[str, dict] = {}     # keyed by racing number str
-        self.timing_data: dict[str, dict] = {}      # keyed by racing number str
+        self.driver_list: dict[str, dict] = {}  # keyed by racing number str
+        self.timing_data: dict[str, dict] = {}  # keyed by racing number str
         self.timing_stats: dict[str, dict] = {}
         self.timing_app_data: dict[str, dict] = {}
         self.weather_data: dict[str, Any] = {}
@@ -151,8 +167,12 @@ class LiveTimingState:
             status_val = payload.get("Status", "1")
             msg = payload.get("Message", "")
             status_map = {
-                "1": "GREEN", "2": "YELLOW", "4": "SC",
-                "5": "RED", "6": "VSC", "7": "VSC ENDING",
+                "1": "GREEN",
+                "2": "YELLOW",
+                "4": "SC",
+                "5": "RED",
+                "6": "VSC",
+                "7": "VSC ENDING",
             }
             self.track_status = status_map.get(str(status_val), msg or "GREEN")
 
@@ -174,7 +194,9 @@ class LiveTimingState:
             if isinstance(msgs, dict):
                 new_entries: list[tuple[str, dict]] = []
                 for _, m in msgs.items():
-                    utc = m.get("Utc") or datetime.now(timezone.utc).strftime("%H:%M:%S")
+                    utc = m.get("Utc") or datetime.now(timezone.utc).strftime(
+                        "%H:%M:%S"
+                    )
                     text = m.get("Message", "")
                     entry = {
                         "time": utc,
@@ -248,14 +270,19 @@ class LiveTimingState:
                 pits = 0
                 stints_list = []
                 if isinstance(stints_raw, dict):
-                    sorted_stints = sorted(stints_raw.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0)
+                    sorted_stints = sorted(
+                        stints_raw.items(),
+                        key=lambda x: int(x[0]) if x[0].isdigit() else 0,
+                    )
                     pits = max(0, len(sorted_stints) - 1)
                     for _, stint in sorted_stints:
                         comp_raw = stint.get("Compound")
                         current_compound = parse_compound(comp_raw)
                         total_laps = stint.get("TotalLaps", 0)
                         tyre_age = total_laps
-                        stints_list.append({"tyre": current_compound, "laps": total_laps})
+                        stints_list.append(
+                            {"tyre": current_compound, "laps": total_laps}
+                        )
 
                 # Position
                 position = td.get("Position", td.get("Line", 0))
@@ -268,36 +295,56 @@ class LiveTimingState:
                 # Gap & Interval
                 gap_to_leader = td.get("GapToLeader", "")
                 interval = td.get("IntervalToPositionAhead", {})
-                interval_val = interval.get("Value", "") if isinstance(interval, dict) else str(interval)
+                interval_val = (
+                    interval.get("Value", "")
+                    if isinstance(interval, dict)
+                    else str(interval)
+                )
 
                 # Last lap time
                 last_lap = td.get("LastLapTime", {})
-                last_lap_value = last_lap.get("Value", "") if isinstance(last_lap, dict) else str(last_lap)
+                last_lap_value = (
+                    last_lap.get("Value", "")
+                    if isinstance(last_lap, dict)
+                    else str(last_lap)
+                )
 
-                lines.append({
-                    "driver": abbr,
-                    "team": team,
-                    "position": int(position) if str(position).isdigit() else 99,
-                    "gap": gap_to_leader if gap_to_leader else "LEADER",
-                    "interval": interval_val if interval_val else "-",
-                    "lastLap": last_lap_value or "-",
-                    "lap_time_num": 0,
-                    "bestLapNum": 0,
-                    "sector1": s0.get("Value", "-") if isinstance(s0, dict) else "-",
-                    "sector2": s1.get("Value", "-") if isinstance(s1, dict) else "-",
-                    "sector3": s2.get("Value", "-") if isinstance(s2, dict) else "-",
-                    "s1_num": 0, "s2_num": 0, "s3_num": 0,
-                    "s1_color": self._segment_color(s0),
-                    "s2_color": self._segment_color(s1),
-                    "s3_color": self._segment_color(s2),
-                    "lap_color": self._segment_color(last_lap if isinstance(last_lap, dict) else {}),
-                    "tyre": current_compound,
-                    "tyre_age": tyre_age,
-                    "pits": pits,
-                    "status": status,
-                    "progress": 0,
-                    "stints": stints_list,
-                })
+                lines.append(
+                    {
+                        "driver": abbr,
+                        "team": team,
+                        "position": int(position) if str(position).isdigit() else 99,
+                        "gap": gap_to_leader if gap_to_leader else "LEADER",
+                        "interval": interval_val if interval_val else "-",
+                        "lastLap": last_lap_value or "-",
+                        "lap_time_num": 0,
+                        "bestLapNum": 0,
+                        "sector1": (
+                            s0.get("Value", "-") if isinstance(s0, dict) else "-"
+                        ),
+                        "sector2": (
+                            s1.get("Value", "-") if isinstance(s1, dict) else "-"
+                        ),
+                        "sector3": (
+                            s2.get("Value", "-") if isinstance(s2, dict) else "-"
+                        ),
+                        "s1_num": 0,
+                        "s2_num": 0,
+                        "s3_num": 0,
+                        "s1_color": self._segment_color(s0),
+                        "s2_color": self._segment_color(s1),
+                        "s3_color": self._segment_color(s2),
+                        "lap_color": self._segment_color(
+                            last_lap if isinstance(last_lap, dict) else {}
+                        ),
+                        "tyre": current_compound,
+                        "tyre_age": tyre_age,
+                        "pits": pits,
+                        "status": status,
+                        "progress": 0,
+                        "stints": stints_list,
+                    }
+                )
 
             # Sort by position
             lines.sort(key=lambda x: x["position"])

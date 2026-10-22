@@ -39,23 +39,31 @@ def compute_fastf1_all_races(year: int):
     logging.info(f"[Races] Computing all races for {year}...")
 
     if not is_valid_year(year):
-        print(f"  -> Tahun {year} di luar rentang musim F1. Mengembalikan array kosong.")
+        print(
+            f"  -> Tahun {year} di luar rentang musim F1. Mengembalikan array kosong."
+        )
         return []
 
     today = pd.to_datetime("today").normalize()
     schedule = load_event_schedule(year, include_testing=False)
     if schedule is None or schedule.empty:
-        print(f"  -> Tidak ada jadwal resmi ditemukan untuk {year}. Mengembalikan array kosong.")
+        print(
+            f"  -> Tidak ada jadwal resmi ditemukan untuk {year}. Mengembalikan array kosong."
+        )
         return []
 
     try:
-        official_races = schedule[schedule["EventName"].str.contains("Grand Prix", na=False)]
+        official_races = schedule[
+            schedule["EventName"].str.contains("Grand Prix", na=False)
+        ]
     except Exception as e:  # noqa: BLE001
         logging.warning(f"Could not filter schedule for {year}: {e}")
         return []
 
     if official_races.empty:
-        print(f"  -> Tidak ada jadwal resmi ditemukan untuk {year}. Mengembalikan array kosong.")
+        print(
+            f"  -> Tidak ada jadwal resmi ditemukan untuk {year}. Mengembalikan array kosong."
+        )
         return []
 
     all_races_data = []
@@ -88,11 +96,15 @@ def compute_fastf1_all_races(year: int):
         }
 
         if status == "Finished":
-            session = load_session_safe(year, race_info["round"], "R", **LIGHT_LOAD_KWARGS)
+            session = load_session_safe(
+                year, race_info["round"], "R", **LIGHT_LOAD_KWARGS
+            )
             if session is not None and has_rows(session, "results"):
                 try:
                     winner_data = safe_getattr(session, "results").iloc[0]
-                    race_info["winner"] = f"{winner_data['FirstName']} {winner_data['LastName']}"
+                    race_info["winner"] = (
+                        f"{winner_data['FirstName']} {winner_data['LastName']}"
+                    )
                     race_info["winner_team"] = winner_data["TeamName"]
                 except Exception:  # noqa: BLE001
                     race_info["winner"] = "Data not available"

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, ChevronRight, Crown } from 'lucide-react';
-import { teamLogos, teamColors } from '../../data/teamData';
+import { teamLogos, getDriverColor } from '../../data/teamData';
 
 export interface DriverStanding {
   id?: string;
@@ -31,7 +31,7 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
     <div className="space-y-1.5 grow relative z-10">
       {drivers.map((driver, index) => {
         const logo = teamLogos[driver.team];
-        const teamColor = teamColors[driver.team] || '#EF4444';
+        const teamColor = getDriverColor(driver.name, driver.team);
         const driverId = driver.id || driver.name.toLowerCase().replace(/\s+/g, '_');
         const isLeader = index === 0;
 
@@ -57,7 +57,13 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
                 {index + 1}
               </span>
               <span className="w-1.5 h-4 rounded-full shrink-0" style={{ backgroundColor: teamColor, boxShadow: `0 0 8px ${teamColor}80` }} />
-              {logo ? <img src={logo} alt={driver.team} className="h-3.5 w-auto object-contain shrink-0 opacity-90 group-hover:opacity-100" /> : <div className="w-3.5" />}
+              {logo ? (
+                <img
+                  src={logo}
+                  alt={driver.team}
+                  className={`h-3.5 w-auto object-contain shrink-0 opacity-90 group-hover:opacity-100 ${/audi/i.test(driver.team || '') ? 'brightness-0 invert' : ''}`}
+                />
+              ) : <div className="w-3.5" />}
               <span className="font-bold text-white group-hover:text-red-400 uppercase tracking-tight transition-colors truncate">
                 {driver.name}
               </span>

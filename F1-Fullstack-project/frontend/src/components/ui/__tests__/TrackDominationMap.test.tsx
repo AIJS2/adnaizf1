@@ -49,4 +49,48 @@ describe('TrackDominationMap positional data guards', () => {
 
     expect(screen.getByText(/published after a session finishes/i)).toBeInTheDocument();
   });
+
+  it('projects onto canonical circuit geometry for Round 2 (Shanghai)', () => {
+    const telemetry = [
+      point(0, 0, 0),
+      point(1000, 0, 0),
+      point(2000, 0, 0),
+      point(3000, 0, 0),
+      point(5400, 0, 0),
+    ];
+    const { container } = render(
+      <TrackDominationMap
+        telemetry={telemetry}
+        drivers={['BOR']}
+        driver_info={driverInfo}
+        activeDistance={null}
+        circuitInfo={{ round: 2 }}
+      />
+    );
+
+    // Domination polylines and background outline are rendered
+    expect(container.querySelectorAll('polyline').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/published after a session finishes/i)).not.toBeInTheDocument();
+  });
+
+  it('projects onto canonical circuit geometry for Round 11 (Hungaroring)', () => {
+    const telemetry = [
+      point(0, 0, 0),
+      point(1000, 0, 0),
+      point(2000, 0, 0),
+      point(4381, 0, 0),
+    ];
+    const { container } = render(
+      <TrackDominationMap
+        telemetry={telemetry}
+        drivers={['BOR']}
+        driver_info={driverInfo}
+        activeDistance={null}
+        circuitInfo={{ round: 11 }}
+      />
+    );
+
+    expect(container.querySelectorAll('polyline').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/published after a session finishes/i)).not.toBeInTheDocument();
+  });
 });

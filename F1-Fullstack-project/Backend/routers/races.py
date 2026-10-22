@@ -8,8 +8,10 @@ from config.limiter import limiter
 
 router = APIRouter()
 
+
 def get_dashboard_cache_filename(year: int):
     return f"dashboard_cache_{year}.json"
+
 
 # =======================================================================
 # --- Endpoint All Races (DENGAN PERBAIKAN JADWAL KOSONG) ---
@@ -22,11 +24,11 @@ async def get_all_races_for_year(request: Request, year: int):
     if cached_data:
         logging.info(f"[Races] Serving data from cache for {year}...")
         return cached_data
-        
+
     all_races_data = await asyncio.to_thread(compute_fastf1_all_races, year)
     if isinstance(all_races_data, dict) and "error" in all_races_data:
         return all_races_data
-        
+
     set_advanced_cache(CACHE_FILE, all_races_data)
     logging.info(f"[Races] Computation complete for {year}.")
     return all_races_data

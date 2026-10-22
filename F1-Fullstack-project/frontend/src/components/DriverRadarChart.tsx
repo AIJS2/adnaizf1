@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { Radar as RadarIcon } from 'lucide-react';
-import { teamColors } from '../data/teamData';
+import { getDriverColor } from '../data/teamData';
 import type { NumericString } from '../types/f1';
 import EmptyState from './ui/EmptyState';
 import { toNumber } from '../utils/data';
@@ -117,8 +117,8 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2,
     );
   }
 
-  const color1 = customColor1 || teamColors[profile1.team] || '#EF4444';
-  const color2 = customColor2 || teamColors[profile2.team] || '#3B82F6';
+  const color1 = customColor1 || getDriverColor(profile1.name, profile1.team);
+  const color2 = customColor2 || getDriverColor(profile2.name, profile2.team, color1 === getDriverColor(profile2.name, profile2.team));
 
   return (
     <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl relative overflow-hidden group">

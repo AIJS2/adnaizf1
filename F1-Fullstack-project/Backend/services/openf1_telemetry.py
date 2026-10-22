@@ -33,10 +33,14 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+import numpy as np
+
 import pandas as pd
 
 from services import openf1_service
 from services.fastf1_safe import load_event_schedule
+from services.spline_smooth import apply_smoothed_position
+from services.canonical_circuits import interpolate_canonical_coords
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +105,8 @@ def _format_lap_time(seconds: float) -> str:
 def _pick_lap(driver_laps: list[dict[str, Any]], lap: Optional[int]):
     """The requested lap, or the fastest clean lap when none was requested."""
     timed = [
-        row for row in driver_laps
+        row
+        for row in driver_laps
         if isinstance(row.get("lap_duration"), (int, float))
         and row.get("lap_duration")
         and row.get("date_start")
@@ -145,7 +150,8 @@ def _compound_for(
 
 def _frame_from_rows(
     car_rows: list[dict[str, Any]],
-    location_rows: Optional[list[dict[str, Any]]],
+    location_rows: list[dict[str, Any]],
+    round_number: Optional[int] = None,
 ) -> Optional[pd.DataFrame]:
     """Turn OpenF1 samples into the FastF1-shaped car-channel frame."""
     car = pd.DataFrame(car_rows or [])
@@ -199,9 +205,24 @@ def _frame_from_rows(
     elapsed = frame["Time"].dt.total_seconds()
     step = elapsed.diff().fillna(0.0).clip(lower=0.0, upper=2.0)
     previous_speed = frame["Speed"].shift(1).fillna(frame["Speed"])
-    frame["Distance"] = (
-        (frame["Speed"] + previous_speed) / 2.0 / 3.6 * step
-    ).cumsum()
+    frame["Distance"] = ((frame["Speed"] + previous_speed) / 2.0 / 3.6 * step).cumsum()
+
+    # The merge_asof nearest-step leaves X/Y as repeated values (not NaN),
+    # so a plain .interpolate() call has nothing to fill. Use canonical circuit
+    # geometry (or a closed parametric B-spline) to produce a smooth circuit outline.
+    if {"X", "Y"}.issubset(frame.columns) and "Distance" in frame.columns:
+        if round_number:
+            dist = frame["Distance"].values.astype(float, copy=False)
+            d_min = np.nanmin(dist)
+            d_max = np.nanmax(dist)
+            if d_max > d_min:
+                norm_d = (dist - d_min) / (d_max - d_min)
+                coords = interpolate_canonical_coords(round_number, norm_d)
+                if coords is not None:
+                    frame["X"] = coords[0]
+                    frame["Y"] = coords[1]
+                    return frame
+        frame = apply_smoothed_position(frame)
 
     return frame
 
@@ -223,7 +244,10 @@ def collect(
     """
     _throttle()
     session_key = openf1_service.session_key_for(
-        year, round_number, "R", circuit=_circuit_for_round(year, round_number),
+        year,
+        round_number,
+        "R",
+        circuit=_circuit_for_round(year, round_number),
     )
     if session_key is None:
         logger.info("OpenF1 has no race session for %s round %s", year, round_number)
@@ -280,7 +304,10 @@ def collect(
 
         _throttle()
         car_rows = openf1_service.get_car_data(
-            session_key, number, _iso(start), _iso(end),
+            session_key,
+            number,
+            _iso(start),
+            _iso(end),
         )
         if not car_rows:
             missing[drv] = "OpenF1 has no car telemetry for this driver's lap."
@@ -292,11 +319,17 @@ def collect(
         location_rows = []
         if not frames:
             _throttle()
-            location_rows = openf1_service.get_location(
-                session_key, number, _iso(start), _iso(end),
-            ) or []
+            location_rows = (
+                openf1_service.get_location(
+                    session_key,
+                    number,
+                    _iso(start),
+                    _iso(end),
+                )
+                or []
+            )
 
-        frame = _frame_from_rows(car_rows, location_rows)
+        frame = _frame_from_rows(car_rows, location_rows, round_number=round_number)
         if frame is None or frame.empty or len(frame) < 5:
             missing[drv] = "OpenF1 has no car telemetry for this driver's lap."
             continue
@@ -315,7 +348,9 @@ def collect(
                     "team": entry.get("team_name") or "",
                     "lap_time": _format_lap_time(float(target["lap_duration"])),
                     "compound": _compound_for(
-                        stints, number, target.get("lap_number"),
+                        stints,
+                        number,
+                        target.get("lap_number"),
                     ),
                     "max_speed": round(float(frame["Speed"].max()), 1),
                     "min_speed": min_speed,
@@ -348,7 +383,10 @@ def driver_options(year: int, round_number: int) -> list[dict[str, Any]]:
     """OpenF1's entry list, used when FastF1 has no results frame at all."""
     _throttle()
     session_key = openf1_service.session_key_for(
-        year, round_number, "R", circuit=_circuit_for_round(year, round_number),
+        year,
+        round_number,
+        "R",
+        circuit=_circuit_for_round(year, round_number),
     )
     if session_key is None:
         return []

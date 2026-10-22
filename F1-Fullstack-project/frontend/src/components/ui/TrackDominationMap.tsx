@@ -2,13 +2,15 @@ import React from 'react';
 import { Compass } from 'lucide-react';
 import EmptyState, { EMPTY_TABLE_MESSAGES } from './EmptyState';
 import { TelemetryDataPoint, TeamDriverInfo } from '../../types/f1';
-import { teamColors } from '../../data/teamData';
+import { teamColors, DRIVER_TEAM_COLORS_2026, getDriverColor } from '../../data/teamData';
+import { getCircuitGeometry, sampleCircuitPosition, CircuitLookup } from '../../data/circuitPaths';
 
-interface TrackDominationMapProps {
+export interface TrackDominationMapProps {
   telemetry: TelemetryDataPoint[];
   drivers: string[];
   driver_info: Record<string, TeamDriverInfo>;
   activeDistance: number | null;
+  circuitInfo?: CircuitLookup | null;
 }
 
 /** Generate visually distinct colors for teammates using HSL color space rotation */
@@ -94,20 +96,57 @@ const hslToHex = (h: number, s: number, l: number): string => {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
-const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, drivers, driver_info, activeDistance }) => {
+const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
+  telemetry,
+  drivers,
+  driver_info,
+  activeDistance,
+  circuitInfo,
+}) => {
   const [hoveredDriver, setHoveredDriver] = React.useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = React.useState<{ x: number; y: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
-  const xs = telemetry.map(d => d.x).filter((x): x is number => x !== undefined && !isNaN(x));
-  const ys = telemetry.map(d => d.y).filter((y): y is number => y !== undefined && !isNaN(y));
+  const circuitGeom = React.useMemo(() => {
+    return getCircuitGeometry(circuitInfo);
+  }, [circuitInfo]);
 
-  // Degenerate coordinates (all points identical — e.g. an all-zero payload
-  // from a data source without position channels) would render as a single
-  // dot, which reads as "broken map". Treat that as missing position data.
+  // Project or sample telemetry points onto canonical circuit geometry
+  const mappedTelemetry = React.useMemo(() => {
+    if (!telemetry || telemetry.length === 0) return [];
+    if (!circuitGeom) return telemetry;
+
+    const maxDist = Math.max(...telemetry.map(d => d.distance || 0), 1);
+    return telemetry.map(d => {
+      const dist = d.distance ?? 0;
+      const normD = Math.max(0, Math.min(1, dist / maxDist));
+      const pt = sampleCircuitPosition(circuitGeom, normD);
+      return {
+        ...d,
+        x: pt.x,
+        y: pt.y,
+      };
+    });
+  }, [telemetry, circuitGeom]);
+
+  const refXs = React.useMemo(() => {
+    if (circuitGeom && circuitGeom.points.length > 0) {
+      return circuitGeom.points.map(p => p.x);
+    }
+    return mappedTelemetry.map(d => d.x).filter((x): x is number => x !== undefined && !isNaN(x));
+  }, [circuitGeom, mappedTelemetry]);
+
+  const refYs = React.useMemo(() => {
+    if (circuitGeom && circuitGeom.points.length > 0) {
+      return circuitGeom.points.map(p => p.y);
+    }
+    return mappedTelemetry.map(d => d.y).filter((y): y is number => y !== undefined && !isNaN(y));
+  }, [circuitGeom, mappedTelemetry]);
+
+  // Degenerate coordinates check
   const hasSpread =
-    xs.length > 1 &&
-    (Math.max(...xs) - Math.min(...xs) > 1 || Math.max(...ys) - Math.min(...ys) > 1);
+    refXs.length > 1 &&
+    (Math.max(...refXs) - Math.min(...refXs) > 1 || Math.max(...refYs) - Math.min(...refYs) > 1);
 
   // No positional telemetry: render an explicit empty state rather than
   // returning null, which made the whole section disappear with no
@@ -128,17 +167,24 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
     );
   }
 
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  
-  const padding = 800;
-  const viewBox = `${minX - padding} ${minY - padding} ${maxX - minX + padding*2} ${maxY - minY + padding*2}`;
+  const minX = Math.min(...refXs);
+  const maxX = Math.max(...refXs);
+  const minY = Math.min(...refYs);
+  const maxY = Math.max(...refYs);
+
+  const trackWidth  = maxX - minX;
+  const trackHeight = maxY - minY;
+  const maxDim      = Math.max(trackWidth, trackHeight, 1);
+  const padding     = maxDim * 0.08;
+  const viewBox     = `${minX - padding} ${minY - padding} ${trackWidth + padding * 2} ${trackHeight + padding * 2}`;
+
+  const baseStrokeWidth = Math.max(12, maxDim * 0.015);
+  const glowStrokeWidth = baseStrokeWidth * 1.15;
+  const flipY = (y: number) => maxY + minY - y;
 
   let activePoint: TelemetryDataPoint | null = null;
   if (activeDistance !== null) {
-    activePoint = telemetry.find(d => d.distance === activeDistance) || telemetry.find(d => d.distance >= activeDistance) || null;
+    activePoint = mappedTelemetry.find(d => d.distance === activeDistance) || mappedTelemetry.find(d => d.distance >= activeDistance) || null;
   }
 
   const driverStyles: Record<string, { color: string, strokeDasharray: string | undefined }> = {};
@@ -147,7 +193,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
 
   // First pass: group drivers by team
   drivers.forEach(drv => {
-    const team = driver_info[drv]?.team;
+    const team = driver_info[drv]?.team || '';
     if (!teamDrivers[team]) {
       teamDrivers[team] = [];
     }
@@ -156,30 +202,22 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
 
   // Second pass: assign colors with smart differentiation
   drivers.forEach(drv => {
-    const team = driver_info[drv]?.team;
+    const team = driver_info[drv]?.team || '';
     if (!teamCounts[team]) teamCounts[team] = 0;
 
     const index = teamCounts[team];
     const teamSize = teamDrivers[team]?.length || 1;
     teamCounts[team]++;
 
-    // Get base team color
-    const baseColor = teamColors[team] || '#ffffff';
-
-    let color: string;
+    const drvConfig = DRIVER_TEAM_COLORS_2026[drv];
+    let color = getDriverColor(drv, team);
     let strokeDasharray: string | undefined = undefined;
 
-    if (teamSize === 1) {
-      // Single driver from this team - use base color
-      color = baseColor;
-    } else {
-      // Multiple drivers from same team - generate distinct colors
-      const teammateColors = generateTeammateColors(baseColor, teamSize);
-      color = teammateColors[index] || baseColor;
-
-      // Also add dash pattern for extra differentiation
-      if (index === 1) strokeDasharray = "8 6"; // Medium dash
-      else if (index === 2) strokeDasharray = "4 4"; // Short dash
+    if (teamSize > 1) {
+      if (drvConfig?.isTeammate2 || index > 0) {
+        color = drvConfig?.secondary ?? generateTeammateColors(color, teamSize)[index] ?? color;
+        strokeDasharray = index === 1 ? "8 6" : "4 4";
+      }
     }
 
     driverStyles[drv] = {
@@ -190,32 +228,47 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
 
   const polylines: { driver: string; points: string[] }[] = [];
   let currentLine: { driver: string; points: string[] } | null = null;
-  
-  telemetry.forEach((d) => {
+  let prevPoint: string | null = null;
+
+  const flushLine = () => {
+    if (currentLine) {
+      if (prevPoint && currentLine.points[currentLine.points.length - 1] !== prevPoint) {
+        currentLine.points.push(prevPoint);
+      }
+      polylines.push(currentLine);
+      currentLine = null;
+    }
+  };
+
+  mappedTelemetry.forEach((d) => {
     if (d.x === undefined || d.y === undefined || isNaN(d.x) || isNaN(d.y)) return;
     const dominant = d.dominant_driver;
-    
     if (!dominant) return;
 
+    const pt = `${d.x},${flipY(d.y).toFixed(2)}`;
+
     if (!currentLine || currentLine.driver !== dominant) {
-      if (currentLine) {
-        currentLine.points.push(`${d.x},${d.y}`);
-        polylines.push(currentLine);
-      }
+      flushLine();
       currentLine = {
         driver: dominant,
-        points: [`${d.x},${d.y}`]
+        points: [prevPoint ?? pt, pt],
       };
     } else {
-      currentLine.points.push(`${d.x},${d.y}`);
+      currentLine.points.push(pt);
     }
+    prevPoint = pt;
   });
-  if (currentLine) polylines.push(currentLine);
+  flushLine();
 
-  const allPoints = telemetry
-    .filter(d => d.x !== undefined && d.y !== undefined && !isNaN(d.x) && !isNaN(d.y))
-    .map(d => `${d.x},${d.y}`)
-    .join(' ');
+  const allPoints = React.useMemo(() => {
+    if (circuitGeom && circuitGeom.points.length > 0) {
+      return circuitGeom.points.map(p => `${p.x},${flipY(p.y).toFixed(2)}`).join(' ');
+    }
+    return mappedTelemetry
+      .filter(d => d.x !== undefined && d.y !== undefined && !isNaN(d.x) && !isNaN(d.y))
+      .map(d => `${d.x},${flipY(d.y as number).toFixed(2)}`)
+      .join(' ');
+  }, [circuitGeom, mappedTelemetry, maxY, minY]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!svgRef.current) return;
@@ -244,12 +297,12 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <svg ref={svgRef} viewBox={viewBox} className="w-full h-full" style={{ transform: 'scale(1, -1)' }}>
+        <svg ref={svgRef} viewBox={viewBox} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
           {/* Background track outline */}
           <polyline
             points={allPoints}
             stroke="#1a1a1a"
-            strokeWidth={120}
+            strokeWidth={glowStrokeWidth}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
@@ -271,7 +324,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
                 <polyline
                   points={line.points.join(' ')}
                   stroke={style.color}
-                  strokeWidth={isHovered ? 120 : 100}
+                  strokeWidth={isHovered ? glowStrokeWidth : baseStrokeWidth * 0.85}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
@@ -283,7 +336,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
                 <polyline
                   points={line.points.join(' ')}
                   stroke={style.color}
-                  strokeWidth={isHovered ? 95 : 85}
+                  strokeWidth={isHovered ? baseStrokeWidth : baseStrokeWidth * 0.75}
                   strokeDasharray={style.strokeDasharray}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -300,18 +353,18 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({ telemetry, driv
             <g>
               <circle
                 cx={activePoint.x}
-                cy={activePoint.y}
-                r={120}
+                cy={flipY(activePoint.y)}
+                r={glowStrokeWidth * 0.6}
                 fill={driverStyles[activePoint.dominant_driver ?? '']?.color || '#ffffff'}
                 opacity={0.3}
               />
               <circle
                 cx={activePoint.x}
-                cy={activePoint.y}
-                r={80}
+                cy={flipY(activePoint.y)}
+                r={baseStrokeWidth * 0.5}
                 fill="#ffffff"
                 stroke="#000000"
-                strokeWidth={20}
+                strokeWidth={Math.max(2, baseStrokeWidth * 0.12)}
               />
             </g>
           )}

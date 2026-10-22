@@ -38,7 +38,8 @@ def get_driver_standings_from_db(year: int = 2026) -> List[Dict[str, Any]]:
 
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 s.position,
                 s.points,
@@ -60,28 +61,32 @@ def get_driver_standings_from_db(year: int = 2026) -> List[Dict[str, Any]]:
             LEFT JOIN teams t ON s.team_id = t.id
             WHERE s.year = ? AND s.type = 'DRIVER'
             ORDER BY s.position ASC
-        """, (year,))
+        """,
+            (year,),
+        )
         rows = cursor.fetchall()
 
         results = []
         for r in rows:
-            results.append({
-                "id": r["id"],
-                "name": r["name"],
-                "team": r["team_name"] or "",
-                "team_id": r["team_id"] or "",
-                "position": r["position"],
-                "points": float(r["points"]),
-                "wins": int(r["wins"]),
-                "podiums": int(r["podiums"]),
-                "dnfs": int(r["dnfs"]),
-                "dnss": int(r["dnss"]),
-                "abbreviation": r["abbreviation"] or "",
-                "driver_number": r["driver_number"],
-                "nationality": r["nationality"] or "",
-                "points_last_race": float(r["points_last_race"] or 0),
-                "color": r["team_color"] or "#EF4444",
-            })
+            results.append(
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "team": r["team_name"] or "",
+                    "team_id": r["team_id"] or "",
+                    "position": r["position"],
+                    "points": float(r["points"]),
+                    "wins": int(r["wins"]),
+                    "podiums": int(r["podiums"]),
+                    "dnfs": int(r["dnfs"]),
+                    "dnss": int(r["dnss"]),
+                    "abbreviation": r["abbreviation"] or "",
+                    "driver_number": r["driver_number"],
+                    "nationality": r["nationality"] or "",
+                    "points_last_race": float(r["points_last_race"] or 0),
+                    "color": r["team_color"] or "#EF4444",
+                }
+            )
         return results
     except Exception as e:
         logging.warning(f"Failed to query driver standings from SQLite: {e}")
@@ -97,7 +102,8 @@ def get_constructor_standings_from_db(year: int = 2026) -> List[Dict[str, Any]]:
 
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 s.position,
                 s.points,
@@ -115,25 +121,29 @@ def get_constructor_standings_from_db(year: int = 2026) -> List[Dict[str, Any]]:
             JOIN teams t ON s.team_id = t.id
             WHERE s.year = ? AND s.type = 'CONSTRUCTOR'
             ORDER BY s.position ASC
-        """, (year,))
+        """,
+            (year,),
+        )
         rows = cursor.fetchall()
 
         results = []
         for r in rows:
-            results.append({
-                "id": r["id"],
-                "name": r["name"],
-                "full_name": r["full_name"] or r["name"],
-                "position": r["position"],
-                "points": float(r["points"]),
-                "wins": int(r["wins"]),
-                "podiums": int(r["podiums"]),
-                "dnfs": int(r["dnfs"]),
-                "dnss": int(r["dnss"]),
-                "points_last_race": float(r["points_last_race"] or 0),
-                "color": r["color"] or "#EF4444",
-                "country": r["country"] or "",
-            })
+            results.append(
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "full_name": r["full_name"] or r["name"],
+                    "position": r["position"],
+                    "points": float(r["points"]),
+                    "wins": int(r["wins"]),
+                    "podiums": int(r["podiums"]),
+                    "dnfs": int(r["dnfs"]),
+                    "dnss": int(r["dnss"]),
+                    "points_last_race": float(r["points_last_race"] or 0),
+                    "color": r["color"] or "#EF4444",
+                    "country": r["country"] or "",
+                }
+            )
         return results
     except Exception as e:
         logging.warning(f"Failed to query constructor standings from SQLite: {e}")

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { teamColors } from '../../data/teamData';
+import { teamColors, DRIVER_TEAM_COLORS_2026 } from '../../data/teamData';
 import { RaceResultEntry, RaceSeriesPoint } from '../../types/f1';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { LineChart as LineChartIcon } from 'lucide-react';
@@ -32,7 +32,7 @@ const LapChartComponent: React.FC<LapChartProps> = ({ lapChart, results }) => {
       driverMeta[abbr] = {
         name: String(r.full_name || abbr),
         team,
-        color: teamColors[team] || '#888888'
+        color: DRIVER_TEAM_COLORS_2026[abbr]?.primary ?? teamColors[team] ?? '#888888'
       };
     });
   }

@@ -9,7 +9,7 @@ import TyreStrategy from '../components/ui/TyreStrategy';
 import EmptyState from '../components/ui/EmptyState';
 import TeamRadioSection from '../components/dashboard/TeamRadioSection';
 import { LiveTimingData, LiveTimingLine } from '../types/f1';
-import { teamColors } from '../data/teamData';
+import { getDriverColor } from '../data/teamData';
 
 const LiveTimingPage: React.FC = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -292,7 +292,7 @@ const LiveTimingPage: React.FC = () => {
                            transition: 'transform 2s linear'
                          }}
                        >
-                         <circle r="4" fill={teamColors[d.team] || '#fff'} className="drop-shadow-lg" />
+                         <circle r="4" fill={getDriverColor(d.driver, d.team)} className="drop-shadow-lg" />
                          <text y="-6" fontSize="7" fill="#fff" textAnchor="middle" className="font-mono font-black" style={{ textShadow: '0px 1px 2px black, 0px 0px 4px rgba(0,0,0,0.8)' }}>
                            {d.driver}
                          </text>
@@ -381,7 +381,7 @@ interface TimingRowProps {
 }
 
 const TimingRow = memo<TimingRowProps>(({ row }) => {
-  const teamColor = teamColors[row.team] || '#fff';
+  const teamColor = getDriverColor(row.driver, row.team);
   const isIntervalClose = Boolean(
     row.interval && !isNaN(parseFloat(row.interval)) && parseFloat(row.interval) < 1.0
   );

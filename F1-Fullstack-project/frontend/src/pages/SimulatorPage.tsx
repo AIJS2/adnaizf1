@@ -2,7 +2,7 @@ import { DriverProfile, Race, TeamProfile } from '../types/f1';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { teamColors, teamLogos } from '../data/teamData';
+import { getTeamColor, getDriverColor, teamLogos } from '../data/teamData';
 import { Calculator, Trophy, ArrowUp, ArrowDown, Minus, RefreshCw, Zap, Flag, FlaskConical, Activity, Crosshair, Users, Timer, CalendarDays, Crown } from 'lucide-react';
 import { fetchAllRaces, fetchChampionship } from '../services/api';
 import type { ChampionshipPayload, RacesPayload } from '../services/api';
@@ -585,7 +585,7 @@ const SimulatorPage = () => {
                       return (
                         <div key={c.id} className="flex items-center gap-3 bg-neutral-950/70 border border-white/5 rounded-md px-3 py-2.5">
                           <span className="w-5 text-center text-xs font-black text-neutral-500">{i + 1}</span>
-                          <span className="w-1 h-6 rounded-full" style={{ backgroundColor: teamColors[c.team] || '#666' }}></span>
+                          <span className="w-1 h-6 rounded-full" style={{ backgroundColor: getDriverColor(c.name, c.team) }}></span>
                           <div className="flex-1 min-w-0">
                             <span className="block text-xs font-black uppercase italic truncate text-white">{c.name}</span>
                             <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest truncate">{c.team}</span>
@@ -595,7 +595,7 @@ const SimulatorPage = () => {
                                 className="h-full rounded-full transition-all duration-500"
                                 style={{
                                   width: `${Math.min(progress, 100)}%`,
-                                  backgroundColor: c.eliminated ? '#525252' : teamColors[c.team] || '#666'
+                                  backgroundColor: c.eliminated ? '#525252' : getDriverColor(c.name, c.team)
                                 }}
                               ></div>
                             </div>
@@ -685,7 +685,7 @@ const SimulatorPage = () => {
                     const original = originalDrivers.find(o => driverKey(o) === driverKey(d));
                     const posChange = (original?.position || 0) - (d.position || 0);
                     const ptsGained = (d.points || 0) - (original?.points || 0);
-                    const teamColor = teamColors[d.team] || '#666';
+                    const teamColor = getDriverColor(d.name, d.team);
                     const teamLogo = teamLogos[d.team];
 
                     return (
@@ -747,7 +747,7 @@ const SimulatorPage = () => {
                     const original = originalConstructors.find(o => o.id === team.id);
                     const posChange = (original?.position || 0) - (team.position || 0);
                     const ptsGained = (team.points || 0) - (original?.points || 0);
-                    const teamColor = teamColors[team.id] || '#666';
+                    const teamColor = getTeamColor(team.name ?? team.id);
                     const logo = teamLogos[team.id];
                     
                     return (

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, AlertCircle, RefreshCw, Volume2, Search, Radio } from 'lucide-react';
 import { API_URL } from '../../config';
-import { teamColors } from '../../data/teamData';
+import { getDriverColor } from '../../data/teamData';
 
 // Custom types
 interface TeamRadioResponse {
@@ -32,26 +32,26 @@ export const driverRadioData: Record<number, DriverRadioInfo> = {
   1: { name: "Lando Norris", team: "McLaren", code: "NOR" },
   3: { name: "Max Verstappen", team: "Red Bull Racing", code: "VER" },
   4: { name: "Lando Norris", team: "McLaren", code: "NOR" },
-  5: { name: "Gabriel Bortoleto", team: "Kick Sauber", code: "BOR" },
+  5: { name: "Gabriel Bortoleto", team: "Audi", code: "BOR" },
   6: { name: "Isack Hadjar", team: "Red Bull Racing", code: "HAD" },
   10: { name: "Pierre Gasly", team: "Alpine", code: "GAS" },
-  11: { name: "Sergio Perez", team: "Red Bull Racing", code: "PER" },
+  11: { name: "Sergio Perez", team: "Cadillac", code: "PER" },
   12: { name: "Kimi Antonelli", team: "Mercedes", code: "ANT" },
   14: { name: "Fernando Alonso", team: "Aston Martin", code: "ALO" },
   16: { name: "Charles Leclerc", team: "Ferrari", code: "LEC" },
   18: { name: "Lance Stroll", team: "Aston Martin", code: "STR" },
-  22: { name: "Yuki Tsunoda", team: "RB", code: "TSU" },
+  22: { name: "Yuki Tsunoda", team: "Racing Bulls", code: "TSU" },
   23: { name: "Alexander Albon", team: "Williams", code: "ALB" },
-  27: { name: "Nico Hulkenberg", team: "Kick Sauber", code: "HUL" },
-  30: { name: "Liam Lawson", team: "RB", code: "LAW" },
+  27: { name: "Nico Hulkenberg", team: "Audi", code: "HUL" },
+  30: { name: "Liam Lawson", team: "Racing Bulls", code: "LAW" },
   31: { name: "Esteban Ocon", team: "Haas F1 Team", code: "OCO" },
   37: { name: "Isack Hadjar", team: "Red Bull Racing", code: "HAD" },
-  41: { name: "Arvid Lindblad", team: "RB", code: "LIN" },
+  41: { name: "Arvid Lindblad", team: "Racing Bulls", code: "LIN" },
   43: { name: "Franco Colapinto", team: "Alpine", code: "COL" },
   44: { name: "Lewis Hamilton", team: "Ferrari", code: "HAM" },
   55: { name: "Carlos Sainz", team: "Williams", code: "SAI" },
   63: { name: "George Russell", team: "Mercedes", code: "RUS" },
-  77: { name: "Valtteri Bottas", team: "Mercedes", code: "BOT" },
+  77: { name: "Valtteri Bottas", team: "Cadillac", code: "BOT" },
   81: { name: "Oscar Piastri", team: "McLaren", code: "PIA" },
   87: { name: "Oliver Bearman", team: "Haas F1 Team", code: "BEA" },
 };
@@ -175,7 +175,7 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
 
   const meta = driverRadioData[driver];
   const driverName = meta?.name || driverNames[driver] || `Car #${driver}`;
-  const teamColor = meta?.team ? teamColors[meta.team] || '#EF4444' : '#EF4444';
+  const teamColor = meta ? getDriverColor(meta.code, meta.team) : '#EF4444';
 
   return (
     <div className="flex items-center gap-4 p-4 bg-neutral-900/90 border border-neutral-800 rounded-md hover:border-neutral-700 transition-ui shadow-md group">

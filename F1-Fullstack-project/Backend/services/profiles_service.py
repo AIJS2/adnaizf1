@@ -15,6 +15,7 @@ def _safe_float(value, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
 
+
 def _safe_int(value, default: int = 0) -> int:
     try:
         if value is None or value == "":
@@ -61,6 +62,7 @@ def _incident_detail(row, driver_name: str = "", abbreviation: str = ""):
         "driver_abbreviation": abbreviation,
     }
 
+
 def process_driver_profile(champ_data: dict, year: int, driver_id: str):
     try:
         drivers = champ_data.get("drivers", [])
@@ -69,7 +71,8 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         # Cari driver berdasarkan ID, Nama, atau Abbr
         driver = next(
             (
-                d for d in drivers
+                d
+                for d in drivers
                 if d.get("id") == clean_id
                 or str(d.get("name", "")).lower() == clean_id.replace("_", " ")
                 or str(d.get("abbreviation", "")).lower() == clean_id
@@ -83,8 +86,10 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         # Cari rekan setim
         teammate = next(
             (
-                d for d in drivers
-                if d.get("team") == driver.get("team") and d.get("name") != driver.get("name")
+                d
+                for d in drivers
+                if d.get("team") == driver.get("team")
+                and d.get("name") != driver.get("name")
             ),
             None,
         )
@@ -94,39 +99,59 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
 
         if not session_results or len(session_results) == 0:
             # No session results available — fall back to standings-only profile (no mock data)
-            return clean_nans({
-                "name": driver_name,
-                "id": driver.get("id", ""),
-                "abbreviation": driver.get("abbreviation", ""),
-                "driver_number": _safe_int(driver.get("driver_number", 0)),
-                "team": driver.get("team", ""),
-                "position": _safe_int(driver.get("position", 0)),
-                "points": _safe_float(driver.get("points", 0)),
-                "wins": _safe_int(driver.get("wins", 0)),
-                "podiums": _safe_int(driver.get("podiums", 0)),
-                "poles": _safe_int(driver.get("poles", 0)),
-                "best_finish": None,
-                "avg_finish": None,
-                "dnfs": 0,
-                "dnss": 0,
-                "race_dnfs": 0,
-                "sprint_dnfs": 0,
-                "race_dnss": 0,
-                "sprint_dnss": 0,
-                "dnf_details": [],
-                "dns_details": [],
-                "progression": [],
-                "teammate": {
-                    "name": teammate.get("name", "") if teammate else "",
-                    "id": teammate.get("id", "") if teammate else "",
-                    "abbreviation": teammate.get("abbreviation", "") if teammate else "",
-                    "driver_number": _safe_int(teammate.get("driver_number", 0)) if teammate else 0,
-                    "points": _safe_float(teammate.get("points", 0)) if teammate else 0,
-                    "position": _safe_int(teammate.get("position", 0)) if teammate else 0,
-                    "race_h2h": {"driver_ahead": 0, "teammate_ahead": 0},
-                    "quali_h2h": {"driver_ahead": 0, "teammate_ahead": 0},
-                } if teammate else None,
-            })
+            return clean_nans(
+                {
+                    "name": driver_name,
+                    "id": driver.get("id", ""),
+                    "abbreviation": driver.get("abbreviation", ""),
+                    "driver_number": _safe_int(driver.get("driver_number", 0)),
+                    "team": driver.get("team", ""),
+                    "position": _safe_int(driver.get("position", 0)),
+                    "points": _safe_float(driver.get("points", 0)),
+                    "wins": _safe_int(driver.get("wins", 0)),
+                    "podiums": _safe_int(driver.get("podiums", 0)),
+                    "poles": _safe_int(driver.get("poles", 0)),
+                    "best_finish": None,
+                    "avg_finish": None,
+                    "dnfs": 0,
+                    "dnss": 0,
+                    "race_dnfs": 0,
+                    "sprint_dnfs": 0,
+                    "race_dnss": 0,
+                    "sprint_dnss": 0,
+                    "dnf_details": [],
+                    "dns_details": [],
+                    "progression": [],
+                    "teammate": (
+                        {
+                            "name": teammate.get("name", "") if teammate else "",
+                            "id": teammate.get("id", "") if teammate else "",
+                            "abbreviation": (
+                                teammate.get("abbreviation", "") if teammate else ""
+                            ),
+                            "driver_number": (
+                                _safe_int(teammate.get("driver_number", 0))
+                                if teammate
+                                else 0
+                            ),
+                            "points": (
+                                _safe_float(teammate.get("points", 0))
+                                if teammate
+                                else 0
+                            ),
+                            "position": (
+                                _safe_int(teammate.get("position", 0))
+                                if teammate
+                                else 0
+                            ),
+                            "race_h2h": {"driver_ahead": 0, "teammate_ahead": 0},
+                            "quali_h2h": {"driver_ahead": 0, "teammate_ahead": 0},
+                        }
+                        if teammate
+                        else None
+                    ),
+                }
+            )
 
         # Index every session row by (FullName, RoundNumber, SessionType) ONCE.
         by_key = {
@@ -139,13 +164,14 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         for s in session_results:
             if s.get("SessionType") == "Sprint" and s.get("FullName") == driver_name:
                 rnd = s.get("RoundNumber")
-                sprint_pts_by_round[rnd] = sprint_pts_by_round.get(rnd, 0.0) + _safe_float(
-                    s.get("Points", 0)
-                )
+                sprint_pts_by_round[rnd] = sprint_pts_by_round.get(
+                    rnd, 0.0
+                ) + _safe_float(s.get("Points", 0))
 
         driver_races = sorted(
             (
-                r for r in session_results
+                r
+                for r in session_results
                 if r.get("FullName") == driver_name and r.get("SessionType") == "R"
             ),
             key=lambda x: x.get("RoundNumber", 0),
@@ -157,7 +183,8 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         # championship table always agree on the totals.
         driver_weekend_sessions = sorted(
             (
-                r for r in session_results
+                r
+                for r in session_results
                 if r.get("FullName") == driver_name
                 and r.get("SessionType") in ("R", "Sprint")
             ),
@@ -187,21 +214,27 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                     sprint_dnss += 1
                 else:
                     race_dnss += 1
-                dns_details.append(_incident_detail(r, driver_name, driver_abbreviation))
+                dns_details.append(
+                    _incident_detail(r, driver_name, driver_abbreviation)
+                )
             elif is_dnf_classified(r.get("ClassifiedPosition"), r.get("Status")):
                 dnfs += 1
                 if is_sprint:
                     sprint_dnfs += 1
                 else:
                     race_dnfs += 1
-                dnf_details.append(_incident_detail(r, driver_name, driver_abbreviation))
+                dnf_details.append(
+                    _incident_detail(r, driver_name, driver_abbreviation)
+                )
 
         def _teammate_position(tm_row):
             if not tm_row:
                 return "—"
             if is_dns_status(tm_row.get("Status")):
                 return "DNS"
-            if is_dnf_classified(tm_row.get("ClassifiedPosition"), tm_row.get("Status")):
+            if is_dnf_classified(
+                tm_row.get("ClassifiedPosition"), tm_row.get("Status")
+            ):
                 return "DNF"
             pos = _safe_int(tm_row.get("Position", 99), 99)
             # A missing position (null / legacy sentinel) must render as "-",
@@ -229,24 +262,34 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
             tm_r = by_key.get((teammate_name, rnd, "R"))  # O(1) lookup
             sprint_r = by_key.get((driver_name, rnd, "Sprint"))  # O(1) lookup
 
-            progression.append({
-                "round": rnd,
-                "race_name": r.get("EventName") or f"Round {rnd}",
-                "location": r.get("Location", ""),
-                # Never expose the legacy 99 sentinel: a missing classification
-                # shows as "-" (or the real DNF/DNS status).
-                "position": "DNS" if is_dns else ("DNF" if is_dnf else (pos if pos < 90 else "-")),
-                "grid_position": _grid_position(r),
-                "status": str(r.get("Status", "")),
-                "points": total_round_pts,
-                "race_points": pts,
-                "sprint_points": sprint_pts,
-                "sprint_position": _session_result_label(sprint_r),
-                "sprint_status": str(sprint_r.get("Status", "")) if sprint_r else None,
-                "cumulative_points": cum_points,
-                "teammate_position": _teammate_position(tm_r),
-                "teammate_points": _safe_float(tm_r.get("Points", 0)) if tm_r else 0.0,
-            })
+            progression.append(
+                {
+                    "round": rnd,
+                    "race_name": r.get("EventName") or f"Round {rnd}",
+                    "location": r.get("Location", ""),
+                    # Never expose the legacy 99 sentinel: a missing classification
+                    # shows as "-" (or the real DNF/DNS status).
+                    "position": (
+                        "DNS"
+                        if is_dns
+                        else ("DNF" if is_dnf else (pos if pos < 90 else "-"))
+                    ),
+                    "grid_position": _grid_position(r),
+                    "status": str(r.get("Status", "")),
+                    "points": total_round_pts,
+                    "race_points": pts,
+                    "sprint_points": sprint_pts,
+                    "sprint_position": _session_result_label(sprint_r),
+                    "sprint_status": (
+                        str(sprint_r.get("Status", "")) if sprint_r else None
+                    ),
+                    "cumulative_points": cum_points,
+                    "teammate_position": _teammate_position(tm_r),
+                    "teammate_points": (
+                        _safe_float(tm_r.get("Points", 0)) if tm_r else 0.0
+                    ),
+                }
+            )
 
         # Head to Head vs Teammate
         race_ahead = 0
@@ -268,7 +311,8 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                     tm_race_ahead += 1
 
             driver_qualis = [
-                q for q in session_results
+                q
+                for q in session_results
                 if q.get("FullName") == driver_name and q.get("SessionType") == "Q"
             ]
             for q in driver_qualis:
@@ -284,7 +328,8 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
                     tm_quali_ahead += 1
 
         poles = sum(
-            1 for q in session_results
+            1
+            for q in session_results
             if q.get("FullName") == driver_name
             and q.get("SessionType") == "Q"
             and _safe_int(q.get("Position", 99), 99) == 1
@@ -292,45 +337,59 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
         best_finish = min(positions_classified) if positions_classified else None
         avg_finish = (
             round(sum(positions_classified) / len(positions_classified), 1)
-            if positions_classified else None
+            if positions_classified
+            else None
         )
 
-        return clean_nans({
-            "name": driver_name,
-            "id": driver.get("id", ""),
-            "abbreviation": driver.get("abbreviation", ""),
-            "driver_number": _safe_int(driver.get("driver_number", 0)),
-            "team": driver.get("team", ""),
-            "position": _safe_int(driver.get("position", 0)),
-            "points": _safe_float(driver.get("points", 0)),
-            "wins": _safe_int(driver.get("wins", 0)),
-            "podiums": _safe_int(driver.get("podiums", 0)),
-            "poles": poles,
-            "best_finish": best_finish,
-            "avg_finish": avg_finish,
-            "dnfs": dnfs,
-            "dnss": dnss,
-            "race_dnfs": race_dnfs,
-            "sprint_dnfs": sprint_dnfs,
-            "race_dnss": race_dnss,
-            "sprint_dnss": sprint_dnss,
-            "dnf_details": dnf_details,
-            "dns_details": dns_details,
-            "progression": progression,
-            "teammate": {
-                "name": teammate_name,
-                "id": teammate.get("id", ""),
-                "abbreviation": teammate.get("abbreviation", ""),
-                "driver_number": _safe_int(teammate.get("driver_number", 0)),
-                "points": _safe_float(teammate.get("points", 0)),
-                "position": _safe_int(teammate.get("position", 0)),
-                "race_h2h": {"driver_ahead": race_ahead, "teammate_ahead": tm_race_ahead},
-                "quali_h2h": {"driver_ahead": quali_ahead, "teammate_ahead": tm_quali_ahead},
-            } if teammate else None,
-        })
+        return clean_nans(
+            {
+                "name": driver_name,
+                "id": driver.get("id", ""),
+                "abbreviation": driver.get("abbreviation", ""),
+                "driver_number": _safe_int(driver.get("driver_number", 0)),
+                "team": driver.get("team", ""),
+                "position": _safe_int(driver.get("position", 0)),
+                "points": _safe_float(driver.get("points", 0)),
+                "wins": _safe_int(driver.get("wins", 0)),
+                "podiums": _safe_int(driver.get("podiums", 0)),
+                "poles": poles,
+                "best_finish": best_finish,
+                "avg_finish": avg_finish,
+                "dnfs": dnfs,
+                "dnss": dnss,
+                "race_dnfs": race_dnfs,
+                "sprint_dnfs": sprint_dnfs,
+                "race_dnss": race_dnss,
+                "sprint_dnss": sprint_dnss,
+                "dnf_details": dnf_details,
+                "dns_details": dns_details,
+                "progression": progression,
+                "teammate": (
+                    {
+                        "name": teammate_name,
+                        "id": teammate.get("id", ""),
+                        "abbreviation": teammate.get("abbreviation", ""),
+                        "driver_number": _safe_int(teammate.get("driver_number", 0)),
+                        "points": _safe_float(teammate.get("points", 0)),
+                        "position": _safe_int(teammate.get("position", 0)),
+                        "race_h2h": {
+                            "driver_ahead": race_ahead,
+                            "teammate_ahead": tm_race_ahead,
+                        },
+                        "quali_h2h": {
+                            "driver_ahead": quali_ahead,
+                            "teammate_ahead": tm_quali_ahead,
+                        },
+                    }
+                    if teammate
+                    else None
+                ),
+            }
+        )
     except Exception as e:
         logging.error(f"Error memuat profil driver: {e}", exc_info=True)
         return {"error": "Driver profile data is currently unavailable."}
+
 
 def process_team_profile(champ_data: dict, year: int, team_id: str):
     try:
@@ -339,7 +398,8 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
 
         team = next(
             (
-                t for t in teams
+                t
+                for t in teams
                 if t.get("id") == clean_id
                 or str(t.get("name", "")).lower() == clean_id.replace("_", " ")
             ),
@@ -358,42 +418,50 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
 
         team_drivers = []
         for d in drivers:
-            share = round((_safe_float(d.get("points", 0)) / total_team_points) * 100, 1)
-            team_drivers.append({
-                "name": d.get("name", ""),
-                "id": d.get("id", ""),
-                "abbreviation": d.get("abbreviation", ""),
-                "driver_number": _safe_int(d.get("driver_number", 0)),
-                "points": _safe_float(d.get("points", 0)),
-                "position": _safe_int(d.get("position", 0)),
-                "points_share": share,
-            })
+            share = round(
+                (_safe_float(d.get("points", 0)) / total_team_points) * 100, 1
+            )
+            team_drivers.append(
+                {
+                    "name": d.get("name", ""),
+                    "id": d.get("id", ""),
+                    "abbreviation": d.get("abbreviation", ""),
+                    "driver_number": _safe_int(d.get("driver_number", 0)),
+                    "points": _safe_float(d.get("points", 0)),
+                    "position": _safe_int(d.get("position", 0)),
+                    "points_share": share,
+                }
+            )
 
         session_results = champ_data.get("session_results", [])
 
         if not session_results or len(session_results) == 0:
-            return clean_nans({
-                "name": team_name,
-                "id": team.get("id", ""),
-                "position": _safe_int(team.get("position", 0)),
-                "points": _safe_float(team.get("points", 0)),
-                "wins": _safe_int(team.get("wins", 0)),
-                "podiums": _safe_int(team.get("podiums", 0)),
-                "dnfs": 0,
-                "dnss": 0,
-                "race_dnfs": 0,
-                "sprint_dnfs": 0,
-                "race_dnss": 0,
-                "sprint_dnss": 0,
-                "dnf_details": [],
-                "dns_details": [],
-                "drivers": team_drivers,
-                "progression": [],
-            })
+            return clean_nans(
+                {
+                    "name": team_name,
+                    "id": team.get("id", ""),
+                    "position": _safe_int(team.get("position", 0)),
+                    "points": _safe_float(team.get("points", 0)),
+                    "wins": _safe_int(team.get("wins", 0)),
+                    "podiums": _safe_int(team.get("podiums", 0)),
+                    "dnfs": 0,
+                    "dnss": 0,
+                    "race_dnfs": 0,
+                    "sprint_dnfs": 0,
+                    "race_dnss": 0,
+                    "sprint_dnss": 0,
+                    "dnf_details": [],
+                    "dns_details": [],
+                    "drivers": team_drivers,
+                    "progression": [],
+                }
+            )
 
         team_races = [
-            r for r in session_results
-            if r.get("TeamName") == team_name and r.get("SessionType") in ("R", "Sprint")
+            r
+            for r in session_results
+            if r.get("TeamName") == team_name
+            and r.get("SessionType") in ("R", "Sprint")
         ]
 
         # DNF/DNS are counted across every points-scoring race session (Grand
@@ -410,7 +478,11 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
 
         for r in sorted(
             team_races,
-            key=lambda x: (x.get("RoundNumber", 0), str(x.get("SessionType", "")), str(x.get("FullName", ""))),
+            key=lambda x: (
+                x.get("RoundNumber", 0),
+                str(x.get("SessionType", "")),
+                str(x.get("FullName", "")),
+            ),
         ):
             is_sprint = r.get("SessionType") == "Sprint"
             row_driver_name = r.get("FullName", "")
@@ -421,14 +493,18 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
                     sprint_dnss += 1
                 else:
                     race_dnss += 1
-                dns_details.append(_incident_detail(r, row_driver_name, row_abbreviation))
+                dns_details.append(
+                    _incident_detail(r, row_driver_name, row_abbreviation)
+                )
             elif is_dnf_classified(r.get("ClassifiedPosition"), r.get("Status")):
                 dnfs += 1
                 if is_sprint:
                     sprint_dnfs += 1
                 else:
                     race_dnfs += 1
-                dnf_details.append(_incident_detail(r, row_driver_name, row_abbreviation))
+                dnf_details.append(
+                    _incident_detail(r, row_driver_name, row_abbreviation)
+                )
 
         progression = []
         rounds = sorted({r.get("RoundNumber", 0) for r in team_races})
@@ -436,38 +512,44 @@ def process_team_profile(champ_data: dict, year: int, team_id: str):
 
         for rnd in rounds:
             rnd_pts = sum(
-                _safe_float(r.get("Points", 0)) for r in team_races if r.get("RoundNumber") == rnd
+                _safe_float(r.get("Points", 0))
+                for r in team_races
+                if r.get("RoundNumber") == rnd
             )
             cum_points += rnd_pts
             first_entry = next(
                 (r for r in team_races if r.get("RoundNumber") == rnd), {}
             )
-            progression.append({
-                "round": rnd,
-                "race_name": first_entry.get("EventName") or f"Round {rnd}",
-                "location": first_entry.get("Location", ""),
-                "points": rnd_pts,
-                "cumulative_points": cum_points,
-            })
+            progression.append(
+                {
+                    "round": rnd,
+                    "race_name": first_entry.get("EventName") or f"Round {rnd}",
+                    "location": first_entry.get("Location", ""),
+                    "points": rnd_pts,
+                    "cumulative_points": cum_points,
+                }
+            )
 
-        return clean_nans({
-            "name": team_name,
-            "id": team.get("id", ""),
-            "position": _safe_int(team.get("position", 0)),
-            "points": _safe_float(team.get("points", 0)),
-            "wins": _safe_int(team.get("wins", 0)),
-            "podiums": _safe_int(team.get("podiums", 0)),
-            "dnfs": dnfs,
-            "dnss": dnss,
-            "race_dnfs": race_dnfs,
-            "sprint_dnfs": sprint_dnfs,
-            "race_dnss": race_dnss,
-            "sprint_dnss": sprint_dnss,
-            "dnf_details": dnf_details,
-            "dns_details": dns_details,
-            "drivers": team_drivers,
-            "progression": progression,
-        })
+        return clean_nans(
+            {
+                "name": team_name,
+                "id": team.get("id", ""),
+                "position": _safe_int(team.get("position", 0)),
+                "points": _safe_float(team.get("points", 0)),
+                "wins": _safe_int(team.get("wins", 0)),
+                "podiums": _safe_int(team.get("podiums", 0)),
+                "dnfs": dnfs,
+                "dnss": dnss,
+                "race_dnfs": race_dnfs,
+                "sprint_dnfs": sprint_dnfs,
+                "race_dnss": race_dnss,
+                "sprint_dnss": sprint_dnss,
+                "dnf_details": dnf_details,
+                "dns_details": dns_details,
+                "drivers": team_drivers,
+                "progression": progression,
+            }
+        )
     except Exception as e:
         logging.error(f"Error memuat profil team: {e}", exc_info=True)
         return {"error": "Team profile data is currently unavailable."}

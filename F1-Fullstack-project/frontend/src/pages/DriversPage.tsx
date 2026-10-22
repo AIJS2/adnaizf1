@@ -2,11 +2,11 @@
 // src/DriversPage - FIXED: shared teamData, config, dynamic year, improved error
 
 import { DriverProfile } from '../types/f1';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ErrorState from '../components/layout/ErrorState';
 import { Search, ArrowUp, Trophy } from 'lucide-react';
 import { API_URL } from '../config';
-import { teamLogos, teamColors } from '../data/teamData';
+import { teamLogos, getDriverColor } from '../data/teamData';
 import { safeMax, toNumber } from '../utils/data';
 
 // --- ERROR STATE ---
@@ -17,31 +17,41 @@ function DriversPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // FIXED: pakai dinamis, bukan hardcode 2026
   const currentYear = new Date().getFullYear();
 
-  const fetchChampionshipData = async () => {
+  const fetchChampionshipData = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_URL}/api/championship/${currentYear}`);
+      const response = await fetch(`${API_URL}/api/championship/${currentYear}`, {
+        signal: abortControllerRef.current.signal,
+      });
       if (!response.ok) throw new Error(`Network error: ${response.status}`);
       const data = await response.json();
 
-      if (data.error) setError(data.error);
-      else if (data && data.drivers) setDrivers(data.drivers);
+      if (data?.error) setError(data.error);
+      else if (data?.drivers) setDrivers(data.drivers);
       else throw new Error("Invalid data structure from API.");
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(`Failed to fetch data: ${(err instanceof Error ? err.message : String(err))}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentYear]);
 
   useEffect(() => {
     fetchChampionshipData();
-  }, [currentYear]);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, [fetchChampionshipData]);
 
   const filteredDrivers = drivers.filter(driver =>
     (driver.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -98,7 +108,7 @@ function DriversPage() {
         <div className="space-y-4">
           {filteredDrivers.length > 0 ? (
             filteredDrivers.map((driver, index) => {
-              const teamColor = teamColors[driver.team] || '#374151';
+              const teamColor = getDriverColor(driver.name, driver.team);
               const logo = teamLogos[driver.team];
 
               const isP1 = driver.position === 1;

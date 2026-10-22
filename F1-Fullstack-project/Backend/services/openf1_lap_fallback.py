@@ -117,7 +117,9 @@ def _parse_dt(raw: Any) -> Optional[datetime]:
 # --- roster ------------------------------------------------------------------
 
 
-def _build_roster(driver_rows: Optional[list[dict[str, Any]]]) -> dict[int, dict[str, str]]:
+def _build_roster(
+    driver_rows: Optional[list[dict[str, Any]]],
+) -> dict[int, dict[str, str]]:
     """`/drivers` rows -> {driver_number: {full_name, team_name, abbreviation}}."""
     roster: dict[int, dict[str, str]] = {}
     for row in driver_rows or []:
@@ -177,14 +179,16 @@ def build_fastest_lap_rows(session_key: Optional[int]) -> list[dict[str, Any]]:
         full_name, team_name, _abbr = _meta(roster, number)
         if not full_name:
             continue
-        rows.append({
-            "position": len(rows) + 1,
-            "driver_number": number,
-            "full_name": full_name,
-            "team_name": team_name,
-            "time": _fmt_lap_time(best[number]),
-            "laps": lap_counts.get(number, 0),
-        })
+        rows.append(
+            {
+                "position": len(rows) + 1,
+                "driver_number": number,
+                "full_name": full_name,
+                "team_name": team_name,
+                "time": _fmt_lap_time(best[number]),
+                "laps": lap_counts.get(number, 0),
+            }
+        )
     return rows
 
 
@@ -228,7 +232,8 @@ def build_starting_grid(session_key: Optional[int]) -> list[dict[str, Any]]:
         driver_samples.sort(key=lambda sample: sample[0])
         in_window = next(
             (
-                sample for sample in driver_samples
+                sample
+                for sample in driver_samples
                 if (sample[0] - opening_moment).total_seconds() <= _GRID_WINDOW_SECONDS
             ),
             None,
@@ -246,27 +251,36 @@ def build_starting_grid(session_key: Optional[int]) -> list[dict[str, Any]]:
         full_name, team_name, abbreviation = _meta(roster, number)
         if not full_name:
             continue
-        grid.append({
-            "grid_position": index,
-            "driver_number": number,
-            "full_name": full_name,
-            "team_name": team_name,
-            "abbreviation": abbreviation,
-        })
+        grid.append(
+            {
+                "grid_position": index,
+                "driver_number": number,
+                "full_name": full_name,
+                "team_name": team_name,
+                "abbreviation": abbreviation,
+            }
+        )
     return grid
 
 
 # --- race blocks -------------------------------------------------------------
 
 
-def _fastest_lap(laps: list[dict[str, Any]], roster: dict[int, dict[str, str]]) -> Optional[dict[str, Any]]:
+def _fastest_lap(
+    laps: list[dict[str, Any]], roster: dict[int, dict[str, str]]
+) -> Optional[dict[str, Any]]:
     best_number: Optional[int] = None
     best_duration: Optional[float] = None
     best_lap_number: Optional[int] = None
     for row in laps:
         number = _as_int(row.get("driver_number"))
         duration = _as_float(row.get("lap_duration"))
-        if number is None or duration is None or duration <= 0 or row.get("is_pit_out_lap"):
+        if (
+            number is None
+            or duration is None
+            or duration <= 0
+            or row.get("is_pit_out_lap")
+        ):
             continue
         if best_duration is None or duration < best_duration:
             best_number, best_duration = number, duration
@@ -314,13 +328,15 @@ def _tyre_strategy(
             # add a phantom lap to the sum.
             if end < start:
                 continue
-            stints_out.append({
-                "stint": _as_int(row.get("stint_number")) or 1,
-                "compound": str(row.get("compound") or "UNKNOWN").upper(),
-                "start_lap": start,
-                "end_lap": end,
-                "laps": end - start + 1,
-            })
+            stints_out.append(
+                {
+                    "stint": _as_int(row.get("stint_number")) or 1,
+                    "compound": str(row.get("compound") or "UNKNOWN").upper(),
+                    "start_lap": start,
+                    "end_lap": end,
+                    "laps": end - start + 1,
+                }
+            )
         if not stints_out:
             continue
 
@@ -337,17 +353,19 @@ def _tyre_strategy(
         # mirror of FastF1's PitInTime-derived pit_laps.
         pit_laps = [s["end_lap"] for s in stints_out[:-1]]
 
-        entries.append({
-            "driver": abbr,
-            "full_name": full_name,
-            "team_name": team_name,
-            "driver_number": number,
-            "position": position_by_number.get(number, 0),
-            "status": status_by_number.get(number, ""),
-            "total_laps": max(s["end_lap"] for s in stints_out),
-            "stints": stints_out,
-            "pit_laps": pit_laps,
-        })
+        entries.append(
+            {
+                "driver": abbr,
+                "full_name": full_name,
+                "team_name": team_name,
+                "driver_number": number,
+                "position": position_by_number.get(number, 0),
+                "status": status_by_number.get(number, ""),
+                "total_laps": max(s["end_lap"] for s in stints_out),
+                "stints": stints_out,
+                "pit_laps": pit_laps,
+            }
+        )
 
     # Finishers first in classification order; unclassified cars (position 0,
     # status DNF/DNS/DSQ) last, the one that completed the most laps first. A
@@ -385,7 +403,8 @@ def _speed_and_sectors(
 
         duration = _as_float(row.get("lap_duration"))
         if (
-            duration is not None and duration > 0
+            duration is not None
+            and duration > 0
             and (best_lap.get(number) is None or duration < best_lap[number])
         ):
             best_lap[number] = duration
@@ -405,7 +424,9 @@ def _speed_and_sectors(
         if not _meta(roster, number)[2]:
             continue
         for index, value in enumerate(sectors):
-            if value is not None and (overall_best[index] is None or value < overall_best[index]):
+            if value is not None and (
+                overall_best[index] is None or value < overall_best[index]
+            ):
                 overall_best[index] = value
 
     speed_traps: list[dict[str, Any]] = []
@@ -419,14 +440,16 @@ def _speed_and_sectors(
         full_name, team_name, abbr = _meta(roster, number)
         if not abbr:
             continue
-        speed_traps.append({
-            "driver": abbr,
-            "full_name": full_name,
-            "team_name": team_name,
-            "driver_number": number,
-            "speed": round(speed, 1),
-            "position": position_by_number.get(number, 0),
-        })
+        speed_traps.append(
+            {
+                "driver": abbr,
+                "full_name": full_name,
+                "team_name": team_name,
+                "driver_number": number,
+                "speed": round(speed, 1),
+                "position": position_by_number.get(number, 0),
+            }
+        )
 
     for number, sectors in best_sectors.items():
         if number in no_start or all(value is None for value in sectors):
@@ -442,23 +465,25 @@ def _speed_and_sectors(
         if actual is not None and ideal > 0:
             potential_gain = round(actual - ideal, 3)
 
-        sector_matrix.append({
-            "driver": abbr,
-            "full_name": full_name,
-            "team_name": team_name,
-            "driver_number": number,
-            "position": position,
-            "s1": _fmt_sector(sectors[0]),
-            "s1_purple": sectors[0] is not None and sectors[0] == overall_best[0],
-            "s2": _fmt_sector(sectors[1]),
-            "s2_purple": sectors[1] is not None and sectors[1] == overall_best[1],
-            "s3": _fmt_sector(sectors[2]),
-            "s3_purple": sectors[2] is not None and sectors[2] == overall_best[2],
-            "ideal_lap": _fmt_lap_time(ideal if ideal > 0 else None),
-            "actual_lap": _fmt_lap_time(actual),
-            "potential_gain": potential_gain,
-            "top_speed": speed,
-        })
+        sector_matrix.append(
+            {
+                "driver": abbr,
+                "full_name": full_name,
+                "team_name": team_name,
+                "driver_number": number,
+                "position": position,
+                "s1": _fmt_sector(sectors[0]),
+                "s1_purple": sectors[0] is not None and sectors[0] == overall_best[0],
+                "s2": _fmt_sector(sectors[1]),
+                "s2_purple": sectors[1] is not None and sectors[1] == overall_best[1],
+                "s3": _fmt_sector(sectors[2]),
+                "s3_purple": sectors[2] is not None and sectors[2] == overall_best[2],
+                "ideal_lap": _fmt_lap_time(ideal if ideal > 0 else None),
+                "actual_lap": _fmt_lap_time(actual),
+                "potential_gain": potential_gain,
+                "top_speed": speed,
+            }
+        )
 
     speed_traps.sort(key=lambda entry: entry["speed"], reverse=True)
     for rank, entry in enumerate(speed_traps):
@@ -480,13 +505,15 @@ def _weather(weather_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for row in dated:
         moment = _parse_dt(row.get("date"))
         offset_minutes = (moment - anchor).total_seconds() / 60.0
-        samples.append({
-            "time_offset": round(offset_minutes, 1),
-            "air_temp": round(_as_float(row.get("air_temperature")) or 0.0, 1),
-            "track_temp": round(_as_float(row.get("track_temperature")) or 0.0, 1),
-            "humidity": round(_as_float(row.get("humidity")) or 0.0, 1),
-            "rainfall": bool(_as_float(row.get("rainfall")) or 0),
-        })
+        samples.append(
+            {
+                "time_offset": round(offset_minutes, 1),
+                "air_temp": round(_as_float(row.get("air_temperature")) or 0.0, 1),
+                "track_temp": round(_as_float(row.get("track_temperature")) or 0.0, 1),
+                "humidity": round(_as_float(row.get("humidity")) or 0.0, 1),
+                "rainfall": bool(_as_float(row.get("rainfall")) or 0),
+            }
+        )
     return samples
 
 
@@ -518,11 +545,13 @@ def _series_charts(
         number = _as_int(row.get("driver_number"))
         if lap_number is None or number is None or number not in completed:
             continue
-        by_lap.setdefault(lap_number, []).append((
-            number,
-            _parse_dt(row.get("date_start")),
-            _as_float(row.get("lap_duration")),
-        ))
+        by_lap.setdefault(lap_number, []).append(
+            (
+                number,
+                _parse_dt(row.get("date_start")),
+                _as_float(row.get("lap_duration")),
+            )
+        )
 
     lap_chart: list[dict[str, Any]] = []
     gap_chart: list[dict[str, Any]] = []
@@ -599,7 +628,8 @@ def build_race_blocks(
     # A non-starter must not leak into lap-derived blocks: OpenF1 still emits
     # a placeholder stint, a lap-1 row and position samples for a DNS car.
     no_start = {
-        number for number, status in (status_by_number or {}).items()
+        number
+        for number, status in (status_by_number or {}).items()
         if str(status or "").strip().upper() in ("DNS", "DID NOT START")
     }
 
@@ -610,13 +640,20 @@ def build_race_blocks(
         blocks["fastest_lap"] = fastest
 
     strategy = _tyre_strategy(
-        stints, roster, position_by_number, status_by_number, no_start,
+        stints,
+        roster,
+        position_by_number,
+        status_by_number,
+        no_start,
     )
     if strategy:
         blocks["tyre_strategy"] = strategy
 
     speed_traps, sector_matrix = _speed_and_sectors(
-        laps, roster, position_by_number, no_start,
+        laps,
+        roster,
+        position_by_number,
+        no_start,
     )
     if speed_traps:
         blocks["speed_traps"] = speed_traps

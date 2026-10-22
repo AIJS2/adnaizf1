@@ -8,7 +8,7 @@ import {
   ArrowUpDown, ArrowUp, ArrowDown, Database, Radio,
   type LucideIcon
 } from 'lucide-react';
-import { teamLogos, teamColors } from '../data/teamData';
+import { teamLogos, getTeamColor, getDriverColor } from '../data/teamData';
 import { fetchChampionship, fetchStandings } from '../services/api';
 import type { ChampionshipPayload } from '../services/api';
 import { SessionResultEntry } from '../types/f1';
@@ -61,8 +61,8 @@ interface PodiumCardProps {
 
 const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardProps) => {
   const teamColor = type === 'driver' && entry.team
-    ? (teamColors[entry.team] || entry.color || '#EF4444')
-    : (teamColors[entry.name] || entry.color || '#EF4444');
+    ? getDriverColor(entry.name, entry.team)
+    : getTeamColor(entry.name);
   const darkLogos = ['Audi', 'Mercedes', 'Haas'];
   const teamName = type === 'driver' && entry.team ? entry.team : entry.name;
   const logoNeedsBrightening = darkLogos.includes(teamName);
@@ -243,7 +243,7 @@ const StatsPage = () => {
     return rawDrivers.map((d, index) => {
       const id = d.id || (d.name ? d.name.toLowerCase().replace(/\s+/g, '_') : `driver_${index}`);
       const team = d.team || '';
-      const color = teamColors[team] || d.teamColor || '#EF4444';
+      const color = getDriverColor(d.abbreviation || d.code || d.name, team);
       return {
         id,
         name: d.name || '-',
@@ -266,7 +266,7 @@ const StatsPage = () => {
   const normalizedTeams: LeaderboardEntry[] = useMemo(() => {
     return rawTeams.map((t, index) => {
       const id = t.id || (t.name ? t.name.toLowerCase().replace(/\s+/g, '_') : `team_${index}`);
-      const color = teamColors[t.name] || '#EF4444';
+      const color = getTeamColor(t.name);
       return {
         id,
         name: t.name || '-',
@@ -649,7 +649,7 @@ const StatsPage = () => {
                           </tr>
                         ) : (
                           sortedEntries.map((entry) => {
-                            const teamColor = entry.color || (entry.team ? teamColors[entry.team] : teamColors[entry.name]) || '#EF4444';
+                            const teamColor = entry.color || (entry.team ? getDriverColor(entry.name, entry.team) : getTeamColor(entry.name));
                             const linkTo = activeTab === 'drivers'
                               ? `/driver/${entry.id}`
                               : `/team/${entry.id}`;

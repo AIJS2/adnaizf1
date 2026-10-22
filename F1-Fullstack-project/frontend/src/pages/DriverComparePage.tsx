@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchDriverProfile } from '../services/api';
 import { Link, useSearchParams } from 'react-router-dom';
 import { API_URL } from '../config';
-import { teamColors, teamLogos } from '../data/teamData';
+import { teamLogos, getDriverColor } from '../data/teamData';
 import {
   Swords, Trophy, Medal, Target, ArrowLeftRight, TrendingUp,
   Flag, AlertTriangle, Loader2, CheckCircle2,
@@ -125,10 +125,13 @@ const DriverComparePage = () => {
     setDriver2Id(temp);
   };
 
-  const d1Color = profile1 ? (teamColors[profile1.team] || '#EF4444') : '#EF4444';
-  let d2Color = profile2 ? (teamColors[profile2.team] || '#3B82F6') : '#3B82F6';
+  const d1Color = profile1 ? getDriverColor(profile1.name, profile1.team) : '#EF4444';
+  let d2Color = profile2 ? getDriverColor(profile2.name, profile2.team) : '#3B82F6';
   if (profile1 && profile2 && d1Color.toLowerCase() === d2Color.toLowerCase()) {
-    d2Color = '#FACC15';
+    d2Color = getDriverColor(profile2.name, profile2.team, true);
+    if (d1Color.toLowerCase() === d2Color.toLowerCase()) {
+      d2Color = '#FACC15';
+    }
   }
 
   const handleExportPNG = async () => {
@@ -493,7 +496,7 @@ const DriverComparePage = () => {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     {/* Radar Chart */}
                     <div className="w-full">
-                      <DriverRadarChart profile1={profile1} profile2={profile2} />
+                      <DriverRadarChart profile1={profile1} profile2={profile2} color1={d1Color} color2={d2Color} />
                     </div>
 
                     {/* Comparison Bars */}

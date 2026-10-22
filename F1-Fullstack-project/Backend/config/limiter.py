@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 _redis_url = os.getenv("REDIS_URL", "").strip()
 
 _storage_uri = _redis_url or "memory://"
-if not _redis_url:
+if not _redis_url and os.getenv("ENVIRONMENT") not in ("test", "testing"):
     logger.warning(
         "REDIS_URL not set - rate limiting using in-memory storage. "
         "Limits are per-worker and will NOT hold under multiple Uvicorn "

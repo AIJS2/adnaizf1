@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, Gauge, Timer, Table2 } from 'lucide-react';
-import { teamColors, teamLogos } from '../../data/teamData';
+import { teamLogos, getDriverColor } from '../../data/teamData';
 import EmptyState, { EMPTY_TABLE_MESSAGES } from '../ui/EmptyState';
 import { driverSlug, hasItems, safeMax, teamSlug, toNumber } from '../../utils/data';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer} from 'recharts';
@@ -168,7 +168,7 @@ const PracticeResultTable: React.FC<RaceTableProps> = ({ data }) => (
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <PositionCell row={d} />
-            <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
+            <td className="p-3 font-bold text-center text-base" style={{ color: getDriverColor(d.full_name, d.team_name) }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
             </td>
@@ -204,7 +204,7 @@ const QualifyingResultTable: React.FC<RaceTableProps> = ({ data }) => (
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <PositionCell row={d} />
-            <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
+            <td className="p-3 font-bold text-center text-base" style={{ color: getDriverColor(d.full_name, d.team_name) }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
             </td>
@@ -246,7 +246,7 @@ const SprintResultTable: React.FC<RaceTableProps> = ({ data }) => (
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <PositionCell row={d} />
-            <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
+            <td className="p-3 font-bold text-center text-base" style={{ color: getDriverColor(d.full_name, d.team_name) }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
             </td>
@@ -281,7 +281,7 @@ const RaceResultTable: React.FC<RaceTableProps> = ({ data }) => (
         {data?.map(d => (
           <tr key={d.position} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <PositionCell row={d} />
-            <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
+            <td className="p-3 font-bold text-center text-base" style={{ color: getDriverColor(d.full_name, d.team_name) }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
             </td>
@@ -314,7 +314,7 @@ const GridTable: React.FC<GridTableProps> = ({ data, posKey = 'grid_position' })
           return (
           <tr key={String(pos)} className="border-b border-neutral-800 last:border-b-0 hover:bg-neutral-800/40 transition-colors">
             <td className="p-3 font-bold text-center text-base">{String(pos ?? '-')}</td>
-            <td className="p-3 font-bold text-center text-base" style={{ color: teamColors[d.team_name] || '#FFFFFF' }}>{d.driver_number}</td>
+            <td className="p-3 font-bold text-center text-base" style={{ color: getDriverColor(d.full_name, d.team_name) }}>{d.driver_number}</td>
             <td className="p-3 font-bold text-white whitespace-nowrap">
               <DriverCell fullName={d.full_name} />
             </td>
@@ -469,7 +469,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                     <div className="flex items-center gap-3">
                       <span className="w-5 text-center text-xs font-bold text-neutral-500">{i + 1}</span>
                       <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-4 rounded-xs" style={{ backgroundColor: teamColors[d.team_name] || '#666' }}></span>
+                        <span className="w-1.5 h-4 rounded-xs" style={{ backgroundColor: getDriverColor(d.driver, d.team_name) }}></span>
                         <span className="font-bold text-sm text-white">{d.driver}</span>
                       </div>
                     </div>
@@ -498,7 +498,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                       <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Fastest Sector {idx + 1}</span>
                       {best ? (
                         <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-3 rounded-xs" style={{ backgroundColor: teamColors[best.team_name] || '#666' }}></span>
+                          <span className="w-1.5 h-3 rounded-xs" style={{ backgroundColor: getDriverColor(best.driver, best.team_name) }}></span>
                           <span className="text-sm font-bold text-white">{best.driver}</span>
                         </div>
                       ) : <span className="text-sm text-neutral-500">-</span>}
@@ -535,7 +535,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                   <tr key={d.driver} className="hover:bg-neutral-800/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-2 font-bold text-white">
-                        <span className="w-1.5 h-4 rounded-xs" style={{ backgroundColor: teamColors[d.team_name] || '#666' }}></span>
+                        <span className="w-1.5 h-4 rounded-xs" style={{ backgroundColor: getDriverColor(d.driver, d.team_name) }}></span>
                         {d.driver}
                       </div>
                     </td>

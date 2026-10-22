@@ -3,6 +3,7 @@
 Runs the FastAPI app through TestClient against deliberately hostile
 parameters and reports anything that is NOT a graceful result.
 """
+
 from __future__ import annotations
 
 import os
@@ -51,7 +52,9 @@ def probe(label: str, url: str, expect_ok: bool = True) -> None:
     body_txt = json.dumps(body)[:300]
     NOTES.append(f"{label}: HTTP {r.status_code} -> {body_txt}")
     if isinstance(body, dict) and "error" in body:
-        NOTES.append(f"    ^ ERROR ENVELOPE (status {r.status_code}): {body.get('error')}")
+        NOTES.append(
+            f"    ^ ERROR ENVELOPE (status {r.status_code}): {body.get('error')}"
+        )
     if expect_ok and r.status_code != 200:
         FAILURES.append((label, f"unexpected HTTP {r.status_code} body={body_txt}"))
 
@@ -82,8 +85,16 @@ for year in (2026, 2025, 2024, 1900, 9999):
 # Race details — hostile rounds
 # ---------------------------------------------------------------------------
 for year, rnd in [
-    (2025, 1), (2025, 24), (2025, 25), (2025, 0), (2025, -1),
-    (2025, 9999), (2026, 1), (2026, 30), (1900, 1), (9999, 1),
+    (2025, 1),
+    (2025, 24),
+    (2025, 25),
+    (2025, 0),
+    (2025, -1),
+    (2025, 9999),
+    (2026, 1),
+    (2026, 30),
+    (1900, 1),
+    (9999, 1),
 ]:
     probe(f"GET /api/race/{year}/{rnd}", f"/api/race/{year}/{rnd}")
 
@@ -91,15 +102,23 @@ for year, rnd in [
 # Profiles — unknown / zero-point / bogus drivers
 # ---------------------------------------------------------------------------
 for year, did in [
-    (2025, "max_verstappen"), (2025, "VER"), (2025, "nobody"),
-    (2025, ""), (2025, "ZZZ"), (2026, "max_verstappen"),
-    (1900, "max_verstappen"), (9999, "max_verstappen"),
+    (2025, "max_verstappen"),
+    (2025, "VER"),
+    (2025, "nobody"),
+    (2025, ""),
+    (2025, "ZZZ"),
+    (2026, "max_verstappen"),
+    (1900, "max_verstappen"),
+    (9999, "max_verstappen"),
 ]:
     probe(f"GET /api/driver/{year}/{did}", f"/api/driver/{year}/{did}")
 
 for year, tid in [
-    (2025, "red_bull_racing"), (2025, "nobody"), (2025, ""),
-    (2026, "red_bull_racing"), (1900, "red_bull_racing"),
+    (2025, "red_bull_racing"),
+    (2025, "nobody"),
+    (2025, ""),
+    (2026, "red_bull_racing"),
+    (1900, "red_bull_racing"),
 ]:
     probe(f"GET /api/team/{year}/{tid}", f"/api/team/{year}/{tid}")
 
@@ -107,9 +126,13 @@ for year, tid in [
 # Telemetry — missing telemetry / bogus rounds
 # ---------------------------------------------------------------------------
 for year, rnd, drivers in [
-    (2025, 1, "VER,NOR"), (2025, 1, ""), (2025, 1, ","),
-    (2025, 1, "ZZZ,QQQ"), (2025, 9999, "VER"),
-    (2026, 1, "VER,NOR"), (1900, 1, "VER"),
+    (2025, 1, "VER,NOR"),
+    (2025, 1, ""),
+    (2025, 1, ","),
+    (2025, 1, "ZZZ,QQQ"),
+    (2025, 9999, "VER"),
+    (2026, 1, "VER,NOR"),
+    (1900, 1, "VER"),
 ]:
     probe(
         f"GET /api/telemetry/{year}/{rnd}?drivers={drivers}",
@@ -129,7 +152,9 @@ probe("GET /api/clear_cache/1900", "/api/clear_cache/1900")
 # mounted in main.py, so it currently 404s. Probe it to keep that visible.
 probe("GET /api/team_radio", "/api/team_radio")
 probe("GET /api/team_radio?driver_number=1", "/api/team_radio?driver_number=1")
-probe("GET /api/team_radio?session_key=previous", "/api/team_radio?session_key=previous")
+probe(
+    "GET /api/team_radio?session_key=previous", "/api/team_radio?session_key=previous"
+)
 probe("GET /api/team_radio?session_key=bogus", "/api/team_radio?session_key=bogus")
 probe("GET /nonexistent", "/nonexistent")
 

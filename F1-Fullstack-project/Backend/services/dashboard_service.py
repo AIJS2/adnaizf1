@@ -79,7 +79,9 @@ def _find_next_session(schedule: pd.DataFrame, now_utc: pd.Timestamp):
     return fallback_event
 
 
-def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int, year: int):
+def _build_driver_standings(
+    races_to_process: pd.DataFrame, last_race_round: int, year: int
+):
     """Aggregate per-driver / per-team points from every race + sprint."""
     all_driver_results = []
     last_race_driver_results = []
@@ -95,7 +97,9 @@ def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int
         is_last_race = round_number == last_race_round
 
         for session_type in ("R", "Sprint"):
-            session = load_session_safe(year, round_number, session_type, **RACE_LOAD_KWARGS)
+            session = load_session_safe(
+                year, round_number, session_type, **RACE_LOAD_KWARGS
+            )
             if session is None:
                 continue
 
@@ -133,19 +137,28 @@ def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int
     df_all_drivers = pd.concat(all_driver_results, ignore_index=True)
     print(f"DEBUG DASHBOARD: total session rows = {len(df_all_drivers)}")
     df_all_teams = df_all_drivers[["TeamName", "Points"]]
-    total_team_standings = df_all_teams.groupby("TeamName", as_index=False)["Points"].sum()
+    total_team_standings = df_all_teams.groupby("TeamName", as_index=False)[
+        "Points"
+    ].sum()
 
     # Add race wins computed above (official race wins only, no sprint wins).
-    total_team_standings["wins"] = total_team_standings["TeamName"].apply(lambda x: team_wins_map.get(x, 0)).astype(int)
+    total_team_standings["wins"] = (
+        total_team_standings["TeamName"]
+        .apply(lambda x: team_wins_map.get(x, 0))
+        .astype(int)
+    )
 
     if last_race_driver_results:
         df_last_race = pd.concat(last_race_driver_results, ignore_index=True)
-        last_race_team_points = (
-            df_last_race.groupby("TeamName", as_index=False)["Points"].sum()
+        last_race_team_points = df_last_race.groupby("TeamName", as_index=False)[
+            "Points"
+        ].sum()
+        last_race_team_points.rename(
+            columns={"Points": "points_last_race"}, inplace=True
         )
-        last_race_team_points.rename(columns={"Points": "points_last_race"}, inplace=True)
-        dashboard_teams = pd.merge(total_team_standings, last_race_team_points,
-                                   on="TeamName", how="left")
+        dashboard_teams = pd.merge(
+            total_team_standings, last_race_team_points, on="TeamName", how="left"
+        )
         dashboard_teams["points_last_race"] = (
             dashboard_teams["points_last_race"].fillna(0).astype(int)
         )
@@ -153,14 +166,22 @@ def _build_driver_standings(races_to_process: pd.DataFrame, last_race_round: int
         dashboard_teams = total_team_standings.copy()
         dashboard_teams["points_last_race"] = 0
 
-    dashboard_teams = dashboard_teams.sort_values(by="Points", ascending=False).reset_index(drop=True)
-    dashboard_teams.rename(columns={"TeamName": "name", "Points": "points"}, inplace=True)
+    dashboard_teams = dashboard_teams.sort_values(
+        by="Points", ascending=False
+    ).reset_index(drop=True)
+    dashboard_teams.rename(
+        columns={"TeamName": "name", "Points": "points"}, inplace=True
+    )
 
     df_all_drivers.dropna(subset=["FirstName", "LastName"], inplace=True)
-    df_all_drivers["FullName"] = df_all_drivers["FirstName"] + " " + df_all_drivers["LastName"]
-    dashboard_drivers = df_all_drivers.groupby("FullName").agg(
-        points=("Points", "sum"), team=("TeamName", "last")
-    ).reset_index()
+    df_all_drivers["FullName"] = (
+        df_all_drivers["FirstName"] + " " + df_all_drivers["LastName"]
+    )
+    dashboard_drivers = (
+        df_all_drivers.groupby("FullName")
+        .agg(points=("Points", "sum"), team=("TeamName", "last"))
+        .reset_index()
+    )
     dashboard_drivers = dashboard_drivers.sort_values(
         by="points", ascending=False
     ).reset_index(drop=True)
@@ -217,7 +238,9 @@ def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp
         }
 
         if status == "Finished":
-            session = load_session_safe(year, race_info["round"], "R", **ANALYTICS_LOAD_KWARGS)
+            session = load_session_safe(
+                year, race_info["round"], "R", **ANALYTICS_LOAD_KWARGS
+            )
             winner_name = "Data not available"
             if session is not None and has_rows(session, "results"):
                 try:
@@ -254,15 +277,15 @@ def compute_fastf1_dashboard(year: int):
         )
 
     try:
-        official_races = schedule[schedule["EventName"].str.contains("Grand Prix", na=False)]
+        official_races = schedule[
+            schedule["EventName"].str.contains("Grand Prix", na=False)
+        ]
         event_dates = official_races["EventDate"].dt.normalize()
         completed_races = official_races[event_dates < today].copy()
         ongoing_races = official_races[event_dates == today].copy()
     except Exception as e:  # noqa: BLE001
         logging.warning(f"Could not partition schedule for {year}: {e}")
-        return _empty_season(
-            year, f"The {year} season schedule could not be read."
-        )
+        return _empty_season(year, f"The {year} season schedule could not be read.")
 
     # Penanganan Pra-Musim (sudah diupdate dengan logika countdown)
     if completed_races.empty and ongoing_races.empty:
@@ -283,7 +306,9 @@ def compute_fastf1_dashboard(year: int):
     except (TypeError, ValueError):
         last_race_round = 0
     if last_race is not None:
-        print(f"  -> Balapan terakhir teridentifikasi: {last_race_name} (Ronde {last_race_round})")
+        print(
+            f"  -> Balapan terakhir teridentifikasi: {last_race_name} (Ronde {last_race_round})"
+        )
 
     races_to_process = pd.concat([completed_races, ongoing_races])
 
@@ -307,8 +332,10 @@ def compute_fastf1_dashboard(year: int):
 
     next_race_event = _find_next_session(schedule, now_utc)
     if next_race_event:
-        print(f"  -> Sesi selanjutnya ditemukan: {next_race_event['name']} "
-              f"pada {next_race_event['date']}")
+        print(
+            f"  -> Sesi selanjutnya ditemukan: {next_race_event['name']} "
+            f"pada {next_race_event['date']}"
+        )
         final_data["next_race_event"] = next_race_event
     else:
         print(f"  -> Tidak ada sesi balapan selanjutnya di musim {year}.")
@@ -316,4 +343,5 @@ def compute_fastf1_dashboard(year: int):
     final_data["race_analytics"] = _build_race_analytics(schedule, year, today)
 
     from services.championship_service import clean_nans
+
     return clean_nans(final_data)

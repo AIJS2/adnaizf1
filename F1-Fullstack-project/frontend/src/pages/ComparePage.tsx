@@ -8,7 +8,7 @@ import {
   Download, Hash, Gauge, Scale, CircleDot, Flag, Users,
   BarChart3, Shield, Minus, Crosshair, Ban
 } from 'lucide-react';
-import { teamLogos, teamColors } from '../data/teamData';
+import { teamLogos, getDriverColor } from '../data/teamData';
 import { fetchChampionship, fetchDriverProfile } from '../services/api';
 import type { ChampionshipPayload, DriverProfilePayload } from '../services/api';
 import { toNumber } from '../utils/data';
@@ -392,7 +392,7 @@ const ComparePage = () => {
     return data.drivers.map((d, index) => {
       const id = d.id || (d.name ? d.name.toLowerCase().replace(/\s+/g, '_') : `driver_${index}`);
       const team = d.team || 'Unknown';
-      const color = teamColors[team] || d.teamColor || '#EF4444';
+      const color = getDriverColor(d.abbreviation || d.code || d.name, team);
       return {
         id,
         name: d.name || '-',
@@ -469,11 +469,13 @@ const ComparePage = () => {
   });
 
   // Teammate color collision logic
-  let d1Color = driver1?.color || '#EF4444';
-  let d2Color = driver2?.color || '#3B82F6';
-  if (driver1 && driver2 && driver1.team === driver2.team) {
-    d1Color = teamColors[driver1.team] || '#EF4444';
-    d2Color = '#FACC15'; // Yellow/gold for teammate distinction
+  let d1Color = driver1 ? getDriverColor(driver1.abbreviation || driver1.name, driver1.team) : '#EF4444';
+  let d2Color = driver2 ? getDriverColor(driver2.abbreviation || driver2.name, driver2.team) : '#3B82F6';
+  if (driver1 && driver2 && (driver1.team === driver2.team || d1Color.toLowerCase() === d2Color.toLowerCase())) {
+    d2Color = getDriverColor(driver2.abbreviation || driver2.name, driver2.team, true);
+    if (d1Color.toLowerCase() === d2Color.toLowerCase()) {
+      d2Color = '#FACC15'; // Yellow/gold for teammate distinction fallback
+    }
   }
 
   const metrics: StatMetric[] = useMemo(() => {

@@ -14,6 +14,7 @@ Architecture
 
 The SignalR connection is shared across all WebSocket clients (singleton).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -93,11 +94,20 @@ _NEGOTIATE_URL = "https://livetiming.formula1.com/signalrcore/negotiate"
 _CONNECTION_URL = "wss://livetiming.formula1.com/signalrcore"
 
 _TOPICS = [
-    "Heartbeat", "DriverList", "ExtrapolatedClock",
-    "RaceControlMessages", "SessionInfo", "SessionStatus",
-    "TimingAppData", "TimingStats", "TrackStatus",
-    "WeatherData", "SessionData", "TimingData",
-    "TopThree", "LapCount",
+    "Heartbeat",
+    "DriverList",
+    "ExtrapolatedClock",
+    "RaceControlMessages",
+    "SessionInfo",
+    "SessionStatus",
+    "TimingAppData",
+    "TimingStats",
+    "TrackStatus",
+    "WeatherData",
+    "SessionData",
+    "TimingData",
+    "TopThree",
+    "LapCount",
 ]
 
 
@@ -121,6 +131,7 @@ def _start_signalr() -> None:
 
         try:
             from fastf1.internals.f1auth import get_auth_token
+
             token_factory = get_auth_token
         except ImportError:
             token_factory = None
@@ -255,6 +266,7 @@ def _empty_snapshot() -> dict:
 # clients stay connected, so we re-evaluate periodically and switch modes.
 _LIVE_RECHECK_SECONDS = 60.0
 
+
 async def _broadcast_loop(initial_is_live: bool) -> None:
     """
     Periodically build a snapshot and send it to every connected client.
@@ -304,10 +316,13 @@ async def _broadcast_loop(initial_is_live: bool) -> None:
         clients = list(_connected_clients)
         if clients:
             results = await asyncio.gather(
-                *[ws.send_text(msg_bytes) for ws in clients],
-                return_exceptions=True
+                *[ws.send_text(msg_bytes) for ws in clients], return_exceptions=True
             )
-            disconnected = {ws for ws, res in zip(clients, results, strict=False) if isinstance(res, Exception)}
+            disconnected = {
+                ws
+                for ws, res in zip(clients, results, strict=False)
+                if isinstance(res, Exception)
+            }
             if disconnected:
                 _connected_clients.difference_update(disconnected)
 
@@ -321,6 +336,7 @@ async def _broadcast_loop(initial_is_live: bool) -> None:
 # ======================================================================
 #  WebSocket endpoint
 # ======================================================================
+
 
 @router.websocket("/ws/livetiming")
 async def websocket_livetiming(websocket: WebSocket) -> None:
@@ -345,7 +361,9 @@ async def websocket_livetiming(websocket: WebSocket) -> None:
 
                 # Fallback: schedule says live but no data arrived → report no session
                 if not _state.timing_data:
-                    logger.info("Schedule indicates live session but no SignalR data received – reporting no session")
+                    logger.info(
+                        "Schedule indicates live session but no SignalR data received – reporting no session"
+                    )
                     is_live = False
                     _state.is_live = False
 
@@ -362,4 +380,3 @@ async def websocket_livetiming(websocket: WebSocket) -> None:
         logger.info("Client disconnected from Live Timing")
         if not _connected_clients:
             _stop_signalr()
-

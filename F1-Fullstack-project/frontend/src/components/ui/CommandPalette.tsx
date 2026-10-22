@@ -4,7 +4,7 @@ import {
   Search, X, User, Users, Flag, Trophy, Activity, 
   LayoutDashboard, MapPin, CornerDownLeft, Sparkles, type LucideIcon
 } from 'lucide-react';
-import { teamColors, teamLogos } from '../../data/teamData';
+import { teamLogos, getTeamColor, getDriverColor } from '../../data/teamData';
 import { API_URL } from '../../config';
 
 const year = new Date().getFullYear();
@@ -766,7 +766,9 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             filteredItems.map((item, idx) => {
               const isSelected = idx === selectedIndex;
               const Icon = item.icon || Sparkles;
-              const accentColor = item.team ? (teamColors[item.team] || '#EF4444') : '#EF4444';
+              const accentColor = item.team 
+                ? (item.type === 'driver' ? getDriverColor(item.title, item.team) : getTeamColor(item.team))
+                : '#EF4444';
 
               return (
                 <div

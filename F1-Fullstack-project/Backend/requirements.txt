@@ -45,7 +45,7 @@ redis==8.1.0
 requests==2.33.0
 requests-cache==1.2.1
 scipy==1.16.2
-sentry-sdk==2.71.0
+sentry-sdk[fastapi]==2.71.0
 signalrcore==0.9.71
 six==1.17.0
 slowapi==0.1.10

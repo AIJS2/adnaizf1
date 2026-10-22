@@ -2,11 +2,11 @@
 // src/TeamsPage - FIXED: shared teamData, config, dynamic year, improved error
 
 import { TeamProfile } from '../types/f1';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ErrorState from '../components/layout/ErrorState';
 import { Search, Trophy, ArrowUp } from 'lucide-react';
 import { API_URL } from '../config';
-import { teamLogos, teamColors } from '../data/teamData';
+import { teamLogos, getTeamColor } from '../data/teamData';
 
 // --- ERROR STATE ---
 
@@ -16,15 +16,21 @@ function TeamsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // FIXED: pakai dinamis, bukan hardcode 2026
   const currentYear = new Date().getFullYear();
 
-  const fetchChampionshipData = async () => {
+  const fetchChampionshipData = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_URL}/api/championship/${currentYear}`);
+      const response = await fetch(`${API_URL}/api/championship/${currentYear}`, {
+        signal: abortControllerRef.current.signal
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         const errorMessage = errorData?.error || `Network error: ${response.status}`;
@@ -32,20 +38,23 @@ function TeamsPage() {
       }
       const data = await response.json();
 
-      if (data.error) setError(data.error);
-      else if (data && data.teams) setTeams(data.teams);
+      if (data?.error) setError(data.error);
+      else if (data?.teams) setTeams(data.teams);
       else throw new Error("Invalid data structure from API.");
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(`Failed to fetch data: ${(err instanceof Error ? err.message : String(err))}`);
-      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentYear]);
 
   useEffect(() => {
     fetchChampionshipData();
-  }, [currentYear]);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, [fetchChampionshipData]);
 
   const filteredTeams = teams.filter(team =>
     team.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -101,7 +110,7 @@ function TeamsPage() {
         <div className="space-y-4">
           {filteredTeams.length > 0 ? (
             filteredTeams.map((team, index) => {
-              const teamColor = teamColors[team.name] || '#374151';
+              const teamColor = getTeamColor(team.name);
               const logo = teamLogos[team.name];
               const isP1 = team.position === 1;
               const animationDelay = `${index * 0.1}s`;

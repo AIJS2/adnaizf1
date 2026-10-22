@@ -117,18 +117,22 @@ def seed_data(conn: sqlite3.Connection):
         name = t["name"]
         color = TEAM_COLORS.get(name, "#EF4444")
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO teams (id, name, color, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 color = excluded.color,
                 updated_at = excluded.updated_at;
-        """, (team_id, name, color, now_iso, now_iso))
+        """,
+            (team_id, name, color, now_iso, now_iso),
+        )
 
         pos = t.get("position")
         if pos:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO standings (
                     year, type, position, points, wins, podiums, dnfs, dnss, points_last_race, team_id, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -141,20 +145,22 @@ def seed_data(conn: sqlite3.Connection):
                     points_last_race = excluded.points_last_race,
                     team_id = excluded.team_id,
                     updated_at = excluded.updated_at;
-            """, (
-                2026,
-                "CONSTRUCTOR",
-                pos,
-                float(t.get("points", 0)),
-                int(t.get("wins", 0)),
-                int(t.get("podiums", 0)),
-                int(t.get("dnfs", 0)),
-                int(t.get("dnss", 0)),
-                float(t.get("points_last_race", 0)),
-                team_id,
-                now_iso,
-                now_iso
-            ))
+            """,
+                (
+                    2026,
+                    "CONSTRUCTOR",
+                    pos,
+                    float(t.get("points", 0)),
+                    int(t.get("wins", 0)),
+                    int(t.get("podiums", 0)),
+                    int(t.get("dnfs", 0)),
+                    int(t.get("dnss", 0)),
+                    float(t.get("points_last_race", 0)),
+                    team_id,
+                    now_iso,
+                    now_iso,
+                ),
+            )
 
     # Seed Drivers
     for d in drivers:
@@ -165,7 +171,8 @@ def seed_data(conn: sqlite3.Connection):
         abbr = d.get("abbreviation")
         num = d.get("driver_number")
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO drivers (id, name, abbreviation, driver_number, team_id, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
@@ -174,11 +181,14 @@ def seed_data(conn: sqlite3.Connection):
                 driver_number = excluded.driver_number,
                 team_id = excluded.team_id,
                 updated_at = excluded.updated_at;
-        """, (driver_id, name, abbr, num, team_id, now_iso, now_iso))
+        """,
+            (driver_id, name, abbr, num, team_id, now_iso, now_iso),
+        )
 
         pos = d.get("position")
         if pos:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO standings (
                     year, type, position, points, wins, podiums, dnfs, dnss, points_last_race, driver_id, team_id, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -192,21 +202,23 @@ def seed_data(conn: sqlite3.Connection):
                     driver_id = excluded.driver_id,
                     team_id = excluded.team_id,
                     updated_at = excluded.updated_at;
-            """, (
-                2026,
-                "DRIVER",
-                pos,
-                float(d.get("points", 0)),
-                int(d.get("wins", 0)),
-                int(d.get("podiums", 0)),
-                int(d.get("dnfs", 0)),
-                int(d.get("dnss", 0)),
-                float(d.get("points_last_race", 0)),
-                driver_id,
-                team_id,
-                now_iso,
-                now_iso
-            ))
+            """,
+                (
+                    2026,
+                    "DRIVER",
+                    pos,
+                    float(d.get("points", 0)),
+                    int(d.get("wins", 0)),
+                    int(d.get("podiums", 0)),
+                    int(d.get("dnfs", 0)),
+                    int(d.get("dnss", 0)),
+                    float(d.get("points_last_race", 0)),
+                    driver_id,
+                    team_id,
+                    now_iso,
+                    now_iso,
+                ),
+            )
 
     conn.commit()
     print("✅ Successfully seeded SQLite database with 2026 standings!")

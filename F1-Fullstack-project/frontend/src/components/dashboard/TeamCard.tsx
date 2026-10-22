@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
-import { teamLogos, teamColors } from '../../data/teamData';
+import { teamLogos, getTeamColor } from '../../data/teamData';
 
 export interface TeamStanding {
   id?: string;
@@ -19,7 +19,7 @@ interface TeamCardProps {
 
 const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
   const logo = teamLogos[team.name];
-  const color = teamColors[team.name] || '#EF4444';
+  const color = getTeamColor(team.name);
   const teamId = team.id || team.name.toLowerCase().replace(/\s+/g, '_');
   const pointsNum = typeof team.points === 'string' ? parseFloat(team.points) : team.points;
   const pct = maxPoints > 0 ? Math.max(8, (pointsNum / maxPoints) * 100) : 50;
@@ -41,7 +41,13 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
             {team.name}
           </span>
         </div>
-        {logo && <img src={logo} alt={team.name} className="h-5 w-auto object-contain opacity-90 shrink-0 ml-2" />}
+        {logo && (
+          <img
+            src={logo}
+            alt={team.name}
+            className={`h-5 w-auto object-contain opacity-90 shrink-0 ml-2 ${/audi/i.test(team.name || '') ? 'brightness-0 invert' : ''}`}
+          />
+        )}
       </div>
 
       <div className="flex items-baseline justify-between mt-2">

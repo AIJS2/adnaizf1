@@ -7,6 +7,7 @@ router = APIRouter(prefix="/api/team_radio", tags=["Team Radio"])
 
 logger = logging.getLogger(__name__)
 
+
 @router.get("")
 async def get_team_radio(
     driver_number: Optional[int] = Query(
@@ -35,18 +36,21 @@ async def get_team_radio(
                 if sess_resp.status_code == 200:
                     sessions = sess_resp.json()
                     from datetime import datetime, timezone
+
                     now = datetime.now(timezone.utc)
                     past_sessions = []
                     for s in sessions:
                         date_end_str = s.get("date_end")
                         if date_end_str:
                             try:
-                                date_end = datetime.fromisoformat(date_end_str.replace('Z', '+00:00'))
+                                date_end = datetime.fromisoformat(
+                                    date_end_str.replace("Z", "+00:00")
+                                )
                                 if date_end < now:
                                     past_sessions.append(s)
                             except Exception:
                                 pass
-                    
+
                     if len(past_sessions) >= 1:
                         params["session_key"] = past_sessions[-1]["session_key"]
                     else:
@@ -64,15 +68,20 @@ async def get_team_radio(
         async with httpx.AsyncClient(timeout=15.0) as client:
             # Jika request adalah 'latest', cek dulu apakah benar-benar ada sesi live
             if params["session_key"] == "latest":
-                sess_check = await client.get("https://api.openf1.org/v1/sessions?session_key=latest")
+                sess_check = await client.get(
+                    "https://api.openf1.org/v1/sessions?session_key=latest"
+                )
                 if sess_check.status_code == 200:
                     sess_data = sess_check.json()
                     if sess_data and len(sess_data) > 0:
                         date_end_str = sess_data[0].get("date_end")
                         if date_end_str:
                             from datetime import datetime, timezone
+
                             # format: '2026-10-09T13:14:00+00:00'
-                            date_end = datetime.fromisoformat(date_end_str.replace('Z', '+00:00'))
+                            date_end = datetime.fromisoformat(
+                                date_end_str.replace("Z", "+00:00")
+                            )
                             now = datetime.now(timezone.utc)
                             if now > date_end:
                                 # Sesi sudah berakhir, kembalikan kosong untuk 'latest'

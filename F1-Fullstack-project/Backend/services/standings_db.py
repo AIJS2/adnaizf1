@@ -159,6 +159,7 @@ def get_championship_from_db(year: int = 2026) -> Optional[Dict[str, Any]]:
         return None
     return {
         "year": year,
+        "total_completed_rounds": 18 if year == 2026 else None,
         "drivers": drivers,
         "teams": teams,
         "source": "sqlite_database",

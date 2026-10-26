@@ -279,6 +279,7 @@ def compute_fastf1_championship(year: int):
 
     final_data = {
         "year": year,
+        "total_completed_rounds": int(last_race_round) if last_race_round else 0,
         "teams": team_standings.to_dict(orient="records"),
         "drivers": driver_standings.to_dict(orient="records"),
         "session_results": df_full[

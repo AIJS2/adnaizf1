@@ -1,9 +1,50 @@
 import logging
+import unicodedata
 from services.championship_service import (
     clean_nans,
     is_dnf_classified,
     is_dns_status,
 )
+
+
+def _normalize_slug(value) -> str:
+    """Fold Unicode diacritics to ASCII and normalise separators to '_'."""
+    raw = str(value or "").strip()
+    folded = (
+        unicodedata.normalize("NFKD", raw)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    return folded.lower().replace("-", "_").replace(" ", "_")
+
+
+_TEAM_SLUG_ALIASES = {
+    "red_bull_racing": ("red_bull", "oracle_red_bull_racing"),
+    "red_bull": ("red_bull_racing", "oracle_red_bull_racing"),
+    "alpine": ("alpine_f1_team", "bwt_alpine_f1_team"),
+    "alpine_f1_team": ("alpine", "bwt_alpine_f1_team"),
+    "rb": ("rb_f1_team", "racing_bulls", "vcarb", "visa_cash_app_rb"),
+    "rb_f1_team": ("rb", "racing_bulls", "vcarb", "visa_cash_app_rb"),
+    "racing_bulls": ("rb_f1_team", "rb", "vcarb"),
+    "haas": ("haas_f1_team", "moneygram_haas_f1_team"),
+    "haas_f1_team": ("haas", "moneygram_haas_f1_team"),
+    "cadillac": ("cadillac_f1_team", "andretti_cadillac"),
+    "cadillac_f1_team": ("cadillac", "andretti_cadillac"),
+    "sauber": (
+        "kick_sauber",
+        "stake_f1_team_kick_sauber",
+        "audi",
+        "audi_f1_team",
+    ),
+    "kick_sauber": (
+        "sauber",
+        "stake_f1_team_kick_sauber",
+        "audi",
+        "audi_f1_team",
+    ),
+    "audi": ("audi_f1_team", "kick_sauber", "sauber"),
+    "audi_f1_team": ("audi", "kick_sauber", "sauber"),
+}
 
 
 def _safe_float(value, default: float = 0.0) -> float:
@@ -66,19 +107,34 @@ def _incident_detail(row, driver_name: str = "", abbreviation: str = ""):
 def process_driver_profile(champ_data: dict, year: int, driver_id: str):
     try:
         drivers = champ_data.get("drivers", [])
-        clean_id = str(driver_id or "").lower().replace("-", "_")
+        clean_id = str(driver_id or "").strip().lower().replace("-", "_")
+        norm_id = _normalize_slug(driver_id)
 
-        # Cari driver berdasarkan ID, Nama, atau Abbr
+        # Cari driver berdasarkan ID, Nama, atau Abbr (termasuk normalisasi aksen/diakritik)
         driver = next(
             (
                 d
                 for d in drivers
-                if d.get("id") == clean_id
-                or str(d.get("name", "")).lower() == clean_id.replace("_", " ")
-                or str(d.get("abbreviation", "")).lower() == clean_id
+                if str(d.get("id", "")).lower() == clean_id
+                or _normalize_slug(d.get("id", "")) == norm_id
+                or _normalize_slug(d.get("name", "")) == norm_id
+                or _normalize_slug(d.get("abbreviation", "")) == norm_id
             ),
             None,
         )
+        if not driver and norm_id:
+            driver = next(
+                (
+                    d
+                    for d in drivers
+                    if _normalize_slug(d.get("id", "")).endswith(f"_{norm_id}")
+                    or _normalize_slug(d.get("name", "")).endswith(
+                        f"_{norm_id}"
+                    )
+                    or norm_id in _normalize_slug(d.get("name", "")).split("_")
+                ),
+                None,
+            )
 
         if not driver:
             return {"error": f"Driver '{driver_id}' not found in {year} season."}
@@ -394,17 +450,37 @@ def process_driver_profile(champ_data: dict, year: int, driver_id: str):
 def process_team_profile(champ_data: dict, year: int, team_id: str):
     try:
         teams = champ_data.get("teams", [])
-        clean_id = str(team_id or "").lower().replace("-", "_")
+        clean_id = str(team_id or "").strip().lower().replace("-", "_")
+        norm_id = _normalize_slug(team_id)
+        candidate_slugs = {
+            norm_id,
+            *_TEAM_SLUG_ALIASES.get(norm_id, ()),
+        }
 
         team = next(
             (
                 t
                 for t in teams
-                if t.get("id") == clean_id
-                or str(t.get("name", "")).lower() == clean_id.replace("_", " ")
+                if str(t.get("id", "")).lower() == clean_id
+                or _normalize_slug(t.get("id", "")) in candidate_slugs
+                or _normalize_slug(t.get("name", "")) in candidate_slugs
             ),
             None,
         )
+        if not team and norm_id:
+            team = next(
+                (
+                    t
+                    for t in teams
+                    if _normalize_slug(t.get("id", "")).startswith(
+                        f"{norm_id}_"
+                    )
+                    or norm_id.startswith(
+                        f"{_normalize_slug(t.get('id', ''))}_"
+                    )
+                ),
+                None,
+            )
         if not team:
             return {"error": f"Team '{team_id}' not found in {year} season."}
 

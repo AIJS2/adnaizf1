@@ -3,19 +3,29 @@
 // ============================================================================
 
 /**
- * Turn a driver full name into the slug used by the driver route.
- * Returns an empty string when the name is missing, so callers can skip the
- * link instead of navigating to "/driver/".
+ * Build the `/driver/:slug` route parameter from a full name. Returns `''` when
+ * the name is missing so the caller can suppress the `<Link>` rather than
+ * linking to `/driver/undefined`.
  */
 export function driverSlug(fullName?: string | null): string {
   if (!fullName || typeof fullName !== 'string') return '';
-  return fullName.trim().toLowerCase().replace(/\s+/g, '_');
+  return fullName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
 }
 
-/** Same, for team routes. */
+/** Build the `/team/:slug` route parameter from a team name. */
 export function teamSlug(teamName?: string | null): string {
   if (!teamName || typeof teamName !== 'string') return '';
-  return teamName.trim().toLowerCase().replace(/\s+/g, '_');
+  return teamName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
 }
 
 /** True when the value is a usable, non-empty array. */

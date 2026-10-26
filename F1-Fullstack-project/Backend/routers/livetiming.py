@@ -288,8 +288,7 @@ def _handle_signalr_record(record: str) -> None:
             if incoming_key is not None:
                 _state_session_key = incoming_key
 
-            for topic, payload in result.items():
-                _state.update(topic, payload)
+            _state.update_batch(result)
             if _state.timing_data:
                 _state.is_live = True
     elif message_type == 1 and message.get("target") == "feed":
@@ -315,7 +314,7 @@ def _start_signalr() -> None:
     Maintains a persistent connection to F1 SignalR with auto-reconnect backoff
     as long as `_signalr_running` is True.
     """
-    global _signalr_running, _signalr_connected
+    global _signalr_connected
     global _signalr_auth_failed, _signalr_error_logged
 
     backoff = 2.0
@@ -713,3 +712,44 @@ async def websocket_livetiming(websocket: WebSocket) -> None:
         logger.info("Client disconnected from Live Timing")
         if not _connected_clients:
             _schedule_signalr_stop()
+
+
+@router.get("/api/livetiming/previous")
+async def get_previous_livetiming() -> dict[str, Any]:
+    """
+    Return the last completed F1 session snapshot captured from SignalR
+    (full driver classification, sector times, tyre stints, circuit map,
+    weather, race control log, and team radio).
+    """
+    existing = _state.last_session_snapshot()
+    if existing and existing.get("lines"):
+        return existing
+
+    if os.getenv("ENVIRONMENT", "development").lower() != "test":
+        async with _init_lock:
+            existing = _state.last_session_snapshot()
+            if not (existing and existing.get("lines")):
+                await asyncio.to_thread(_ensure_signalr)
+                deadline = time.monotonic() + _LIVE_DATA_WAIT_SECONDS
+                while time.monotonic() < deadline and not _state.timing_data:
+                    await asyncio.sleep(0.25)
+                if _state.timing_data:
+                    _state.snapshot()
+                if not _state.is_live and not _connected_clients:
+                    _state.reset()
+                    await asyncio.to_thread(_stop_signalr)
+
+    snapshot = _state.last_session_snapshot()
+    if snapshot:
+        return snapshot
+    return {
+        "session_title": "",
+        "session_state": "no_session",
+        "circuit": None,
+        "lap": None,
+        "total_laps": None,
+        "lines": [],
+        "weather": {"air": "--", "track": "--", "humidity": "--", "rain": "--"},
+        "messages": [],
+        "radio": [],
+    }

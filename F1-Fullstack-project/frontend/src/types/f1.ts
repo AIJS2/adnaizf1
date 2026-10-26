@@ -100,16 +100,24 @@ export interface LiveTimingCircuit {
   path: string;
 }
 
-/** Compact record of the last completed session, sent with no_session. */
+/** Compact or full record of the last completed session, sent with no_session. */
 export interface LiveTimingLastSession {
   session_title: string;
+  session_state?: LiveTimingSessionState | string;
+  session_status?: string;
+  archive_status?: string;
   circuit?: LiveTimingCircuit | null;
   track_status?: string;
+  trackStatus?: string;
   lap?: number | null;
   total_laps?: number | null;
   leader?: string;
   leader_team?: string;
   finished_at?: string;
+  lines?: LiveTimingLine[];
+  weather?: LiveTimingWeather;
+  messages?: LiveTimingMessage[];
+  radio?: LiveTimingRadioItem[];
 }
 
 export type LiveTimingSessionState = 'live' | 'finished' | 'no_session';

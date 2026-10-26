@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { webSocketUrl } from '../config';
+import { API_URL, webSocketUrl } from '../config';
 import { fetchDashboardData } from '../services/api';
 import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
 import HeroCountdown from '../components/ui/HeroCountdown';
@@ -138,8 +138,62 @@ const LiveTimingPage: React.FC = () => {
     return 'bg-green-500 text-black';
   };
 
+  const [sessionView, setSessionView] = useState<'latest' | 'previous'>('latest');
+
+  const hasEmbeddedPreviousLines = Boolean(
+    data.last_session?.lines && data.last_session.lines.length > 0
+  );
+
+  const { data: remotePrevious } = useQuery({
+    queryKey: ['livetiming', 'previous'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/livetiming/previous`);
+      if (!res.ok) throw new Error('Failed to fetch previous session telemetry');
+      return res.json();
+    },
+    enabled: sessionView === 'previous' && !hasEmbeddedPreviousLines,
+    staleTime: 60 * 1000,
+  });
+
+  const activePreviousSession = useMemo(() => {
+    if (data.last_session && data.last_session.lines && data.last_session.lines.length > 0) {
+      return data.last_session;
+    }
+    if (remotePrevious && (remotePrevious.lines || remotePrevious.session_title)) {
+      return remotePrevious;
+    }
+    return data.last_session ?? null;
+  }, [data.last_session, remotePrevious]);
+
+  const isViewingPrevious = sessionView === 'previous' && Boolean(activePreviousSession);
+
+  const activeData = useMemo<LiveTimingData>(() => {
+    if (isViewingPrevious && activePreviousSession) {
+      const prevLines = activePreviousSession.lines ?? [];
+      return {
+        ...data,
+        session_title: activePreviousSession.session_title || data.session_title,
+        session_state: 'finished',
+        isLiveSession: false,
+        status: 'live',
+        circuit: activePreviousSession.circuit ?? data.circuit ?? null,
+        lap: activePreviousSession.lap ?? null,
+        total_laps: activePreviousSession.total_laps ?? null,
+        lines: prevLines,
+        weather: activePreviousSession.weather ?? { air: '--', track: '--', humidity: '--', rain: '--' },
+        trackStatus: activePreviousSession.trackStatus ?? activePreviousSession.track_status ?? 'FINISH',
+        messages: activePreviousSession.messages ?? [],
+        radio: activePreviousSession.radio && activePreviousSession.radio.length > 0
+          ? activePreviousSession.radio
+          : data.radio,
+        last_session: activePreviousSession,
+      };
+    }
+    return data;
+  }, [isViewingPrevious, activePreviousSession, data]);
+
   const sortedLines = useMemo(() => {
-    return [...data.lines].sort((a, b) => {
+    return [...activeData.lines].sort((a, b) => {
       const posA = parseInt(String(a.position));
       const posB = parseInt(String(b.position));
       if (isNaN(posA) && isNaN(posB)) return 0;
@@ -147,20 +201,20 @@ const LiveTimingPage: React.FC = () => {
       if (isNaN(posB)) return -1;
       return posA - posB;
     });
-  }, [data.lines]);
+  }, [activeData.lines]);
 
   const hasNoSessionData = sortedLines.length === 0;
-  const isUnavailable = data.status === 'unavailable_subscription';
-  const isFinished = data.session_state === 'finished';
-  const isNoSession = data.session_state === 'no_session';
-  const sessionSubBadge = data.session_title
-    ? data.session_title.replace(' — ', ' • ')
+  const isUnavailable = !isViewingPrevious && activeData.status === 'unavailable_subscription';
+  const isFinished = activeData.session_state === 'finished';
+  const isNoSession = activeData.session_state === 'no_session';
+  const sessionSubBadge = activeData.session_title
+    ? activeData.session_title.replace(' — ', ' • ')
     : '';
   const trackStatusClass = isFinished
     ? 'bg-linear-to-r from-neutral-100 via-amber-200 to-neutral-100 text-black border-amber-400/70 text-sm sm:text-base'
     : isNoSession
       ? 'bg-neutral-900 text-neutral-400 border-neutral-700 text-sm sm:text-base'
-      : `border-black/50 text-xl ${getStatusColor(data.trackStatus)}`;
+      : `border-black/50 text-xl ${getStatusColor(activeData.trackStatus)}`;
 
   return (
     <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600 w-full overflow-hidden" style={{ overflowAnchor: 'none' }}>
@@ -172,13 +226,15 @@ const LiveTimingPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <div className={`inline-flex items-center gap-2 border text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-xs ${
                 connectionStatus === 'connected'
-                  ? isFinished
+                  ? isViewingPrevious
                     ? 'bg-amber-400/10 border-amber-400/40 text-amber-300'
-                    : isUnavailable
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                      : data.isLiveSession
-                        ? 'bg-red-600/10 border-red-500/30 text-red-500'
-                        : 'bg-blue-600/10 border-blue-500/30 text-blue-400'
+                    : isFinished
+                      ? 'bg-amber-400/10 border-amber-400/40 text-amber-300'
+                      : isUnavailable
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                        : activeData.isLiveSession
+                          ? 'bg-red-600/10 border-red-500/30 text-red-500'
+                          : 'bg-blue-600/10 border-blue-500/30 text-blue-400'
                   : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
               }`}>
                 <Activity size={12} />
@@ -186,15 +242,17 @@ const LiveTimingPage: React.FC = () => {
                   ? 'AWAITING CONNECTION…'
                   : connectionStatus === 'lost'
                     ? 'CONNECTION LOST - RECONNECTING…'
-                    : isFinished
-                      ? '🏁 SESSION FINISHED — FINAL CLASSIFICATION'
-                      : isUnavailable
-                        ? 'LIVE TIMING UNAVAILABLE'
-                        : data.isLiveSession
-                          ? 'LIVE SIGNAL DETECTED'
-                          : 'NO LIVE SESSION'}
+                    : isViewingPrevious
+                      ? '🏁 PREVIOUS SESSION — FINAL CLASSIFICATION'
+                      : isFinished
+                        ? '🏁 SESSION FINISHED — FINAL CLASSIFICATION'
+                        : isUnavailable
+                          ? 'LIVE TIMING UNAVAILABLE'
+                          : activeData.isLiveSession
+                            ? 'LIVE SIGNAL DETECTED'
+                            : 'NO LIVE SESSION'}
               </div>
-              {isFinished && sessionSubBadge && (
+              {(isFinished || isViewingPrevious) && sessionSubBadge && (
                 <div className="inline-flex items-center gap-2 border border-amber-500/20 bg-amber-500/5 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/80 px-3 py-1 rounded-xs">
                   {sessionSubBadge}
                 </div>
@@ -205,10 +263,40 @@ const LiveTimingPage: React.FC = () => {
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold bg-tarmac border border-[#222] rounded-md px-4 py-2 uppercase tracking-wider shadow-inner w-full md:w-auto">
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500 "></div> Overall Best</span>
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500 "></div> Personal Best</span>
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-yellow-400"></div> No Improvement</span>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Live / Previous Session Toggle Button */}
+            <div className="flex bg-neutral-900 border border-neutral-800 rounded-md p-1 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setSessionView('latest')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-ui flex items-center gap-1.5 cursor-pointer ${
+                  sessionView === 'latest'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${data.isLiveSession ? 'bg-green-400 motion-safe:animate-pulse' : 'bg-neutral-500'}`} />
+                Live Race
+              </button>
+              <button
+                type="button"
+                onClick={() => setSessionView('previous')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-ui flex items-center gap-1.5 cursor-pointer ${
+                  sessionView === 'previous'
+                    ? 'bg-neutral-700 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <span>🏁</span>
+                Previous
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold bg-tarmac border border-[#222] rounded-md px-4 py-2 uppercase tracking-wider shadow-inner w-full md:w-auto">
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500 "></div> Overall Best</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500 "></div> Personal Best</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-yellow-400"></div> No Improvement</span>
+            </div>
           </div>
         </div>
 
@@ -218,6 +306,22 @@ const LiveTimingPage: React.FC = () => {
           <div className="lg:col-span-3 bg-tarmac border border-[#1a1a1a] rounded-md overflow-hidden shadow-2xl flex flex-col relative min-w-0">
             {/* Glossy top highlight */}
             <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
+
+            {isViewingPrevious && (
+              <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 text-xs font-bold text-amber-300 flex items-center justify-between z-20">
+                <div className="flex items-center gap-2">
+                  <span>🏁</span>
+                  <span>VIEWING PREVIOUS RACE TELEMETRY: <span className="text-white">{activeData.session_title}</span></span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSessionView('latest')}
+                  className="text-[11px] text-amber-400 hover:text-amber-200 underline font-mono cursor-pointer"
+                >
+                  Return to Live feed →
+                </button>
+              </div>
+            )}
 
             <div className="overflow-auto flex-1 max-h-[calc(100vh-280px)]" style={{ overflowAnchor: 'none' }}>
               {hasNoSessionData ? (
@@ -285,9 +389,25 @@ const LiveTimingPage: React.FC = () => {
 
                   {/* Last completed session, when the backend still remembers it */}
                   {data.last_session && (
-                    <div className="mt-6 w-full max-w-lg rounded-lg border border-neutral-800 bg-neutral-900/40 p-4 text-left">
-                      <div className="text-[10px] uppercase tracking-[0.25em] text-neutral-500 font-black mb-1">
-                        Last Completed Session
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSessionView('previous')}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSessionView('previous');
+                        }
+                      }}
+                      className="mt-6 w-full max-w-lg rounded-lg border border-neutral-800 bg-neutral-900/40 p-4 text-left cursor-pointer hover:border-amber-400/50 hover:bg-neutral-900/70 transition-colors group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-[10px] uppercase tracking-[0.25em] text-neutral-500 font-black">
+                          Last Completed Session
+                        </div>
+                        <span className="text-[10px] uppercase font-bold text-amber-400/80 group-hover:text-amber-300">
+                          View Session Telemetry →
+                        </span>
                       </div>
                       <div className="text-sm font-bold text-neutral-200">
                         {data.last_session.session_title}
@@ -303,6 +423,13 @@ const LiveTimingPage: React.FC = () => {
                   )}
 
                   <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSessionView('previous')}
+                      className="inline-flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 transition-ui cursor-pointer"
+                    >
+                      <Flag size={13} className="text-amber-400" /> View Previous Race Telemetry
+                    </button>
                     <Link
                       to="/races"
                       className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-neutral-200 hover:border-red-500/60 hover:text-white transition-ui"
@@ -355,9 +482,9 @@ const LiveTimingPage: React.FC = () => {
                       <td colSpan={10} className="p-0">
                         <EmptyState
                           icon={Radio}
-                          title={data.isLiveSession ? 'Waiting for timing data' : 'No live session right now'}
+                          title={activeData.isLiveSession ? 'Waiting for timing data' : 'No live session right now'}
                           description={
-                            data.isLiveSession
+                            activeData.isLiveSession
                               ? 'The session is live but no timing rows have arrived yet. This updates automatically.'
                               : 'Live timing is only available while a Formula 1 session is in progress. The feed will populate automatically when a session starts.'
                           }
@@ -380,11 +507,11 @@ const LiveTimingPage: React.FC = () => {
             <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
               <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
               <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
-                <Activity size={14} /> {data.circuit ? `${data.circuit.name.toUpperCase()} — TRACK MAP` : 'TRACK MAP'}
+                <Activity size={14} /> {activeData.circuit ? `${activeData.circuit.name.toUpperCase()} — TRACK MAP` : 'TRACK MAP'}
               </h3>
               <div className="relative w-full aspect-square bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
-                {data.circuit ? (
-                  <CircuitTrackMap circuit={data.circuit} lines={sortedLines} />
+                {activeData.circuit ? (
+                  <CircuitTrackMap circuit={activeData.circuit} lines={sortedLines} />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full px-6 text-center">
                     <Activity size={28} className="text-neutral-700 mb-2" />
@@ -397,7 +524,7 @@ const LiveTimingPage: React.FC = () => {
                     </p>
                   </div>
                 )}
-                {isUnavailable && data.circuit && (
+                {isUnavailable && activeData.circuit && (
                   <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-4">
                     <p className="text-[11px] text-neutral-300 font-bold uppercase tracking-wider text-center leading-relaxed">
                       Live track map unavailable — requires the paid data feed.
@@ -405,10 +532,10 @@ const LiveTimingPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              {data.circuit && (
+              {activeData.circuit && (
                 <div className="mt-2 flex w-full items-center justify-between text-[9px] uppercase tracking-widest text-neutral-600">
-                  <span>{data.circuit.location}</span>
-                  <span>{data.circuit.country}</span>
+                  <span>{activeData.circuit.location}</span>
+                  <span>{activeData.circuit.country}</span>
                 </div>
               )}
             </div>
@@ -424,7 +551,7 @@ const LiveTimingPage: React.FC = () => {
                   ? '🏁 CHEQUERED FLAG (SESSION ENDED)'
                   : isNoSession
                     ? 'NO SESSION'
-                    : data.trackStatus}
+                    : activeData.trackStatus}
               </div>
             </div>
 
@@ -437,19 +564,19 @@ const LiveTimingPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">AIR TEMP</div>
-                  <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-red-500"/> {data.weather.air}</div>
+                  <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-red-500"/> {activeData.weather.air}</div>
                 </div>
                 <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">TRACK TEMP</div>
-                  <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-orange-500"/> {data.weather.track}</div>
+                  <div className="font-bold flex items-center gap-2 text-md"><Thermometer size={14} className="text-orange-500"/> {activeData.weather.track}</div>
                 </div>
                 <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">HUMIDITY</div>
-                  <div className="font-bold flex items-center gap-2 text-md"><Wind size={14} className="text-blue-500"/> {data.weather.humidity}</div>
+                  <div className="font-bold flex items-center gap-2 text-md"><Wind size={14} className="text-blue-500"/> {activeData.weather.humidity}</div>
                 </div>
                 <div className="bg-tarmac p-3 rounded-sm border border-[#151515]">
                   <div className="text-[11px] text-neutral-500 mb-1 font-bold tracking-wider">RAIN RISK</div>
-                  <div className="font-bold flex items-center gap-2 text-md"><CloudRain size={14} className="text-cyan-500"/> {data.weather.rain}</div>
+                  <div className="font-bold flex items-center gap-2 text-md"><CloudRain size={14} className="text-cyan-500"/> {activeData.weather.rain}</div>
                 </div>
               </div>
             </div>
@@ -473,7 +600,7 @@ const LiveTimingPage: React.FC = () => {
                 <div className="text-neutral-500 font-bold flex items-center justify-center h-full text-center px-6 leading-relaxed">
                   Live race control is unavailable — real-time messages require a paid data feed that isn't connected yet.
                 </div>
-              ) : data.messages.length > 0 ? data.messages.map((m, idx) => (
+              ) : activeData.messages.length > 0 ? activeData.messages.map((m, idx) => (
                 <div key={idx} className="flex flex-col py-1.5 border-b border-[#151515] last:border-0 group hover:bg-tarmac transition-colors rounded-sm px-1">
                   <span className="text-neutral-600 font-bold">{m.time}</span>
                   <span className={`font-black tracking-wide ${m.type === 'pit' ? 'text-blue-400' : m.type === 'flag' ? 'text-yellow-400' : 'text-neutral-300'}`}>
@@ -488,9 +615,11 @@ const LiveTimingPage: React.FC = () => {
 
           {/* Pit Wall Team Radio Comms */}
           <TeamRadioSection
-            liveRadio={data.radio}
-            liveStatus={data.status}
+            liveRadio={activeData.radio}
+            liveStatus={activeData.status}
             connectionStatus={connectionStatus}
+            sessionMode={sessionView}
+            onSessionModeChange={setSessionView}
           />
         </div>
       </main>

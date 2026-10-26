@@ -35,6 +35,9 @@ export interface TeamRadioSectionProps {
   /** Wire status from `/ws/livetiming` (`live`, `no_session`, ...). */
   liveStatus?: string;
   connectionStatus?: 'connecting' | 'connected' | 'lost';
+  /** Optional controlled session filter: 'latest' (Live) or 'previous'. */
+  sessionMode?: 'latest' | 'previous';
+  onSessionModeChange?: (mode: 'latest' | 'previous') => void;
 }
 
 export interface DriverRadioInfo {
@@ -340,8 +343,19 @@ export default function TeamRadioSection({
   liveRadio = [],
   liveStatus,
   connectionStatus = 'connected',
+  sessionMode,
+  onSessionModeChange,
 }: TeamRadioSectionProps) {
-  const [sessionFilter, setSessionFilter] = useState<'latest' | 'previous'>('latest');
+  const [internalSessionFilter, setInternalSessionFilter] = useState<'latest' | 'previous'>('latest');
+  const sessionFilter = sessionMode !== undefined ? sessionMode : internalSessionFilter;
+
+  const handleSessionChange = (mode: 'latest' | 'previous') => {
+    if (sessionMode === undefined) {
+      setInternalSessionFilter(mode);
+    }
+    onSessionModeChange?.(mode);
+  };
+
   const [driverFilter, setDriverFilter] = useState<string>('all');
 
   const isLiveFeed = liveStatus === 'live' && sessionFilter === 'latest';
@@ -485,7 +499,7 @@ export default function TeamRadioSection({
           {/* Session Toggle */}
           <div className="flex bg-neutral-900 border border-neutral-800 rounded-lg p-1">
             <button
-              onClick={() => setSessionFilter('latest')}
+              onClick={() => handleSessionChange('latest')}
               className={`px-3 py-1.5 text-xs font-bold rounded-md transition-ui ${
                 sessionFilter === 'latest'
                   ? 'bg-red-600 text-white shadow-md'
@@ -495,7 +509,7 @@ export default function TeamRadioSection({
               Live Race
             </button>
             <button
-              onClick={() => setSessionFilter('previous')}
+              onClick={() => handleSessionChange('previous')}
               className={`px-3 py-1.5 text-xs font-bold rounded-md transition-ui ${
                 sessionFilter === 'previous'
                   ? 'bg-neutral-700 text-white shadow-md'

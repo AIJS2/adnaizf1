@@ -341,6 +341,32 @@ class FinishedSessionTests(unittest.TestCase):
 
         self.assertEqual(state.snapshot()["session_state"], "live")
 
+    def test_reset_preserves_full_previous_session_telemetry(self):
+        state = LiveTimingState()
+        self._seed_finished_race(state)
+        state.update(
+            "DriverList",
+            {
+                "1": {"Tla": "VER", "TeamName": "Red Bull Racing"},
+                "4": {"Tla": "NOR", "TeamName": "McLaren"},
+            },
+        )
+        state.update("WeatherData", {"AirTemp": "27.0", "TrackTemp": "35.0"})
+        state.reset()
+
+        last_session = state.last_session_snapshot()
+        self.assertIsNotNone(last_session)
+        assert last_session is not None
+        self.assertEqual(
+            last_session["session_title"], "United States Grand Prix — Race"
+        )
+        self.assertEqual(last_session["leader"], "VER")
+        self.assertEqual(len(last_session["lines"]), 2)
+        self.assertEqual(last_session["lines"][0]["driver"], "VER")
+        self.assertEqual(last_session["lines"][1]["driver"], "NOR")
+        self.assertEqual(last_session["weather"]["air"], "27.0°C")
+        self.assertEqual(last_session["circuit"]["key"], "austin")
+
 
 class CircuitMapTests(unittest.TestCase):
     def test_resolves_austin_from_signalr_session_info(self):

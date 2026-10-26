@@ -162,12 +162,12 @@ const defaultSearchItems: SearchItem[] = [
   {
     id: 'team-sauber',
     type: 'Teams',
-    title: 'Stake F1 Team Kick Sauber',
+    title: 'Audi F1 Team',
     subtitle: 'Formula One Team · Hinwil, Switzerland',
-    team: 'Sauber',
-    link: '/team/sauber',
+    team: 'Audi',
+    link: '/team/audi',
     icon: Users,
-    keywords: ['sauber', 'kick sauber', 'stake', 'hulkenberg', 'bortoleto', 'audi']
+    keywords: ['audi', 'sauber', 'kick sauber', 'stake', 'hulkenberg', 'bortoleto']
   },
   {
     id: 'team-haas_f1_team',
@@ -178,6 +178,16 @@ const defaultSearchItems: SearchItem[] = [
     link: '/team/haas_f1_team',
     icon: Users,
     keywords: ['haas', 'bearman', 'ocon']
+  },
+  {
+    id: 'team-cadillac_f1_team',
+    type: 'Teams',
+    title: 'Cadillac F1 Team',
+    subtitle: 'Formula One Team · Fishers, USA & Silverstone, UK',
+    team: 'Cadillac F1 Team',
+    link: '/team/cadillac_f1_team',
+    icon: Users,
+    keywords: ['cadillac', 'perez', 'checo', 'bottas', 'gm', 'general motors']
   },
   {
     id: 'driver-max_verstappen',
@@ -418,6 +428,42 @@ const defaultSearchItems: SearchItem[] = [
     link: '/driver/esteban_ocon',
     icon: User,
     keywords: ['esteban', 'ocon', 'oco', 'haas', '31']
+  },
+  {
+    id: 'driver-sergio_perez',
+    type: 'Drivers',
+    title: 'Sergio Pérez',
+    code: 'PER',
+    number: 11,
+    team: 'Cadillac F1 Team',
+    subtitle: '#11 · Cadillac F1 Team',
+    link: '/driver/sergio_perez',
+    icon: User,
+    keywords: ['sergio', 'perez', 'pérez', 'checo', 'per', 'cadillac', 'mexico', '11']
+  },
+  {
+    id: 'driver-valtteri_bottas',
+    type: 'Drivers',
+    title: 'Valtteri Bottas',
+    code: 'BOT',
+    number: 77,
+    team: 'Cadillac F1 Team',
+    subtitle: '#77 · Cadillac F1 Team',
+    link: '/driver/valtteri_bottas',
+    icon: User,
+    keywords: ['valtteri', 'bottas', 'bot', 'cadillac', 'finland', '77']
+  },
+  {
+    id: 'driver-arvid_lindblad',
+    type: 'Drivers',
+    title: 'Arvid Lindblad',
+    code: 'LIN',
+    number: 41,
+    team: 'RB',
+    subtitle: '#41 · Racing Bulls',
+    link: '/driver/arvid_lindblad',
+    icon: User,
+    keywords: ['arvid', 'lindblad', 'lin', 'rb', 'racing bulls', '41']
   },
 
   // Grand Prix Circuits & Races

@@ -87,6 +87,8 @@ describe('driverSlug', () => {
   it('builds the route slug from a full name', () => {
     expect(driverSlug('Max Verstappen')).toBe('max_verstappen');
     expect(driverSlug('Lando  Norris')).toBe('lando_norris');
+    expect(driverSlug('Sergio Pérez')).toBe('sergio_perez');
+    expect(driverSlug('Nico Hülkenberg')).toBe('nico_hulkenberg');
   });
 
   it('returns empty for a missing name so the link is not rendered', () => {

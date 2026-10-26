@@ -7,7 +7,7 @@ from config.limiter import limiter
 
 router = APIRouter()
 
-SLUG_PATTERN = r"^[A-Za-z0-9_-]+$"
+SLUG_PATTERN = r"^[A-Za-z0-9_\-\u00C0-\u024F]+$"
 
 
 def _season_has_no_standings(champ_data) -> bool:

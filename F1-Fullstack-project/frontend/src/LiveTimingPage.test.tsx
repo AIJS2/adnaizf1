@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
@@ -261,5 +261,119 @@ describe('LiveTimingPage empty state & countdown integration', () => {
     expect(
       screen.getByRole('link', { name: /Open Simulator/i }),
     ).toHaveAttribute('href', '/simulator');
+  });
+
+  it('renders previous race telemetry when clicking Previous Race and switches back to Live', () => {
+    renderLiveTiming();
+
+    const socket = MockWebSocket.instances[0];
+    expect(socket).toBeDefined();
+
+    act(() => {
+      socket.emitOpen();
+      socket.emitMessage({
+        type: 'TimingData',
+        session_title: 'Australian Grand Prix — Free Practice 1',
+        session_state: 'no_session',
+        status: 'live',
+        is_live_session: false,
+        circuit: null,
+        lap: null,
+        total_laps: null,
+        last_session: {
+          session_title: 'United States Grand Prix — Race',
+          session_state: 'finished',
+          circuit: {
+            key: 'cota',
+            name: 'Circuit of the Americas',
+            location: 'Austin',
+            country: 'USA',
+            viewBox: '0 0 500 500',
+            path: 'M 10 10 L 50 50',
+          },
+          lap: 56,
+          total_laps: 56,
+          leader: 'ANT',
+          leader_team: 'Mercedes',
+          lines: [
+            {
+              position: 1,
+              driver: 'ANT',
+              driver_name: 'Kimi Antonelli',
+              team: 'Mercedes',
+              interval: 'LEADER',
+              gap: 'LEADER',
+              best_lap: '1:37.234',
+              last_lap: '1:38.100',
+              s1: '25.100',
+              s2: '38.200',
+              s3: '33.934',
+              s1_color: 'purple',
+              s2_color: 'green',
+              s3_color: 'yellow',
+              tyre_compound: 'HARD',
+              tyre_age: 18,
+              pits: 1,
+            },
+            {
+              position: 2,
+              driver: 'VER',
+              driver_name: 'Max Verstappen',
+              team: 'Red Bull Racing',
+              interval: '+1.450',
+              gap: '+1.450',
+              best_lap: '1:37.500',
+              last_lap: '1:38.300',
+              s1: '25.300',
+              s2: '38.100',
+              s3: '34.100',
+              s1_color: 'green',
+              s2_color: 'purple',
+              s3_color: 'yellow',
+              tyre_compound: 'HARD',
+              tyre_age: 19,
+              pits: 1,
+            },
+          ],
+          trackStatus: 'FINISH',
+          weather: { air: '22.9°C', track: '37.8°C', humidity: '31%', rain: '0%' },
+          messages: [{ time: '16:45', msg: 'CHEQUERED FLAG', type: 'flag' }],
+          radio: [],
+        },
+        lines: [],
+        trackStatus: 'NO SESSION',
+        weather: { air: '--', track: '--', humidity: '--', rain: '--' },
+        messages: [],
+        radio: [],
+      });
+    });
+
+    // In live mode without active session, empty state is visible
+    expect(screen.getByText('No Live Session Data')).toBeInTheDocument();
+    expect(screen.queryByText('Kimi Antonelli')).not.toBeInTheDocument();
+
+    // Click the "Previous" toggle button
+    const prevButtons = screen.getAllByRole('button', { name: /Previous/i });
+    expect(prevButtons.length).toBeGreaterThan(0);
+    act(() => {
+      fireEvent.click(prevButtons[0]);
+    });
+
+    // Classification table, tyre strategy, driver rows, weather and status are now rendered
+    expect(screen.getAllByText('ANT').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('VER').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('22.9°C')).toBeInTheDocument();
+    expect(screen.getByText('37.8°C')).toBeInTheDocument();
+    expect(screen.getAllByText(/CHEQUERED FLAG/i).length).toBeGreaterThanOrEqual(2);
+
+    // Click "Live Race" toggle button to switch back
+    const liveButtons = screen.getAllByRole('button', { name: /Live Race/i });
+    act(() => {
+      fireEvent.click(liveButtons[0]);
+    });
+
+    // Returns to live empty state
+    expect(screen.getByText('No Live Session Data')).toBeInTheDocument();
+    expect(screen.queryByText('ANT')).not.toBeInTheDocument();
   });
 });

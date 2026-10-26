@@ -27,6 +27,7 @@ Use `openf1_status()` for the connection detail that `/health` can surface.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from typing import Any, Optional
@@ -41,11 +42,80 @@ logger = logging.getLogger(__name__)
 # routers/race_details.py), so a blocking client is fine — an async client
 # would gain nothing without a caller change.
 BASE_URL = "https://api.openf1.org/v1"
-DEFAULT_TIMEOUT = 10.0
+DEFAULT_TIMEOUT = 4.0
 
 # 429 is transient, so retry it. Retry-After is honoured when present.
 MAX_RETRIES = 3
 RETRY_BACKOFF = 0.6
+
+# OpenF1's free tier is historical-only. While an F1 session is live (from
+# 30 minutes before to 30 minutes after), the API answers 401/403 for every
+# endpoint — including historical session keys — unless the request carries a
+# paid API key. Retrying that is pointless and used to flood the logs. Cache
+# the condition for 10 minutes, then probe again so the app recovers by itself
+# after the session.
+_PAYWALL_UNTIL = 0.0
+_PAYWALL_DETAIL = ""
+_PAYWALL_BACKOFF_SECONDS = 600.0
+
+
+def paywall_active() -> bool:
+    """True while OpenF1's live-session paywall backoff is in effect."""
+    return time.monotonic() < _PAYWALL_UNTIL
+
+
+def paywall_detail() -> str:
+    """The upstream's 401/403 explanation, or an empty string."""
+    return _PAYWALL_DETAIL
+
+
+def clear_paywall() -> None:
+    """End the backoff after a successful OpenF1 request."""
+    global _PAYWALL_UNTIL, _PAYWALL_DETAIL
+    _PAYWALL_UNTIL = 0.0
+    _PAYWALL_DETAIL = ""
+
+
+def _extract_paywall_detail(body: str) -> str:
+    text = (body or "").strip()
+    if not text:
+        return ""
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return text[:300]
+    if isinstance(data, dict):
+        detail = data.get("detail") or data.get("error") or data.get("message")
+        if detail:
+            return str(detail)[:300]
+    return text[:300]
+
+
+def note_paywall(status_code: int, body: str = "") -> bool:
+    """Record a 401/403 from OpenF1 and pause further calls for a while.
+
+    Returns True only for the first failure in a streak (or when the upstream
+    message changes), so callers can log the cause once instead of on every
+    request.
+    """
+    global _PAYWALL_UNTIL, _PAYWALL_DETAIL
+
+    detail = _extract_paywall_detail(body)
+    now = time.monotonic()
+    stored_detail = detail or f"HTTP {status_code}"
+    first = (now >= _PAYWALL_UNTIL) or (stored_detail != _PAYWALL_DETAIL)
+    _PAYWALL_UNTIL = now + _PAYWALL_BACKOFF_SECONDS
+    _PAYWALL_DETAIL = stored_detail
+
+    if first:
+        logger.warning(
+            "OpenF1 live-session paywall active (HTTP %s): %s. "
+            "Pausing OpenF1 calls for %d minutes.",
+            status_code,
+            _PAYWALL_DETAIL,
+            int(_PAYWALL_BACKOFF_SECONDS / 60),
+        )
+    return first
 
 # A browser-ish UA: OpenF1 sits behind a CDN that answers bare script UAs
 # with a challenge page, which surfaces as a JSON decode error rather than a
@@ -89,8 +159,12 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
 
     Retries on 429 (rate limit) and on connection errors, since both are
     transient. A 404 is NOT retried: for `/position` it legitimately means
-    "no data for this session yet".
+    "no data for this session yet". A 401/403 means the live-session paywall
+    is up, so it is cached and no further calls are attempted until it lifts.
     """
+    if paywall_active():
+        return None
+
     last_error: Optional[str] = None
 
     for attempt in range(MAX_RETRIES):
@@ -111,7 +185,12 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
 
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
-            # 4xx other than 429 is a permanent answer for this request.
+            # 401/403 during a live session is OpenF1's paywall: cache it so the
+            # rest of the app stops hammering an endpoint that cannot answer.
+            if e.response.status_code in (401, 403):
+                note_paywall(e.response.status_code, e.response.text)
+                return None
+            # Other 4xx is a permanent answer for this request.
             logger.warning(
                 "OpenF1 %s -> HTTP %s: %s",
                 path,
@@ -133,7 +212,7 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
             continue
 
         try:
-            return response.json()
+            data = response.json()
         except ValueError as e:
             # A CDN challenge page parses as HTML, so this is the symptom you
             # see when the UA is refused rather than a genuine server error.
@@ -144,6 +223,8 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
                 e,
             )
             return None
+        clear_paywall()
+        return data
 
     logger.warning(
         "OpenF1 %s gave up after %d attempts: %s", path, MAX_RETRIES, last_error
@@ -316,11 +397,21 @@ def openf1_status() -> dict[str, Any]:
 
     Deliberately uses ONE request. An earlier version probed several
     endpoints, which tripped OpenF1's 3/sec limit and made /health flaky.
+    When the live-session paywall is cached, the probe is skipped entirely so
+    /health stays fast and the logs stay quiet.
     """
+    if paywall_active():
+        return {
+            "connected": False,
+            "base_url": BASE_URL,
+            "paywalled": True,
+            "detail": paywall_detail(),
+        }
     sessions = get_sessions(2026)
     return {
         "connected": sessions is not None,
         "base_url": BASE_URL,
+        "paywalled": paywall_active(),
     }
 
 
@@ -557,6 +648,10 @@ __all__ = [
     "get_car_data",
     "get_location",
     "openf1_status",
+    "paywall_active",
+    "paywall_detail",
+    "clear_paywall",
+    "note_paywall",
     "fetch_classification",
     "session_key_for",
 ]

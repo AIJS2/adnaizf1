@@ -1,24 +1,40 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, AlertCircle, RefreshCw, Volume2, Search, Radio } from 'lucide-react';
 import { API_URL } from '../../config';
 import { getDriverColor } from '../../data/teamData';
+import { LiveTimingRadioItem } from '../../types/f1';
+import {
+  LIVE_TIMING_UNAVAILABLE_TITLE,
+  LIVE_TIMING_UNAVAILABLE_MESSAGE,
+} from '../../utils/liveTimingCopy';
 
 // Custom types
 interface TeamRadioResponse {
   status: string;
   source: string;
   warning?: string;
+  detail?: string;
+  fallback?: boolean;
+  session_title?: string;
   data: TeamRadioItem[];
 }
 
 interface TeamRadioItem {
-  session_key: number;
-  meeting_key: number;
+  session_key?: number | string | null;
+  meeting_key?: number | string | null;
   date: string;
   driver_number: number;
   recording_url: string;
+}
+
+export interface TeamRadioSectionProps {
+  /** Real team-radio captures from the live SignalR feed. */
+  liveRadio?: LiveTimingRadioItem[];
+  /** Wire status from `/ws/livetiming` (`live`, `no_session`, ...). */
+  liveStatus?: string;
+  connectionStatus?: 'connecting' | 'connected' | 'lost';
 }
 
 export interface DriverRadioInfo {
@@ -89,6 +105,20 @@ const EmptyState = ({ title, description }: { title: string; description: string
     <Search className="text-neutral-600 mb-4" size={40} />
     <h3 className="text-xl font-bold text-neutral-300 mb-2">{title}</h3>
     <p className="text-neutral-500 text-sm">{description}</p>
+  </div>
+);
+
+// Paywall / unavailable state. Same copy as the live-timing table so both
+// panels explain the missing paid feed instead of looking silently broken.
+const UnavailableState = () => (
+  <div className="flex flex-col items-center justify-center p-12 bg-amber-950/20 border border-amber-900/30 rounded-md text-center">
+    <Radio className="text-amber-400 mb-4" size={40} />
+    <h3 className="text-xl font-black uppercase tracking-widest text-amber-300 mb-2">
+      {LIVE_TIMING_UNAVAILABLE_TITLE}
+    </h3>
+    <p className="text-neutral-400 text-sm max-w-md leading-relaxed">
+      {LIVE_TIMING_UNAVAILABLE_MESSAGE}
+    </p>
   </div>
 );
 
@@ -284,32 +314,151 @@ const AudioPlayer = ({ url, driver, date }: { url: string; driver: number; date:
   );
 };
 
-export default function TeamRadioSection() {
+const RadioList = ({ items }: { items: TeamRadioItem[] }) => (
+  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+    <AnimatePresence mode="popLayout">
+      {items.map((item) => (
+        <motion.div
+          key={`${item.driver_number}-${item.date}-${item.recording_url}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+        >
+          <AudioPlayer
+            url={item.recording_url}
+            driver={item.driver_number}
+            date={item.date}
+          />
+        </motion.div>
+      ))}
+    </AnimatePresence>
+  </div>
+);
+
+export default function TeamRadioSection({
+  liveRadio = [],
+  liveStatus,
+  connectionStatus = 'connected',
+}: TeamRadioSectionProps) {
   const [sessionFilter, setSessionFilter] = useState<'latest' | 'previous'>('latest');
   const [driverFilter, setDriverFilter] = useState<string>('all');
 
+  const isLiveFeed = liveStatus === 'live' && sessionFilter === 'latest';
+  const isWireUnavailable = liveStatus === 'unavailable_subscription';
+  const hasLiveRadio = liveRadio.length > 0;
+  // A lost WebSocket is not a live feed: let the REST fallback try while the
+  // page reconnects. "connecting" stays disabled so the panel does not fire a
+  // request before the first status message arrives.
+  const queryEnabled =
+    connectionStatus !== 'connecting' && !isLiveFeed && !isWireUnavailable;
+
   const { data, isLoading, error, refetch } = useQuery<TeamRadioResponse, Error>({
-    queryKey: ['teamRadio', driverFilter, sessionFilter],
+    queryKey: ['teamRadio', sessionFilter],
     queryFn: async () => {
-      let url = `${API_URL}/api/team_radio?session_key=${sessionFilter}`;
-      if (driverFilter !== 'all') {
-        url += `&driver_number=${driverFilter}`;
-      }
-      const response = await fetch(url);
+      const response = await fetch(
+        `${API_URL}/api/team_radio?session_key=${sessionFilter}`,
+      );
       if (!response.ok) throw new Error("Network response was not ok");
       return response.json();
     },
-    refetchInterval: sessionFilter === 'latest' ? 15000 : false,
+    enabled: queryEnabled,
+    refetchInterval: queryEnabled && sessionFilter === 'latest' ? 15000 : false,
   });
 
-  // Filter local data strictly (no fake sentiment, only real drivers)
-  const filteredData = data?.data?.filter(item => {
-    return !!driverNames[item.driver_number];
+  const apiRadio = data?.data ?? [];
+  const isCachedFallback = data?.source === 'signalr_cache' || data?.fallback === true;
+  // Prefer the free SignalR captures while a session is live. On the Previous
+  // tab they are a safety net: use them when OpenF1 failed, is paywalled, or
+  // explicitly returned the backend's own SignalR cache.
+  const useLiveFallback =
+    !isLiveFeed &&
+    hasLiveRadio &&
+    (Boolean(error) || isWireUnavailable || isCachedFallback);
+  const sourceData: TeamRadioItem[] = isLiveFeed
+    ? liveRadio
+    : apiRadio.length > 0
+      ? apiRadio
+      : useLiveFallback
+        ? liveRadio
+        : [];
+
+  const isPaywalled =
+    !isLiveFeed &&
+    !hasLiveRadio &&
+    (isWireUnavailable || data?.status === 'unavailable_subscription');
+
+  // Filter local data strictly (no fake sentiment, only real drivers). The
+  // live feed is authoritative, so show every capture it sends; historical
+  // REST rows and SignalR cache rows keep only known 2026 grid numbers.
+  const filteredData = sourceData.filter(item => {
+    const matchesDriver =
+      driverFilter === 'all' || String(item.driver_number) === driverFilter;
+    const knownDriver = !!driverNames[item.driver_number];
+    return (
+      matchesDriver &&
+      (isLiveFeed || isCachedFallback || useLiveFallback || knownDriver)
+    );
   });
 
-  const sortedDriverEntries = Object.entries(driverRadioData).sort((a, b) => {
-    return Number(a[0]) - Number(b[0]);
-  });
+  // Only offer drivers that actually have a clip in this session. The old
+  // static list showed all 26 grid entries even for a single-driver session.
+  const availableDriverNumbers = useMemo(() => {
+    const numbers = new Set<number>();
+    sourceData.forEach(item => {
+      const num = Number(item.driver_number);
+      if (Number.isFinite(num) && driverRadioData[num]) {
+        numbers.add(num);
+      }
+    });
+    return Array.from(numbers).sort((a, b) => a - b);
+  }, [sourceData]);
+
+  useEffect(() => {
+    if (
+      driverFilter !== 'all' &&
+      !availableDriverNumbers.includes(Number(driverFilter))
+    ) {
+      setDriverFilter('all');
+    }
+  }, [availableDriverNumbers, driverFilter]);
+
+  const friendlyError =
+    error?.message === 'Failed to fetch'
+      ? 'Relay radio tidak dapat dijangkau. Periksa koneksi lalu coba lagi.'
+      : error?.message || 'Gagal menghubungi OpenF1 Audio Relay';
+
+  let content: React.ReactNode;
+  if (isPaywalled) {
+    content = <UnavailableState />;
+  } else if (isLiveFeed) {
+    content = filteredData.length === 0 ? (
+      <EmptyState
+        title="Menunggu Radio Tim"
+        description="Sesi sedang live. Siaran radio akan muncul di sini saat tim berbicara di radio."
+      />
+    ) : (
+      <RadioList items={filteredData} />
+    );
+  } else if (connectionStatus === 'connecting' || isLoading) {
+    content = <RadioSkeleton />;
+  } else if (error && !hasLiveRadio) {
+    content = (
+      <InlineErrorState
+        error={friendlyError}
+        onRetry={() => refetch()}
+      />
+    );
+  } else if (filteredData.length === 0) {
+    content = (
+      <EmptyState
+        title="Tidak Ada Siaran Radio Ditemukan"
+        description="API OpenF1 tidak mengembalikan data untuk sesi ini. Coba ubah filter atau beralih ke sesi sebelumnya."
+      />
+    );
+  } else {
+    content = <RadioList items={filteredData} />;
+  }
 
   return (
     <section className="w-full bg-neutral-950 p-6 rounded-lg border border-neutral-800 shadow-xl">
@@ -317,8 +466,19 @@ export default function TeamRadioSection() {
         <div>
           <h2 className="text-2xl font-black italic uppercase flex items-center gap-2 text-white">
             <Volume2 className="text-red-500" /> Team <span className="text-red-500">Radio</span>
+            {isLiveFeed && (
+              <span className="ml-1 px-2 py-0.5 text-[10px] font-black tracking-widest bg-red-600/20 border border-red-500/40 text-red-400 rounded-xs uppercase motion-safe:animate-pulse">
+                Live
+              </span>
+            )}
           </h2>
-          <p className="text-sm text-neutral-400">Live communication from the pit wall</p>
+          <p className="text-sm text-neutral-400">
+            {isLiveFeed
+              ? 'Live radio from the official timing feed'
+              : isCachedFallback
+                ? 'Latest SignalR captures (OpenF1 fallback)'
+                : 'Live communication from the pit wall'}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -352,50 +512,28 @@ export default function TeamRadioSection() {
             onChange={(e) => setDriverFilter(e.target.value)}
             className="bg-neutral-900 border border-neutral-800 text-sm rounded-lg px-3 py-2 text-white focus:outline-hidden focus:border-red-500 font-medium"
           >
-            <option value="all">All Drivers ({sortedDriverEntries.length})</option>
-            {sortedDriverEntries.map(([num, info]) => (
-              <option key={num} value={num}>
-                #{num} {info.name} ({info.code})
-              </option>
-            ))}
+            <option value="all">All Drivers ({availableDriverNumbers.length})</option>
+            {availableDriverNumbers.map((num) => {
+              const info = driverRadioData[num];
+              return (
+                <option key={num} value={num}>
+                  #{num} {info.name} ({info.code})
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
 
       <div>
-        {isLoading ? (
-          <RadioSkeleton />
-        ) : error ? (
-          <InlineErrorState
-            error={error.message || "Gagal menghubungi OpenF1 Audio Relay"}
-            onRetry={() => refetch()}
-          />
-        ) : !filteredData || filteredData.length === 0 ? (
-          <EmptyState
-            title="Tidak Ada Siaran Radio Ditemukan"
-            description="API OpenF1 tidak mengembalikan data untuk sesi ini. Coba ubah filter atau beralih ke sesi sebelumnya."
-          />
-        ) : (
-          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
-            <AnimatePresence mode="popLayout">
-              {filteredData.map((item) => (
-                <motion.div
-                  key={`${item.driver_number}-${item.date}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <AudioPlayer
-                    url={item.recording_url}
-                    driver={item.driver_number}
-                    date={item.date}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+        {(isCachedFallback || (error && hasLiveRadio)) && (
+          <div className="mb-3 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-200/80">
+            {isCachedFallback
+              ? 'SignalR cache — OpenF1 sedang tidak tersedia.'
+              : 'Relay radio tidak dapat dijangkau — menampilkan tangkapan SignalR terakhir.'}
           </div>
         )}
+        {content}
       </div>
     </section>
   );

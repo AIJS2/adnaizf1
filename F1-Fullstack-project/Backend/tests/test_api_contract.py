@@ -154,8 +154,10 @@ class ApiContractTests(unittest.TestCase):
             with self.client.websocket_connect("/ws/livetiming") as websocket:
                 payload = websocket.receive_json()
         self.assertEqual(payload["type"], "TimingData")
+        self.assertEqual(payload["status"], "no_session")
         self.assertFalse(payload["is_live_session"])
         self.assertEqual(payload["lines"], [])
+        self.assertEqual(payload["radio"], [])
 
 
 if __name__ == "__main__":

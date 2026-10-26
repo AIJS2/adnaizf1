@@ -469,7 +469,7 @@ const ComparePage = () => {
   });
 
   // Teammate color collision logic
-  let d1Color = driver1 ? getDriverColor(driver1.abbreviation || driver1.name, driver1.team) : '#EF4444';
+  const d1Color = driver1 ? getDriverColor(driver1.abbreviation || driver1.name, driver1.team) : '#EF4444';
   let d2Color = driver2 ? getDriverColor(driver2.abbreviation || driver2.name, driver2.team) : '#3B82F6';
   if (driver1 && driver2 && (driver1.team === driver2.team || d1Color.toLowerCase() === d2Color.toLowerCase())) {
     d2Color = getDriverColor(driver2.abbreviation || driver2.name, driver2.team, true);

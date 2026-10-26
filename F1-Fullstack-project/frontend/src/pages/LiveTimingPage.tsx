@@ -1,14 +1,20 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { API_URL } from '../config';
+import { webSocketUrl } from '../config';
 import { fetchDashboardData } from '../services/api';
 import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
 import HeroCountdown from '../components/ui/HeroCountdown';
 import TyreStrategy from '../components/ui/TyreStrategy';
 import EmptyState from '../components/ui/EmptyState';
 import TeamRadioSection from '../components/dashboard/TeamRadioSection';
-import { LiveTimingData, LiveTimingLine } from '../types/f1';
+import { LiveTimingCircuit, LiveTimingData, LiveTimingLine } from '../types/f1';
+import {
+  LIVE_TIMING_UNAVAILABLE_TITLE,
+  LIVE_TIMING_UNAVAILABLE_MESSAGE,
+  REAL_DATA_ONLY_NOTE,
+} from '../utils/liveTimingCopy';
 import { getDriverColor } from '../data/teamData';
 
 const LiveTimingPage: React.FC = () => {
@@ -42,7 +48,15 @@ const LiveTimingPage: React.FC = () => {
     trackStatus: 'GREEN',
     weather: { air: '--', track: '--', humidity: '--', rain: '--' },
     messages: [],
-    isLiveSession: false
+    radio: [],
+    status: 'no_session',
+    isLiveSession: false,
+    session_state: 'no_session',
+    session_title: '',
+    circuit: null,
+    lap: null,
+    total_laps: null,
+    last_session: null,
   });
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'lost'>('connecting');
 
@@ -61,9 +75,7 @@ const LiveTimingPage: React.FC = () => {
       }
 
       setConnectionStatus(prev => prev === 'connected' ? 'lost' : 'connecting');
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = API_URL.replace(/^https?:\/\//, '');
-      const wsUrl = `${wsProtocol}//${wsHost}/ws/livetiming`;
+      const wsUrl = webSocketUrl('/ws/livetiming');
 
       ws = new WebSocket(wsUrl);
 
@@ -81,7 +93,18 @@ const LiveTimingPage: React.FC = () => {
               trackStatus: msg.trackStatus ?? prev.trackStatus,
               weather: msg.weather ?? prev.weather,
               messages: msg.messages ?? prev.messages,
-              isLiveSession: msg.is_live_session ?? prev.isLiveSession
+              radio: msg.radio ?? prev.radio,
+              status: msg.status ?? prev.status,
+              reason: msg.reason ?? prev.reason,
+              isLiveSession: msg.is_live_session ?? prev.isLiveSession,
+              session_state: 'session_state' in msg ? msg.session_state : prev.session_state,
+              session_title: 'session_title' in msg ? msg.session_title : prev.session_title,
+              session_status: 'session_status' in msg ? msg.session_status : prev.session_status,
+              archive_status: 'archive_status' in msg ? msg.archive_status : prev.archive_status,
+              circuit: 'circuit' in msg ? msg.circuit : prev.circuit,
+              lap: 'lap' in msg ? msg.lap : prev.lap,
+              total_laps: 'total_laps' in msg ? msg.total_laps : prev.total_laps,
+              last_session: 'last_session' in msg ? msg.last_session : prev.last_session,
             }));
           }
         } catch (err) {
@@ -127,6 +150,17 @@ const LiveTimingPage: React.FC = () => {
   }, [data.lines]);
 
   const hasNoSessionData = sortedLines.length === 0;
+  const isUnavailable = data.status === 'unavailable_subscription';
+  const isFinished = data.session_state === 'finished';
+  const isNoSession = data.session_state === 'no_session';
+  const sessionSubBadge = data.session_title
+    ? data.session_title.replace(' — ', ' • ')
+    : '';
+  const trackStatusClass = isFinished
+    ? 'bg-linear-to-r from-neutral-100 via-amber-200 to-neutral-100 text-black border-amber-400/70 text-sm sm:text-base'
+    : isNoSession
+      ? 'bg-neutral-900 text-neutral-400 border-neutral-700 text-sm sm:text-base'
+      : `border-black/50 text-xl ${getStatusColor(data.trackStatus)}`;
 
   return (
     <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600 w-full overflow-hidden" style={{ overflowAnchor: 'none' }}>
@@ -135,9 +169,36 @@ const LiveTimingPage: React.FC = () => {
         {/* Header Bar */}
         <div className="flex flex-col xl:flex-row xl:items-end justify-between mb-6 gap-4 border-b border-[#222] pb-4">
           <div>
-            <div className={`inline-flex items-center gap-2 border text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-xs mb-2 ${connectionStatus === 'connected' ? (data.isLiveSession ? 'bg-red-600/10 border-red-500/30 text-red-500 ' : 'bg-blue-600/10 border-blue-500/30 text-blue-400 ') : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 '}`}>
-              <Activity size={12} className={connectionStatus === 'connected' ? '' : ''} />
-              {connectionStatus === 'connecting' ? 'AWAITING CONNECTION…' : connectionStatus === 'lost' ? 'CONNECTION LOST - RECONNECTING…' : data.isLiveSession ? 'LIVE SIGNAL DETECTED' : 'NO LIVE SESSION'}
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <div className={`inline-flex items-center gap-2 border text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-xs ${
+                connectionStatus === 'connected'
+                  ? isFinished
+                    ? 'bg-amber-400/10 border-amber-400/40 text-amber-300'
+                    : isUnavailable
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                      : data.isLiveSession
+                        ? 'bg-red-600/10 border-red-500/30 text-red-500'
+                        : 'bg-blue-600/10 border-blue-500/30 text-blue-400'
+                  : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
+              }`}>
+                <Activity size={12} />
+                {connectionStatus === 'connecting'
+                  ? 'AWAITING CONNECTION…'
+                  : connectionStatus === 'lost'
+                    ? 'CONNECTION LOST - RECONNECTING…'
+                    : isFinished
+                      ? '🏁 SESSION FINISHED — FINAL CLASSIFICATION'
+                      : isUnavailable
+                        ? 'LIVE TIMING UNAVAILABLE'
+                        : data.isLiveSession
+                          ? 'LIVE SIGNAL DETECTED'
+                          : 'NO LIVE SESSION'}
+              </div>
+              {isFinished && sessionSubBadge && (
+                <div className="inline-flex items-center gap-2 border border-amber-500/20 bg-amber-500/5 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/80 px-3 py-1 rounded-xs">
+                  {sessionSubBadge}
+                </div>
+              )}
             </div>
             <h1 className="text-4xl font-black tracking-tight flex items-center gap-2">
               Pit Wall <span className=" text-chalk">Telemetry</span>
@@ -160,7 +221,26 @@ const LiveTimingPage: React.FC = () => {
 
             <div className="overflow-auto flex-1 max-h-[calc(100vh-280px)]" style={{ overflowAnchor: 'none' }}>
               {hasNoSessionData ? (
-                <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+                isUnavailable ? (
+                  <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+                    <div className="relative mb-5 flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-lg bg-neutral-900/90 border border-neutral-800 flex items-center justify-center text-neutral-400 shadow-inner">
+                        <Radio size={24} className="text-amber-400" />
+                      </div>
+                    </div>
+
+                    <h2 className="text-base font-black uppercase tracking-[0.25em] text-amber-300">
+                      {LIVE_TIMING_UNAVAILABLE_TITLE}
+                    </h2>
+                    <p className="text-xs text-neutral-400 mt-3 max-w-md leading-relaxed font-sans">
+                      {LIVE_TIMING_UNAVAILABLE_MESSAGE}
+                    </p>
+                    <p className="text-[11px] text-neutral-600 mt-2 max-w-md leading-relaxed font-sans">
+                      {REAL_DATA_ONLY_NOTE}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center py-16 px-6">
                   {/* Subtle pit-wall radar beacon */}
                   <div className="relative mb-5 flex items-center justify-center">
                     <div className="w-14 h-14 rounded-lg bg-neutral-900/90 border border-neutral-800 flex items-center justify-center text-neutral-400 shadow-inner">
@@ -202,7 +282,42 @@ const LiveTimingPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                </div>
+
+                  {/* Last completed session, when the backend still remembers it */}
+                  {data.last_session && (
+                    <div className="mt-6 w-full max-w-lg rounded-lg border border-neutral-800 bg-neutral-900/40 p-4 text-left">
+                      <div className="text-[10px] uppercase tracking-[0.25em] text-neutral-500 font-black mb-1">
+                        Last Completed Session
+                      </div>
+                      <div className="text-sm font-bold text-neutral-200">
+                        {data.last_session.session_title}
+                      </div>
+                      <div className="text-[11px] text-neutral-500 mt-1 font-sans">
+                        {data.last_session.circuit?.name}
+                        {data.last_session.lap && data.last_session.total_laps
+                          ? ` • ${data.last_session.lap}/${data.last_session.total_laps} laps`
+                          : ''}
+                        {data.last_session.leader ? ` • Winner: ${data.last_session.leader}` : ''}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      to="/races"
+                      className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-neutral-200 hover:border-red-500/60 hover:text-white transition-ui"
+                    >
+                      <Flag size={13} className="text-red-500" /> View Race Archive
+                    </Link>
+                    <Link
+                      to="/simulator"
+                      className="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-neutral-200 hover:border-red-500/60 hover:text-white transition-ui"
+                    >
+                      <Activity size={13} className="text-red-500" /> Open Simulator
+                    </Link>
+                  </div>
+                  </div>
+                )
               ) : (
               <table className="w-full text-[13px] tracking-tight whitespace-nowrap min-w-[700px]">
                 <thead className="bg-neutral-950 text-neutral-500 font-black text-left border-b border-[#222] shadow-xs sticky top-0 z-10">
@@ -265,42 +380,37 @@ const LiveTimingPage: React.FC = () => {
             <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
               <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
               <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
-                <Activity size={14} /> Track Map Simulation
+                <Activity size={14} /> {data.circuit ? `${data.circuit.name.toUpperCase()} — TRACK MAP` : 'TRACK MAP'}
               </h3>
-              <div className="relative w-full aspect-2/1 bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
-                <svg viewBox="0 0 300 150" className="w-full h-full">
-                  {/* Track outline */}
-                  <ellipse cx="150" cy="75" rx="120" ry="50" fill="none" stroke="#111" strokeWidth="12" />
-                  <ellipse cx="150" cy="75" rx="120" ry="50" fill="none" stroke="#333" strokeWidth="2" strokeDasharray="4 4" />
-
-                  {/* Start/Finish line */}
-                  <line x1="150" y1="20" x2="150" y2="30" stroke="white" strokeWidth="2" />
-                  <text x="150" y="15" fontSize="6" fill="#666" textAnchor="middle" className="font-mono">START</text>
-
-                  {sortedLines.filter(d => d.status === 'TRACK' || d.status === 'OUT').map(d => {
-                     // Using ellipse math for positions
-                     const progress = d.progress || 0;
-                     const theta = (progress - 0.25) * 2 * Math.PI;
-                     const x = 150 + 120 * Math.cos(theta);
-                     const y = 75 + 50 * Math.sin(theta);
-
-                     return (
-                       <g
-                         key={d.driver}
-                         style={{
-                           transform: `translate(${x}px, ${y}px)`,
-                           transition: 'transform 2s linear'
-                         }}
-                       >
-                         <circle r="4" fill={getDriverColor(d.driver, d.team)} className="drop-shadow-lg" />
-                         <text y="-6" fontSize="7" fill="#fff" textAnchor="middle" className="font-mono font-black" style={{ textShadow: '0px 1px 2px black, 0px 0px 4px rgba(0,0,0,0.8)' }}>
-                           {d.driver}
-                         </text>
-                       </g>
-                     )
-                  })}
-                </svg>
+              <div className="relative w-full aspect-square bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
+                {data.circuit ? (
+                  <CircuitTrackMap circuit={data.circuit} lines={sortedLines} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+                    <Activity size={28} className="text-neutral-700 mb-2" />
+                    <p className="text-[11px] text-neutral-500 font-bold uppercase tracking-wider leading-relaxed">
+                      {isNoSession
+                        ? 'No active session — track map unavailable.'
+                        : isUnavailable
+                          ? 'Live track map unavailable — requires the paid data feed.'
+                          : 'Track map unavailable for this circuit.'}
+                    </p>
+                  </div>
+                )}
+                {isUnavailable && data.circuit && (
+                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-4">
+                    <p className="text-[11px] text-neutral-300 font-bold uppercase tracking-wider text-center leading-relaxed">
+                      Live track map unavailable — requires the paid data feed.
+                    </p>
+                  </div>
+                )}
               </div>
+              {data.circuit && (
+                <div className="mt-2 flex w-full items-center justify-between text-[9px] uppercase tracking-widest text-neutral-600">
+                  <span>{data.circuit.location}</span>
+                  <span>{data.circuit.country}</span>
+                </div>
+              )}
             </div>
 
             {/* Track Status */}
@@ -309,8 +419,12 @@ const LiveTimingPage: React.FC = () => {
               <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4">
                 <Flag size={14} /> Track Status
               </h3>
-              <div className={`w-full py-3 rounded-md font-black text-center text-xl tracking-widest shadow-inner border border-black/50 ${getStatusColor(data.trackStatus)}`}>
-                {data.trackStatus}
+              <div className={`w-full py-3 rounded-md font-black text-center tracking-widest shadow-inner border ${trackStatusClass}`}>
+                {isFinished
+                  ? '🏁 CHEQUERED FLAG (SESSION ENDED)'
+                  : isNoSession
+                    ? 'NO SESSION'
+                    : data.trackStatus}
               </div>
             </div>
 
@@ -355,7 +469,11 @@ const LiveTimingPage: React.FC = () => {
               <Radio size={14} /> Race Control Log
             </h3>
             <div className="flex-1 overflow-y-auto pr-3 space-y-2 font-mono text-[11px] custom-scrollbar">
-              {data.messages.length > 0 ? data.messages.map((m, idx) => (
+              {isUnavailable ? (
+                <div className="text-neutral-500 font-bold flex items-center justify-center h-full text-center px-6 leading-relaxed">
+                  Live race control is unavailable — real-time messages require a paid data feed that isn't connected yet.
+                </div>
+              ) : data.messages.length > 0 ? data.messages.map((m, idx) => (
                 <div key={idx} className="flex flex-col py-1.5 border-b border-[#151515] last:border-0 group hover:bg-tarmac transition-colors rounded-sm px-1">
                   <span className="text-neutral-600 font-bold">{m.time}</span>
                   <span className={`font-black tracking-wide ${m.type === 'pit' ? 'text-blue-400' : m.type === 'flag' ? 'text-yellow-400' : 'text-neutral-300'}`}>
@@ -369,12 +487,151 @@ const LiveTimingPage: React.FC = () => {
           </div>
 
           {/* Pit Wall Team Radio Comms */}
-          <TeamRadioSection />
+          <TeamRadioSection
+            liveRadio={data.radio}
+            liveStatus={data.status}
+            connectionStatus={connectionStatus}
+          />
         </div>
       </main>
     </div>
   );
 };
+
+interface CircuitTrackMapProps {
+  circuit: LiveTimingCircuit;
+  lines: LiveTimingLine[];
+}
+
+interface TrackMapPoint {
+  driver: string;
+  team: string;
+  x: number;
+  y: number;
+  color: string;
+}
+
+/**
+ * Draws the real circuit outline bundled by the backend and places every
+ * running car on it with SVGPathElement.getPointAtLength(). The leader sits at
+ * the start/finish point; the rest are spread by their gap in seconds.
+ */
+const CircuitTrackMap = memo<CircuitTrackMapProps>(({ circuit, lines }) => {
+  const pathRef = useRef<SVGPathElement | null>(null);
+  const [points, setPoints] = useState<TrackMapPoint[]>([]);
+
+  useEffect(() => {
+    const path = pathRef.current;
+    if (
+      !path ||
+      typeof path.getTotalLength !== 'function' ||
+      typeof path.getPointAtLength !== 'function'
+    ) {
+      setPoints([]);
+      return;
+    }
+
+    let total = 0;
+    try {
+      total = path.getTotalLength();
+    } catch {
+      total = 0;
+    }
+    if (!Number.isFinite(total) || total <= 0) {
+      setPoints([]);
+      return;
+    }
+
+    const next: TrackMapPoint[] = [];
+    lines
+      .filter((line) => line.status === 'TRACK' || line.status === 'OUT')
+      .forEach((line, index) => {
+        const rawProgress =
+          typeof line.progress === 'number' && Number.isFinite(line.progress)
+            ? line.progress
+            : index === 0
+              ? 0
+              : index * 0.02;
+        const progress = Math.max(0, Math.min(rawProgress, 0.98));
+        try {
+          const point = path.getPointAtLength(progress * total);
+          next.push({
+            driver: line.driver,
+            team: line.team,
+            x: point.x,
+            y: point.y,
+            color: getDriverColor(line.driver, line.team),
+          });
+        } catch {
+          // Ignore a malformed point; the remaining drivers still render.
+        }
+      });
+
+    setPoints(next);
+  }, [circuit.path, lines]);
+
+  return (
+    <svg
+      viewBox={circuit.viewBox || '0 0 500 500'}
+      className="w-full h-full p-2"
+      role="img"
+      aria-label={`${circuit.name} track map`}
+      data-testid="circuit-track-map"
+    >
+      <path
+        d={circuit.path}
+        fill="none"
+        stroke="#080808"
+        strokeWidth="18"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d={circuit.path}
+        fill="none"
+        stroke="#3b3b3b"
+        strokeWidth="5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        ref={pathRef}
+        d={circuit.path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth="1"
+      />
+      {points.map((point) => (
+        <g
+          key={point.driver}
+          style={{
+            transform: `translate(${point.x}px, ${point.y}px)`,
+            transition: 'transform 2s linear',
+          }}
+        >
+          <circle
+            r="6"
+            fill={point.color}
+            stroke="#000"
+            strokeWidth="1.5"
+            className="drop-shadow-lg"
+          />
+          <text
+            y="-9"
+            fontSize="9"
+            fill="#fff"
+            textAnchor="middle"
+            className="font-mono font-black"
+            style={{ paintOrder: 'stroke', stroke: '#000', strokeWidth: 2 }}
+          >
+            {point.driver}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+});
+CircuitTrackMap.displayName = 'CircuitTrackMap';
 
 interface TimingRowProps {
   row: LiveTimingLine;

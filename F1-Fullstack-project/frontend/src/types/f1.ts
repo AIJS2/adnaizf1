@@ -61,6 +61,9 @@ export interface LiveTimingLine {
   pits: number;
   tyre: string;
   tyre_age: number;
+  /** Gap to the leader in seconds, when the feed provides a numeric gap. */
+  gap_seconds?: number | null;
+  /** 0–1 position along the real circuit outline (leader = 0). */
   progress?: number;
 }
 
@@ -78,12 +81,59 @@ export interface LiveTimingMessage {
   type?: string;
 }
 
+export interface LiveTimingRadioItem {
+  session_key?: number | string | null;
+  meeting_key?: number | string | null;
+  date: string;
+  driver_number: number;
+  recording_url: string;
+}
+
+/** Real circuit outline resolved from SignalR SessionInfo by the backend. */
+export interface LiveTimingCircuit {
+  key: string;
+  name: string;
+  location?: string;
+  country?: string;
+  layout?: string;
+  viewBox: string;
+  path: string;
+}
+
+/** Compact record of the last completed session, sent with no_session. */
+export interface LiveTimingLastSession {
+  session_title: string;
+  circuit?: LiveTimingCircuit | null;
+  track_status?: string;
+  lap?: number | null;
+  total_laps?: number | null;
+  leader?: string;
+  leader_team?: string;
+  finished_at?: string;
+}
+
+export type LiveTimingSessionState = 'live' | 'finished' | 'no_session';
+
+/** Wire status values sent by `/ws/livetiming`. */
+export type LiveTimingStatus = 'live' | 'no_session' | 'unavailable_subscription';
+
 export interface LiveTimingData {
   lines: LiveTimingLine[];
   trackStatus: string;
   weather: LiveTimingWeather;
   messages: LiveTimingMessage[];
+  radio?: LiveTimingRadioItem[];
+  status?: LiveTimingStatus | string;
+  reason?: string;
   isLiveSession?: boolean;
+  session_state?: LiveTimingSessionState | string;
+  session_title?: string;
+  session_status?: string;
+  archive_status?: string;
+  circuit?: LiveTimingCircuit | null;
+  lap?: number | null;
+  total_laps?: number | null;
+  last_session?: LiveTimingLastSession | null;
 }
 
 export interface TelemetryDataPoint {

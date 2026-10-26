@@ -42,13 +42,17 @@ COPY --from=builder /opt/venv /opt/venv
 RUN groupadd -r appuser \
     && useradd -r -g appuser -d /app -s /usr/sbin/nologin appuser
 
-# Observability writes to /app/logs and FastF1 cache to /app/cache —
-# both must exist before the app starts as appuser.
-RUN mkdir -p /app/cache /app/logs \
-    && chown -R appuser:appuser /app/cache /app/logs \
-    && chmod -R 775 /app/cache
+# Observability writes to /app/logs and FastF1/SQLite cache to /app/cache —
+# all writable directories must exist and belong to appuser before startup.
+RUN mkdir -p /app/cache/fastf1 /app/logs /app/.config/matplotlib \
+    && chown -R appuser:appuser /app \
+    && chmod -R 775 /app/cache /app/logs
 
-ENV F1_SCRAPE_FALLBACK_DIR=/app/cache
+ENV HOME=/app \
+    F1_CACHE_DIR=/app/cache \
+    FASTF1_CACHE=/app/cache/fastf1 \
+    F1_SCRAPE_FALLBACK_DIR=/app/cache \
+    MPLCONFIGDIR=/app/.config/matplotlib
 
 COPY --chown=appuser:appuser . .
 

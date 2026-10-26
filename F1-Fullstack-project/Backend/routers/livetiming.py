@@ -41,6 +41,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import threading
 import time
 from datetime import timedelta
@@ -593,10 +594,63 @@ async def _broadcast_loop(initial_status: str) -> None:
 #  WebSocket endpoint
 # ======================================================================
 
+MAX_WS_CLIENTS = 100
+MAX_WS_CONNECTIONS = MAX_WS_CLIENTS
+
+
+def _get_allowed_ws_origins() -> set[str]:
+    raw = (
+        os.environ.get("ALLOWED_ORIGINS")
+        or os.environ.get("CORS_ORIGINS")
+        or ""
+    )
+    extra = {o.strip().rstrip("/") for o in raw.split(",") if o.strip()}
+    return {
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://testserver",
+        "https://testserver",
+        "testserver",
+        *extra,
+    }
+
+
+def _is_allowed_ws_origin(websocket: WebSocket) -> bool:
+    origin = (websocket.headers.get("origin") or "").strip().rstrip("/")
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    if not origin:
+        return env != "production"
+    if origin in _get_allowed_ws_origins():
+        return True
+    if origin.startswith(
+        (
+            "http://localhost:",
+            "http://127.0.0.1:",
+            "https://localhost:",
+            "https://127.0.0.1:",
+        )
+    ):
+        return True
+    return False
+
 
 @router.websocket("/ws/livetiming")
 async def websocket_livetiming(websocket: WebSocket) -> None:
     global _broadcast_task
+
+    if not _is_allowed_ws_origin(websocket):
+        await websocket.close(code=1008, reason="Origin not allowed")
+        return
+
+    if len(_connected_clients) >= MAX_WS_CLIENTS:
+        await websocket.close(code=1013, reason="Try Again Later")
+        return
 
     await websocket.accept()
     _cancel_signalr_stop()
@@ -648,7 +702,10 @@ async def websocket_livetiming(websocket: WebSocket) -> None:
     try:
         while True:
             # Keep alive – listen for client pings / disconnect
-            await websocket.receive_text()
+            msg = await websocket.receive_text()
+            if len(msg) > 1024:
+                await websocket.close(code=1009, reason="Message Too Big")
+                break
     except (WebSocketDisconnect, Exception):
         pass
     finally:

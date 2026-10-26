@@ -255,10 +255,13 @@ def _empty_response(session_used: Any, warning: str) -> Dict[str, Any]:
 @router.get("")
 async def get_team_radio(
     driver_number: Optional[int] = Query(
-        None, description="Driver number to filter by"
+        None, ge=1, le=99, description="Driver number to filter by"
     ),
     session_key: Optional[str] = Query(
         None,
+        min_length=1,
+        max_length=32,
+        pattern=r"^(latest|previous|[0-9]+)$",
         description="Session key to filter by (e.g. 9158, 'latest', or 'previous')",
     ),
 ) -> Dict[str, Any]:

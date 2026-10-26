@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Path, Request
 import asyncio
 
 from config.cache import get_advanced_cache, set_advanced_cache
@@ -18,7 +18,9 @@ def get_dashboard_cache_filename(year: int):
 # =======================================================================
 @router.get("/api/races/{year}")
 @limiter.limit("200/minute")
-async def get_all_races_for_year(request: Request, year: int):
+async def get_all_races_for_year(
+    request: Request, year: int = Path(..., ge=2018, le=2026)
+):
     CACHE_FILE = f"all_races_cache_{year}.json"
     cached_data = await asyncio.to_thread(get_advanced_cache, CACHE_FILE)
     if cached_data:

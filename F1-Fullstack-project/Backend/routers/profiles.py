@@ -1,11 +1,13 @@
 import asyncio
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Path, Request
 
 from routers.championship import get_championship_standings
 from services.profiles_service import process_driver_profile, process_team_profile
 from config.limiter import limiter
 
 router = APIRouter()
+
+SLUG_PATTERN = r"^[A-Za-z0-9_-]+$"
 
 
 def _season_has_no_standings(champ_data) -> bool:
@@ -25,7 +27,11 @@ def _season_has_no_standings(champ_data) -> bool:
 
 @router.get("/api/driver/{year}/{driver_id}")
 @limiter.limit("200/minute")
-async def get_driver_profile(request: Request, year: int, driver_id: str):
+async def get_driver_profile(
+    request: Request,
+    year: int = Path(..., ge=2018, le=2026),
+    driver_id: str = Path(..., min_length=1, max_length=64, pattern=SLUG_PATTERN),
+):
     champ_data = await get_championship_standings(request, year)
     if _season_has_no_standings(champ_data):
         # No standings exist for this season yet, so no driver can be found.
@@ -36,7 +42,11 @@ async def get_driver_profile(request: Request, year: int, driver_id: str):
 
 @router.get("/api/team/{year}/{team_id}")
 @limiter.limit("200/minute")
-async def get_team_profile(request: Request, year: int, team_id: str):
+async def get_team_profile(
+    request: Request,
+    year: int = Path(..., ge=2018, le=2026),
+    team_id: str = Path(..., min_length=1, max_length=64, pattern=SLUG_PATTERN),
+):
     champ_data = await get_championship_standings(request, year)
     if _season_has_no_standings(champ_data):
         return {"error": f"Team '{team_id}' not found in {year} season."}

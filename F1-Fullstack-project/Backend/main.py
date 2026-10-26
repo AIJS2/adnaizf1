@@ -23,13 +23,48 @@ from slowapi.middleware import SlowAPIMiddleware
 from config.limiter import limiter
 from config.cache import redis_status
 
-app = FastAPI()
+_is_production = os.getenv("ENVIRONMENT", "development").lower() == "production"
+
+CSP_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' data: https://fonts.gstatic.com; "
+    "img-src 'self' data: blob: https:; "
+    "media-src 'self' https://livetiming.formula1.com https: data: blob:; "
+    "connect-src 'self' ws: wss: http: https:; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self';"
+)
+
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+    "Content-Security-Policy": CSP_POLICY,
+}
+
+app = FastAPI(
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # SlowAPIMiddleware enforces the @limiter.limit(...) decorators and the global
 # default_limits. Without it the decorators are inert. Added BEFORE CORSMiddleware
 # so the limit is evaluated before any other per-request work.
 app.add_middleware(SlowAPIMiddleware)
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for header_name, header_value in SECURITY_HEADERS.items():
+        response.headers.setdefault(header_name, header_value)
+    return response
 
 # ---------------------------------------------------------------------------
 # CORS — support localhost dev ports + production domain via env.

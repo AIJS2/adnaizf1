@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Path, Request
 
 from config.cache import get_advanced_cache, set_advanced_cache
 from services.scraper import apply_f1_official_standings
@@ -17,7 +17,9 @@ def get_championship_cache_filename(year: int):
 
 @router.get("/api/championship/{year}")
 @limiter.limit("100/minute")
-async def get_championship_standings(request: Request, year: int):
+async def get_championship_standings(
+    request: Request, year: int = Path(..., ge=2018, le=2026)
+):
     CACHE_FILE = get_championship_cache_filename(year)
     cached_data = await asyncio.to_thread(get_advanced_cache, CACHE_FILE)
     if cached_data:

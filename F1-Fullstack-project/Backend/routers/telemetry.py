@@ -1,7 +1,9 @@
 import logging
 import asyncio
 import os
-from fastapi import APIRouter, Request
+import re
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 
 from config.cache import get_advanced_cache, set_advanced_cache
 from services.telemetry_service import (
@@ -13,19 +15,26 @@ from config.limiter import limiter
 router = APIRouter()
 
 MAX_TELEMETRY_DRIVERS = 10
+DRIVER_CODE_RE = re.compile(r"^[A-Za-z]{3}$")
 
 
 @router.get("/api/telemetry/{year}/{round_number}")
 @limiter.limit("100/minute")
 async def get_telemetry_compare(
     request: Request,
-    year: int,
-    round_number: int,
-    drivers: str = "VER,NOR",
-    lap: int = None,
+    year: int = Path(..., ge=2018, le=2026),
+    round_number: int = Path(..., ge=1, le=25),
+    drivers: str = Query("VER,NOR", max_length=60),
+    lap: Optional[int] = Query(None, ge=1, le=100),
 ):
-    driver_list = [d.strip().upper() for d in drivers.split(",") if d.strip()]
-    driver_list = driver_list[:MAX_TELEMETRY_DRIVERS]
+    raw_tokens = [d.strip() for d in drivers.split(",") if d.strip()]
+    if any(not DRIVER_CODE_RE.fullmatch(token) for token in raw_tokens):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid driver code; each driver must be a 3-letter abbreviation.",
+        )
+
+    driver_list = [token.upper() for token in raw_tokens][:MAX_TELEMETRY_DRIVERS]
 
     if not driver_list:
         # No driver code was supplied. An empty payload with the reason is more
@@ -71,7 +80,11 @@ async def get_telemetry_compare(
 
 @router.get("/api/telemetry-drivers/{year}/{round_number}")
 @limiter.limit("200/minute")
-async def get_telemetry_drivers(request: Request, year: int, round_number: int):
+async def get_telemetry_drivers(
+    request: Request,
+    year: int = Path(..., ge=2018, le=2026),
+    round_number: int = Path(..., ge=1, le=25),
+):
     try:
         return await asyncio.to_thread(get_telemetry_drivers_list, year, round_number)
     except Exception as e:

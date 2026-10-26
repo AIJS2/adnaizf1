@@ -3,10 +3,24 @@ from __future__ import annotations
 import logging
 import os
 
+from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
+
+
+def get_real_client_ip(request: Request) -> str:
+    """Resolve client IP from reverse-proxy headers, falling back to socket peer."""
+    real_ip = request.headers.get("X-Real-IP", "").strip()
+    if real_ip:
+        return real_ip
+    forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
+    if forwarded_for:
+        first_ip = forwarded_for.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+    return get_remote_address(request)
 
 # ---------------------------------------------------------------------------
 # Rate limiting configuration
@@ -54,7 +68,7 @@ _STORAGE_OPTIONS = {
 }
 
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=get_real_client_ip,
     # Every endpoint is capped even if it forgets a decorator.
     default_limits=[os.getenv("DEFAULT_RATE_LIMIT", "200/minute")],
     storage_uri=_storage_uri,

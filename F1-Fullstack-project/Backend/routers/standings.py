@@ -1,5 +1,5 @@
 import asyncio
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Path, Request
 from config.limiter import limiter
 from services.standings_db import (
     get_championship_from_db,
@@ -13,7 +13,9 @@ router = APIRouter(prefix="/api/standings", tags=["standings"])
 
 @router.get("/{year}")
 @limiter.limit("100/minute")
-async def get_all_standings(request: Request, year: int):
+async def get_all_standings(
+    request: Request, year: int = Path(..., ge=2018, le=2026)
+):
     """Fetch complete F1 standings (Drivers & Constructors) from SQLite DB, fallback to cache."""
     db_data = await asyncio.to_thread(get_championship_from_db, year)
     if db_data:
@@ -26,7 +28,9 @@ async def get_all_standings(request: Request, year: int):
 
 @router.get("/drivers/{year}")
 @limiter.limit("100/minute")
-async def get_driver_standings(request: Request, year: int):
+async def get_driver_standings(
+    request: Request, year: int = Path(..., ge=2018, le=2026)
+):
     """Fetch Driver Championship standings from SQLite DB."""
     drivers = await asyncio.to_thread(get_driver_standings_from_db, year)
     if drivers:
@@ -40,7 +44,9 @@ async def get_driver_standings(request: Request, year: int):
 
 @router.get("/constructors/{year}")
 @limiter.limit("100/minute")
-async def get_constructor_standings(request: Request, year: int):
+async def get_constructor_standings(
+    request: Request, year: int = Path(..., ge=2018, le=2026)
+):
     """Fetch Constructors Championship standings from SQLite DB."""
     teams = await asyncio.to_thread(get_constructor_standings_from_db, year)
     if teams:

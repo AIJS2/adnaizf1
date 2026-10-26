@@ -1,7 +1,10 @@
 import logging
 import asyncio
+import os
+import secrets
 import time
-from fastapi import APIRouter, Request, BackgroundTasks
+from typing import Optional
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Path, Request, status as http_status
 from config.cache import get_advanced_cache_with_meta, set_advanced_cache
 from services.race_details_service import compute_fastf1_race_details
 from config.limiter import limiter
@@ -39,11 +42,25 @@ def _run_background_revalidation(
 @limiter.limit("100/minute")
 async def get_race_details(
     request: Request,
-    year: int,
-    round_number: int,
     background_tasks: BackgroundTasks,
+    year: int = Path(..., ge=2018, le=2026),
+    round_number: int = Path(..., ge=1, le=25),
     refresh: bool = False,
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
 ):
+    if refresh:
+        expected_key = os.environ.get("API_KEY", "")
+        if not expected_key:
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="API_KEY environment variable not configured",
+            )
+        if not x_api_key or not secrets.compare_digest(x_api_key, expected_key):
+            raise HTTPException(
+                status_code=http_status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API Key",
+            )
+
     CACHE_FILE = f"race_detail_cache_{year}_{round_number}.json"
     refresh_key = f"{year}_{round_number}"
 

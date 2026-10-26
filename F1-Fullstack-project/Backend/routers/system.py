@@ -1,6 +1,6 @@
 import asyncio
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Path, Request
 
 from config.cache import clear_advanced_cache
 from config.limiter import limiter
@@ -19,7 +19,9 @@ def get_championship_cache_filename(year: int):
 
 @router.get("/api/clear_cache/{year}", dependencies=[Depends(require_api_key)])
 @limiter.limit("50/minute")
-async def clear_cache(request: Request, year: int):
+async def clear_cache(
+    request: Request, year: int = Path(..., ge=2018, le=2026)
+):
     championship_cache = get_championship_cache_filename(year)
     dashboard_cache = get_dashboard_cache_filename(year)
     all_races_cache = f"all_races_cache_{year}.json"

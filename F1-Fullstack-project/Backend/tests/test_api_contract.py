@@ -106,6 +106,20 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(race_details.json()["_cache_state"], "fresh")
         self.assertEqual(race_details.json()["race_info"]["name"], "Test Grand Prix")
 
+    def test_upcoming_race_details_serves_preview_metadata(self):
+        # Round 19 is an upcoming race in the 2026 calendar
+        response = self.client.get("/api/race/2026/19")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data.get("status"), "Upcoming")
+        self.assertEqual(data.get("round"), 19)
+        self.assertTrue(bool(data.get("race_name") or data.get("name")))
+        self.assertTrue(bool(data.get("circuit")))
+        self.assertTrue(bool(data.get("location")))
+        self.assertTrue(bool(data.get("country")))
+        self.assertTrue(bool(data.get("date")))
+        self.assertIsNotNone(data.get("weekend_timetable"))
+
     def test_cors_preflight_allows_frontend_origin(self):
         response = self.client.options(
             "/api/races/2026",

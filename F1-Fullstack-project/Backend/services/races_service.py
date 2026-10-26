@@ -8,6 +8,7 @@ from services.fastf1_safe import (
     load_session_safe,
     safe_getattr,
 )
+from services.circuit_map_service import resolve_circuit
 
 LIGHT_LOAD_KWARGS = dict(telemetry=False, weather=False, messages=False, laps=False)
 
@@ -83,14 +84,45 @@ def compute_fastf1_all_races(year: int):
         elif race_date == today:
             status = "Ongoing"
 
+        # Resolve circuit path & metadata
+        circuit_data = resolve_circuit({
+            "Meeting": {"Location": race.get("Location"), "Name": race["EventName"]},
+            "Circuit": {"Name": str(race.get("OfficialEventName") or race.get("Location") or race["EventName"])}
+        })
+        circuit_name = circuit_data.get("name") if circuit_data else (race.get("Location") or race["EventName"])
+        circuit_path = circuit_data.get("path") if circuit_data else None
+
+        # Parse session dates
+        fp1_date = None
+        quali_date = None
+        sprint_date = None
+        for i in range(1, 6):
+            s_name = str(race.get(f"Session{i}", ""))
+            s_utc = race.get(f"Session{i}DateUtc")
+            utc_str = s_utc.isoformat() if pd.notna(s_utc) and hasattr(s_utc, "isoformat") else (str(s_utc) if pd.notna(s_utc) and s_utc else None)
+            low = s_name.lower()
+            if "practice 1" in low or low == "fp1":
+                fp1_date = utc_str
+            elif "qualifying" in low and "sprint" not in low:
+                quali_date = utc_str
+            elif "sprint" in low:
+                sprint_date = utc_str
+
         race_info = {
             "round": int(race["RoundNumber"]),
             "name": race["EventName"],
+            "race_name": race["EventName"],
+            "circuit": circuit_name,
             "location": race.get("Location", ""),
             "country": race.get("Country", ""),
             "date": race_date.strftime("%Y-%m-%d"),
             "status": status,
             "is_sprint": _is_sprint_event(race),
+            "fp1_date": fp1_date,
+            "quali_date": quali_date,
+            "sprint_date": sprint_date,
+            "circuit_svg": circuit_data,
+            "circuit_path": circuit_path,
             "winner": None,
             "winner_team": None,
         }

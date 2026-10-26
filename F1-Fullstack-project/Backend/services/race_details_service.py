@@ -1,5 +1,6 @@
 import pandas as pd
 import logging
+from typing import Optional, Any
 from datetime import timedelta
 from config.cache import set_advanced_cache
 
@@ -12,6 +13,7 @@ from services.fastf1_safe import (
 )
 from services import openf1_service
 from services import openf1_lap_fallback
+from services.circuit_map_service import resolve_circuit
 
 DETAIL_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=True, messages=True)
 LIGHT_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=False, messages=False)
@@ -35,13 +37,157 @@ def _classified_status_label(classified_position, status):
     return None
 
 
-def _empty_race_payload(event: pd.Series, status: str, message: str) -> dict:
-    """Shape every response shares, so the UI can rely on all keys existing."""
+def _extract_race_metadata(event: Any, round_number: Optional[int] = None) -> dict:
+    def get_val(k: str, default: Any = "") -> Any:
+        if hasattr(event, "get"):
+            return event.get(k, default)
+        if hasattr(event, "__getitem__"):
+            try:
+                return event[k]
+            except Exception:
+                return default
+        return default
+
+    round_val = round_number
+    if round_val is None:
+        try:
+            round_val = int(get_val("RoundNumber", get_val("round", 0)))
+        except (ValueError, TypeError):
+            round_val = 0
+
+    race_name = str(
+        get_val("EventName") or get_val("name") or get_val("race_name") or ""
+    )
+    location = str(get_val("Location") or get_val("location") or "")
+    country = str(get_val("Country") or get_val("country") or "")
+    official_name = str(get_val("OfficialEventName") or get_val("circuit") or "")
+
+    # Resolve circuit path & metadata
+    circuit_data = resolve_circuit({
+        "Meeting": {"Location": location, "Name": race_name},
+        "Circuit": {"Name": official_name or location or race_name},
+    })
+
+    circuit_name = (
+        circuit_data.get("name") if circuit_data else (official_name or location)
+    )
+    circuit_path = circuit_data.get("path") if circuit_data else None
+
+    # Parse timetable and session dates
+    sessions = []
+    fp1_date = None
+    fp2_date = None
+    fp3_date = None
+    quali_date = None
+    sprint_date = None
+
+    for i in range(1, 6):
+        s_name = get_val(f"Session{i}", None)
+        if pd.isna(s_name) or not s_name:
+            continue
+        s_name_str = str(s_name)
+        s_utc = get_val(f"Session{i}DateUtc", None)
+        s_local = get_val(f"Session{i}Date", None)
+
+        utc_str = None
+        if pd.notna(s_utc) and s_utc:
+            utc_str = s_utc.isoformat() if hasattr(s_utc, "isoformat") else str(s_utc)
+
+        local_str = None
+        if pd.notna(s_local) and s_local:
+            local_str = s_local.isoformat() if hasattr(s_local, "isoformat") else str(s_local)
+
+        sessions.append({
+            "session": s_name_str,
+            "date_utc": utc_str,
+            "date_local": local_str,
+        })
+
+        low = s_name_str.lower()
+        if "practice 1" in low or low == "fp1":
+            fp1_date = utc_str
+        elif "practice 2" in low or low == "fp2":
+            fp2_date = utc_str
+        elif "practice 3" in low or low == "fp3":
+            fp3_date = utc_str
+        elif "qualifying" in low and "sprint" not in low:
+            quali_date = utc_str
+        elif "sprint" in low:
+            sprint_date = utc_str
+
+    # Fallback from direct fields if sessions loop didn't find them
+    fp1_date = fp1_date or get_val("fp1_date", None)
+    fp2_date = fp2_date or get_val("fp2_date", None)
+    fp3_date = fp3_date or get_val("fp3_date", None)
+    quali_date = quali_date or get_val("quali_date", None)
+    sprint_date = sprint_date or get_val("sprint_date", None)
+
+    raw_date = (
+        get_val("Session5DateUtc", None)
+        or get_val("EventDate", None)
+        or get_val("date", None)
+    )
+    date_str = ""
+    if pd.notna(raw_date) and raw_date:
+        date_str = (
+            raw_date.isoformat()
+            if hasattr(raw_date, "isoformat")
+            else str(raw_date)
+        )
+
     return {
+        "round": round_val,
+        "race_name": race_name,
+        "name": race_name,
+        "circuit": circuit_name,
+        "location": location,
+        "country": country,
+        "date": date_str,
+        "fp1_date": fp1_date,
+        "fp2_date": fp2_date,
+        "fp3_date": fp3_date,
+        "quali_date": quali_date,
+        "sprint_date": sprint_date,
+        "circuit_svg": circuit_data,
+        "circuit_path": circuit_path,
+        "weekend_timetable": sessions,
+    }
+
+
+def _empty_race_payload(event: Any, status: str, message: str, round_number: Optional[int] = None) -> dict:
+    """Shape every response shares, so the UI can rely on all keys existing."""
+    meta = _extract_race_metadata(event, round_number)
+    return {
+        "round": meta["round"],
+        "race_name": meta["race_name"],
+        "name": meta["name"],
+        "circuit": meta["circuit"],
+        "location": meta["location"],
+        "country": meta["country"],
+        "date": meta["date"],
+        "fp1_date": meta["fp1_date"],
+        "fp2_date": meta["fp2_date"],
+        "fp3_date": meta["fp3_date"],
+        "quali_date": meta["quali_date"],
+        "sprint_date": meta["sprint_date"],
+        "circuit_svg": meta["circuit_svg"],
+        "circuit_path": meta["circuit_path"],
+        "weekend_timetable": meta["weekend_timetable"],
         "race_info": {
-            "name": event["EventName"],
-            "location": event.get("Location", ""),
-            "country": str(event.get("Country", "")),
+            "round": meta["round"],
+            "name": meta["race_name"],
+            "race_name": meta["race_name"],
+            "circuit": meta["circuit"],
+            "location": meta["location"],
+            "country": meta["country"],
+            "date": meta["date"],
+            "fp1_date": meta["fp1_date"],
+            "fp2_date": meta["fp2_date"],
+            "fp3_date": meta["fp3_date"],
+            "quali_date": meta["quali_date"],
+            "sprint_date": meta["sprint_date"],
+            "circuit_svg": meta["circuit_svg"],
+            "circuit_path": meta["circuit_path"],
         },
         "status": status,
         "message": message,
@@ -66,6 +212,30 @@ def _empty_race_payload(event: pd.Series, status: str, message: str) -> dict:
         "gap_chart": None,
         "lap_times_chart": None,
     }
+
+
+def _get_fallback_upcoming_race(year: int, round_number: int):
+    import json
+    from pathlib import Path
+
+    cache_path = (
+        Path(__file__).resolve().parent.parent / "cache" / f"all_races_cache_{year}.json"
+    )
+    if cache_path.exists():
+        try:
+            races = json.loads(cache_path.read_text(encoding="utf-8"))
+            if isinstance(races, list):
+                for r in races:
+                    if isinstance(r, dict) and r.get("round") == round_number:
+                        return _empty_race_payload(
+                            r,
+                            status="Upcoming",
+                            message="Sesi balapan ini belum dimulai. Data sesi akan tersedia setelah sesi selesai.",
+                            round_number=round_number,
+                        )
+        except Exception as e:
+            logging.warning(f"Could not load fallback race from {cache_path}: {e}")
+    return None
 
 
 def _compute_race_details(year: int, round_number: int, cache_file: str = None):
@@ -228,6 +398,9 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
     available_sessions = {}
     schedule = load_event_schedule(year)
     if schedule is None or schedule.empty:
+        fallback = _get_fallback_upcoming_race(year, round_number)
+        if fallback:
+            return fallback
         return {
             "error": f"Round {round_number} not found for year {year}. "
             f"The schedule may be incomplete or the round does not exist."
@@ -235,6 +408,9 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
 
     event_df = schedule[schedule["RoundNumber"] == round_number]
     if event_df.empty:
+        fallback = _get_fallback_upcoming_race(year, round_number)
+        if fallback:
+            return fallback
         return {
             "error": f"Round {round_number} not found for year {year}. The schedule may be incomplete or the round does not exist."
         }
@@ -251,6 +427,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
             event,
             "Upcoming",
             "Sesi balapan ini belum dimulai. Data sesi akan tersedia setelah sesi selesai.",
+            round_number=round_number,
         )
         if cache_file:
             set_advanced_cache(cache_file, final_data)
@@ -1414,11 +1591,39 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
         "Completed" if results else ("Ongoing" if available_tabs else "Upcoming")
     )
 
+    meta = _extract_race_metadata(event, round_number)
+
     final_data = {
+        "round": meta["round"],
+        "race_name": meta["race_name"],
+        "name": meta["name"],
+        "circuit": meta["circuit"],
+        "location": meta["location"],
+        "country": meta["country"],
+        "date": meta["date"],
+        "fp1_date": meta["fp1_date"],
+        "fp2_date": meta["fp2_date"],
+        "fp3_date": meta["fp3_date"],
+        "quali_date": meta["quali_date"],
+        "sprint_date": meta["sprint_date"],
+        "circuit_svg": meta["circuit_svg"],
+        "circuit_path": meta["circuit_path"],
+        "weekend_timetable": meta["weekend_timetable"],
         "race_info": {
-            "name": event["EventName"],
-            "location": event["Location"],
-            "country": str(event.get("Country", "")),
+            "round": meta["round"],
+            "name": meta["race_name"],
+            "race_name": meta["race_name"],
+            "circuit": meta["circuit"],
+            "location": meta["location"],
+            "country": meta["country"],
+            "date": meta["date"],
+            "fp1_date": meta["fp1_date"],
+            "fp2_date": meta["fp2_date"],
+            "fp3_date": meta["fp3_date"],
+            "quali_date": meta["quali_date"],
+            "sprint_date": meta["sprint_date"],
+            "circuit_svg": meta["circuit_svg"],
+            "circuit_path": meta["circuit_path"],
         },
         "status": race_status,
         "last_updated": pd.Timestamp.utcnow().isoformat(),
@@ -1481,9 +1686,17 @@ def compute_fastf1_race_details(year: int, round_number: int, cache_file: str = 
         return {"error": f"Round {round_number} is not a valid race round for {year}."}
 
     try:
-        return _compute_race_details(year, round_number, cache_file)
+        res = _compute_race_details(year, round_number, cache_file)
+        if isinstance(res, dict) and "error" in res:
+            fallback = _get_fallback_upcoming_race(year, round_number)
+            if fallback:
+                return fallback
+        return res
     except Exception as e:  # noqa: BLE001
         logging.error(
             f"Race details failed for {year}/{round_number}: {e}", exc_info=True
         )
+        fallback = _get_fallback_upcoming_race(year, round_number)
+        if fallback:
+            return fallback
         return {"error": "Race detail data is currently unavailable."}

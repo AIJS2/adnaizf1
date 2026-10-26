@@ -84,11 +84,12 @@ async def get_race_details(
             cached_data.get("tyre_strategy")
         )
         is_completed = status == "Completed" and bool(cached_data.get("results"))
+        is_upcoming = status == "Upcoming"
         ttl_seconds = 86400 if (is_completed and has_lap_data) else 600
         is_stale = (
             age_seconds > ttl_seconds
-            or status in ("Ongoing", "Upcoming")
-            or not cached_data.get("results")
+            or (status == "Ongoing" and age_seconds > 60)
+            or (not is_upcoming and not cached_data.get("results") and age_seconds > 300)
         )
 
         if is_stale:

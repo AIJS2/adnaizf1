@@ -24,6 +24,18 @@ function parseRaceDate(dateStr?: string | null): Date {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
+function calcCountdownTime(targetDate: Date, now: Date = new Date()) {
+  const diff = targetDate.getTime() - now.getTime();
+  if (diff <= 0) return { days: 0, hours: 0, mins: 0 };
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const mins = Math.floor((diff / (1000 * 60)) % 60);
+  if (days === 0 && hours === 0 && mins === 0) {
+    return { days: 0, hours: 0, mins: 1 };
+  }
+  return { days, hours, mins };
+}
+
 // --- MINI COUNTDOWN ---
 // Shows a compact d/h/m timer for a future race. Three lifecycle states:
 //  - 'future'   -> plain countdown.
@@ -31,23 +43,15 @@ function parseRaceDate(dateStr?: string | null): Date {
 //                  (never LIVE — the race has not started).
 //  - 'live'     -> race underway: a LIVE badge instead of a meaningless 0h 0m.
 const MiniCountdown = ({ targetDate, phase = 'future' }: { targetDate: Date; phase?: 'future' | 'race_day' | 'live' }) => {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0 });
+  const targetMs = targetDate.getTime();
+  const [timeLeft, setTimeLeft] = useState(() => calcCountdownTime(targetDate));
 
   useEffect(() => {
-    const calcTime = () => {
-      const now = new Date();
-      const diff = targetDate.getTime() - now.getTime();
-      if (diff <= 0) return { days: 0, hours: 0, mins: 0 };
-      return {
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        mins: Math.floor((diff / (1000 * 60)) % 60),
-      };
-    };
+    const calcTime = () => calcCountdownTime(new Date(targetMs));
     setTimeLeft(calcTime());
     const interval = setInterval(() => setTimeLeft(calcTime()), 60000);
     return () => clearInterval(interval);
-  }, [targetDate]);
+  }, [targetMs]);
 
   // Race underway or start time passed: a countdown to the start is meaningless — show LIVE.
   const isPastStart = targetDate.getTime() <= Date.now();

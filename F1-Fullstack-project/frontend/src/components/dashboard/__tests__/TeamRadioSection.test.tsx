@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import TeamRadioSection from '../TeamRadioSection';
 
 const MOCK_RADIO_DATA = {
@@ -36,8 +36,14 @@ function renderWithClient(ui: React.ReactElement) {
 }
 
 describe('TeamRadioSection component', () => {
+  const origFetch = globalThis.fetch;
+
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = origFetch;
   });
 
   it('renders section header with live race toggle', () => {

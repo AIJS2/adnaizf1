@@ -16,7 +16,6 @@ from services import openf1_lap_fallback
 from services.circuit_map_service import resolve_circuit
 
 DETAIL_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=True, messages=True)
-LIGHT_LOAD_KWARGS = dict(laps=True, telemetry=False, weather=False, messages=False)
 
 
 def _classified_status_label(classified_position, status):
@@ -239,7 +238,7 @@ def _get_fallback_upcoming_race(year: int, round_number: int):
 
 
 def _compute_race_details(year: int, round_number: int, cache_file: str = None):
-    print(f"Menghitung data DETAIL SUPER LENGKAP untuk {year} Ronde {round_number}...")
+    logging.info(f"Menghitung data DETAIL SUPER LENGKAP untuk {year} Ronde {round_number}...")
 
     def format_lap_time(delta):
         if pd.isna(delta):
@@ -420,7 +419,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
     today = pd.to_datetime("today").normalize()
     event_date = pd.to_datetime(event["EventDate"]).normalize()
     if today < (event_date - timedelta(days=3)):
-        print(
+        logging.info(
             f"  Balapan {event['EventName']} masih di masa depan ({event['EventDate'].strftime('%Y-%m-%d')}). Returning instant response."
         )
         final_data = _empty_race_payload(
@@ -459,7 +458,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                         if s_date.tz is None:
                             s_date = s_date.tz_localize("UTC")
                         if s_date > now_utc:
-                            print(
+                            logging.info(
                                 f"  Sesi '{name}' belum berlangsung ({s_date}). Melewati."
                             )
                             continue
@@ -470,7 +469,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 )
                 if session_obj is not None:
                     available_sessions[name] = session_obj
-                    print(
+                    logging.info(
                         f"  -> Sesi '{name}' ditemukan dan dimuat (dengan laps & messages)."
                     )
 
@@ -743,7 +742,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
             if fallback_rows:
                 available_tabs.append("Sprint")
                 sprint_results = fallback_rows
-                print(
+                logging.info(
                     f"  -> OpenF1 fallback menyediakan {len(fallback_rows)} baris klasifikasi Sprint."
                 )
 
@@ -759,7 +758,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                     sprint_grid_results = grid_rows
                     if "Sprint Grid" not in available_tabs:
                         available_tabs.append("Sprint Grid")
-                    print(f"  -> OpenF1 mengisi sprint grid ({len(grid_rows)} baris).")
+                    logging.info(f"  -> OpenF1 mengisi sprint grid ({len(grid_rows)} baris).")
             except (
                 Exception
             ) as e:  # noqa: BLE001 - enrichment must never break the page
@@ -892,7 +891,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
             if fallback_rows:
                 available_tabs.append("Race")
                 results = fallback_rows
-                print(
+                logging.info(
                     f"  -> OpenF1 fallback menyediakan {len(fallback_rows)} baris klasifikasi Race."
                 )
 
@@ -1456,7 +1455,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 starting_grid = grid_rows
                 if "Starting Grid" not in available_tabs:
                     available_tabs.append("Starting Grid")
-                print(f"  -> OpenF1 mengisi starting grid ({len(grid_rows)} baris).")
+                logging.info(f"  -> OpenF1 mengisi starting grid ({len(grid_rows)} baris).")
         except Exception as e:  # noqa: BLE001 - enrichment must never break the page
             logging.warning(
                 "OpenF1 starting grid failed for %s/%s: %s: %s",
@@ -1575,9 +1574,9 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                     filled.append("Sprint Qualifying")
 
             if filled:
-                print(f"  -> OpenF1 fallback mengisi: {', '.join(filled)}.")
+                logging.info(f"  -> OpenF1 fallback mengisi: {', '.join(filled)}.")
             else:
-                print("  -> OpenF1 fallback: tidak ada data tambahan untuk race ini.")
+                logging.info("  -> OpenF1 fallback: tidak ada data tambahan untuk race ini.")
         except Exception as e:  # noqa: BLE001 - enrichment must never break the page
             logging.warning(
                 "OpenF1 enrichment failed for %s/%s: %s: %s",

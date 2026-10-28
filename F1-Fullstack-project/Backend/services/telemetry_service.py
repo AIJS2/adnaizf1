@@ -555,11 +555,22 @@ def process_telemetry_compare(
         """Why `drv` has no lap to analyse, in the driver's own terms."""
         return _no_lap_reason(*status_by_driver.get(drv, ("", None)))
 
+    # The session classification was actually read (results present). This is
+    # the trustworthy signal that the archive genuinely has no laps, as opposed
+    # to a get_session failure or a load() timeout that left everything empty.
+    _results = safe_getattr(session, "results") if session is not None else None
+    results_loaded = _results is not None and not getattr(_results, "empty", True)
+
     if laps_missing:
         # F1's archive has no laps for most 2026 rounds, but OpenF1 keeps
         # car_data/location for those same sessions. Only answer with the
         # honest empty payload when OpenF1 has nothing either.
-        if gap_marker is None:
+        #
+        # Pin the 24h "no timing archive" verdict ONLY when the session loaded
+        # and its classification is readable. A load failure/timeout leaves
+        # results empty too and must not be pinned, or one transient outage
+        # would suppress FastF1 for a whole day.
+        if gap_marker is None and results_loaded:
             _write_fastf1_gap(year, round_number, status_by_driver)
         payload = _telemetry_from_openf1(
             year,

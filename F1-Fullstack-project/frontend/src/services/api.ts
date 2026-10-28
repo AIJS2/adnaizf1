@@ -132,11 +132,17 @@ export function isApiError<T>(payload: ApiResult<T>): payload is ApiErrorPayload
 
 /** Fetch one endpoint and narrow the JSON body to `T`. */
 async function fetchJson<T>(path: string, fallbackMessage: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`);
-  if (!response.ok) throw new Error(fallbackMessage);
-  const payload: unknown = await response.json();
-  if (isApiError(payload)) throw new Error(payload.error ?? fallbackMessage);
-  return payload as T;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(`${API_URL}${path}`, { signal: controller.signal });
+    if (!response.ok) throw new Error(fallbackMessage);
+    const payload: unknown = await response.json();
+    if (isApiError(payload)) throw new Error(payload.error ?? fallbackMessage);
+    return payload as T;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ---------------------------------------------------------------------------

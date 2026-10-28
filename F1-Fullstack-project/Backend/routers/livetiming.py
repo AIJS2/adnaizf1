@@ -45,12 +45,13 @@ import os
 import threading
 import time
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 import fastf1
 import pandas as pd
 import requests
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from websockets.exceptions import (
     ConnectionClosed,
     InvalidHandshake,
@@ -59,7 +60,9 @@ from websockets.exceptions import (
 )
 from websockets.sync.client import connect as ws_connect
 
+from services.fastf1_safe import load_event_schedule
 from services.livetiming_service import LiveTimingState
+from config.limiter import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -110,16 +113,60 @@ STATUS_UNAVAILABLE = "unavailable_subscription"
 _LIVE_DATA_WAIT_SECONDS = 8.0
 
 
-def _get_cached_schedule(year: int) -> pd.DataFrame:
+def _get_cached_schedule(year: int) -> pd.DataFrame | None:
     global _schedule_cache
     now = time.monotonic()
     if _schedule_cache is not None:
         c_year, c_time, c_df = _schedule_cache
         if c_year == year and (now - c_time) < _SCHEDULE_CACHE_TTL:
             return c_df
-    df = fastf1.get_event_schedule(year, include_testing=False)
-    _schedule_cache = (year, now, df)
-    return df
+
+    try:
+        df = load_event_schedule(year, include_testing=False)
+    except Exception as e:
+        logger.warning(f"Failed to load schedule from FastF1 for {year}: {e}")
+        df = None
+
+    if df is not None and not df.empty:
+        _schedule_cache = (year, now, df)
+        return df
+
+    # Fallback to local pre-seeded race cache file if available
+    fallback_file = Path(__file__).resolve().parent.parent / "cache" / f"all_races_cache_{year}.json"
+    if fallback_file.exists():
+        try:
+            with open(fallback_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            # races_service writes a bare list; tolerate the wrapped shape too.
+            races = data.get("races") if isinstance(data, dict) else data
+            races = races or []
+            if races:
+                records = []
+                for r in races:
+                    records.append({
+                        "RoundNumber": r.get("round"),
+                        "Country": r.get("country"),
+                        "Location": r.get("location"),
+                        "OfficialEventName": r.get("name"),
+                        "EventName": r.get("name"),
+                        "EventDate": r.get("date"),
+                        "Session5": "Race",
+                        "Session5DateUtc": r.get("date"),
+                    })
+                df = pd.DataFrame(records)
+                _schedule_cache = (year, now, df)
+                logger.info(f"Loaded {year} schedule fallback from local cache file ({len(df)} races)")
+                return df
+        except Exception as e:
+            logger.warning(f"Failed to parse fallback cache file for {year}: {e}")
+
+    # Retain existing cached schedule if refresh failed to prevent hammering
+    if _schedule_cache is not None and _schedule_cache[0] == year:
+        logger.warning(f"Keeping stale {year} schedule after upstream refresh failure")
+        _schedule_cache = (year, now, _schedule_cache[2])
+        return _schedule_cache[2]
+
+    return None
 
 
 def _load_schedule_in_background(year: int) -> None:
@@ -127,9 +174,11 @@ def _load_schedule_in_background(year: int) -> None:
     global _schedule_loading
 
     try:
-        _get_cached_schedule(year)
+        df = _get_cached_schedule(year)
+        if df is None:
+            logger.warning(f"Schedule for {year} currently unavailable from all sources.")
     except Exception as e:  # noqa: BLE001 - a schedule failure must not kill the app
-        logger.error(f"Error loading the {year} schedule: {e}")
+        logger.warning(f"Warning loading the {year} schedule: {e}")
     finally:
         with _schedule_lock:
             _schedule_loading = False
@@ -169,6 +218,9 @@ def _check_live_session() -> bool:
             schedule = cached[2]
         else:
             schedule = cached[2]
+
+        if schedule is None:
+            return False
 
         for _, event in schedule.iterrows():
             for i in range(1, 6):
@@ -715,29 +767,41 @@ async def websocket_livetiming(websocket: WebSocket) -> None:
 
 
 @router.get("/api/livetiming/previous")
-async def get_previous_livetiming() -> dict[str, Any]:
+@limiter.limit("60/minute")
+async def get_previous_livetiming(request: Request) -> dict[str, Any]:
     """
     Return the last completed F1 session snapshot captured from SignalR
     (full driver classification, sector times, tyre stints, circuit map,
     weather, race control log, and team radio).
+
+    Public read endpoint (consistent with the other read routes) but rate
+    limited. The upstream feed is started only while needed and is torn back
+    down when no client remains, so a lone GET cannot leave a permanent
+    SignalR connection. The wait for the initial snapshot happens OUTSIDE the
+    global ``_init_lock`` so a slow probe never serialises WebSocket handshakes.
     """
     existing = _state.last_session_snapshot()
     if existing and existing.get("lines"):
         return existing
 
     if os.getenv("ENVIRONMENT", "development").lower() != "test":
+        # Start the feed under a brief lock, then wait unlocked.
         async with _init_lock:
-            existing = _state.last_session_snapshot()
-            if not (existing and existing.get("lines")):
+            if not _state.timing_data:
                 await asyncio.to_thread(_ensure_signalr)
-                deadline = time.monotonic() + _LIVE_DATA_WAIT_SECONDS
-                while time.monotonic() < deadline and not _state.timing_data:
-                    await asyncio.sleep(0.25)
-                if _state.timing_data:
-                    _state.snapshot()
-                if not _state.is_live and not _connected_clients:
-                    _state.reset()
-                    await asyncio.to_thread(_stop_signalr)
+        try:
+            deadline = time.monotonic() + _LIVE_DATA_WAIT_SECONDS
+            while time.monotonic() < deadline and not _state.timing_data:
+                await asyncio.sleep(0.25)
+            if _state.timing_data:
+                _state.snapshot()
+        finally:
+            # A lone anonymous GET must not leave the upstream WebSocket open:
+            # stop it only when no live session is active and no client is
+            # attached (a live broadcast keeps `_state.is_live` True).
+            if not _state.is_live and not _connected_clients:
+                _state.reset()
+                await asyncio.to_thread(_stop_signalr)
 
     snapshot = _state.last_session_snapshot()
     if snapshot:

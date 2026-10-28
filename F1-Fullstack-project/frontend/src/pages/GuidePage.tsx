@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
 import { 
-  BookOpen, Flag, Activity, Calculator, 
+  BookOpen, Flag, Activity, Calculator, Database,
   BarChart2, Zap, GitCommitVertical, AlertCircle, ChevronRight
 } from 'lucide-react';
 
@@ -112,7 +113,8 @@ const GuidePage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
           
           {/* Table of Contents / Quick Links */}
-          <div className="lg:col-span-1 sticky top-6 xl:top-8">
+          <div className="lg:col-span-1 self-stretch">
+            <div className="sticky top-6 xl:top-8 space-y-4">
             <div className="bg-neutral-900/40 border border-neutral-800/60 rounded-lg p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-[50px]" />
               <h3 className="text-sm font-black uppercase tracking-widest text-neutral-500 mb-6 flex items-center gap-2">
@@ -141,6 +143,24 @@ const GuidePage = () => {
                   );
                 })}
               </ul>
+            </div>
+
+            {/* Data source card balances the sticky rail on tall viewports. */}
+            <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/30 p-5 backdrop-blur-xl">
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-neutral-500 mb-3 flex items-center gap-2">
+                <Database size={14} className="text-cyan-400" /> Data Pipeline
+              </h3>
+              <p className="text-xs leading-relaxed text-neutral-400">
+                Every chart on this platform reads real session timing — FastF1 for archive
+                telemetry, OpenF1 as the live fallback. Nothing is simulated.
+              </p>
+              <Link
+                to="/live"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-cyan-300 transition-colors hover:border-cyan-400/60 hover:text-white"
+              >
+                Open live timing <ChevronRight size={12} />
+              </Link>
+            </div>
             </div>
           </div>
 

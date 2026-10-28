@@ -1,6 +1,8 @@
-import { Flag, Thermometer } from 'lucide-react';
+import { Flag, Gauge, Ruler, Thermometer, Timer } from 'lucide-react';
 import { getTrackMap, getCountryCode } from '../../data/trackData';
+import { getCircuitSpec } from '../../data/circuitSpecs';
 import { CountryFlag } from './CountryFlag';
+import { Track3D } from './Track3D';
 
 interface TrackMapProps {
   raceInfo?: { location?: string; country?: string; name?: string } | null;
@@ -14,10 +16,18 @@ export function TrackMap({ raceInfo, laps, weatherInfo, className }: TrackMapPro
   const country = raceInfo?.country;
   const name = raceInfo?.name || raceInfo?.location || 'Circuit';
   const countryCode = getCountryCode(raceInfo);
+  const spec = getCircuitSpec(raceInfo?.name || raceInfo?.location);
 
   const latestWeather = weatherInfo?.[weatherInfo.length - 1] || {};
   const trackTemp = latestWeather.track_temp ?? latestWeather.TrackTemp;
   const airTemp = latestWeather.air_temp ?? latestWeather.AirTemp;
+
+  const specTiles = [
+    { label: 'Length', value: spec.length, icon: Ruler },
+    { label: 'Turns', value: String(spec.turns), icon: Gauge },
+    { label: 'Race laps', value: String(laps && laps > 0 ? laps : spec.laps), icon: Flag },
+    { label: 'Lap record', value: spec.lapRecord ?? '—', icon: Timer },
+  ];
 
   const sectionClasses = [
     'mb-10 flex flex-col items-center justify-center relative overflow-hidden',
@@ -55,18 +65,39 @@ export function TrackMap({ raceInfo, laps, weatherInfo, className }: TrackMapPro
 
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-56 bg-red-500/10 blur-[110px] pointer-events-none" aria-hidden="true" />
 
-      <div className="relative flex items-center justify-center mt-8">
-        {trackMapImg ? (
-          <img
-            src={trackMapImg}
-            alt={`Track map for ${name}`}
-            className="h-36 md:h-64 lg:h-72 object-contain drop-shadow-[0_0_24px_rgba(239,68,68,0.4)]"
-          />
-        ) : (
-          <div className="w-64 h-36 sm:w-80 sm:h-44 rounded-full border border-dashed border-neutral-700/60 flex items-center justify-center">
-            <span className="text-neutral-600 text-xs font-mono font-bold uppercase tracking-wider">no map asset</span>
-          </div>
-        )}
+      <div className="relative mx-auto mt-10 grid w-full max-w-5xl grid-cols-1 items-center gap-6 lg:mt-8 xl:grid-cols-[minmax(0,1fr)_16rem] xl:gap-8">
+        <div className="flex items-center justify-center">
+          {trackMapImg ? (
+            <Track3D className="w-full" tone="red">
+              <img
+                src={trackMapImg}
+                alt={`Track map for ${name}`}
+                className="h-40 md:h-64 xl:h-[22rem] w-auto max-w-full object-contain"
+              />
+            </Track3D>
+          ) : (
+            <div className="w-64 h-36 sm:w-80 sm:h-44 rounded-full border border-dashed border-neutral-700/60 flex items-center justify-center">
+              <span className="text-neutral-600 text-xs font-mono font-bold uppercase tracking-wider">no map asset</span>
+            </div>
+          )}
+        </div>
+
+        {/* Circuit data rail balances the wide card at xl and gives the layout
+            a read-out even when the track artwork is narrow. */}
+        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-1">
+          {specTiles.map(({ label, value, icon: Icon }) => (
+            <div
+              key={label}
+              className="flex items-center gap-3 rounded-md border border-neutral-800/70 bg-neutral-950/50 px-3 py-2.5 transition-colors duration-300 hover:border-red-500/30"
+            >
+              <Icon size={15} className="shrink-0 text-red-500/80" />
+              <div className="min-w-0">
+                <dt className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-500">{label}</dt>
+                <dd className="truncate font-mono text-sm font-black tabular-nums text-neutral-200">{value}</dd>
+              </div>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );

@@ -88,7 +88,9 @@ describe('LiveTimingPage empty state & countdown integration', () => {
     expect(screen.getByText(/Timing appears here only while an F1 session is running/i)).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText(/Bahrain Grand Prix/i)).toBeInTheDocument();
+      // The next-round name appears in the countdown and in the track-map
+      // preview overlay, so more than one matching node is expected.
+      expect(screen.getAllByText(/Bahrain Grand Prix/i).length).toBeGreaterThan(0);
     });
 
     expect(screen.getByText(/LIGHTS OUT COUNTDOWN/i)).toBeInTheDocument();
@@ -362,6 +364,14 @@ describe('LiveTimingPage empty state & countdown integration', () => {
     // Classification table, tyre strategy, driver rows, weather and status are now rendered
     expect(screen.getAllByText('ANT').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('VER').length).toBeGreaterThanOrEqual(2);
+
+    // The timing table must grow with the field instead of trapping drivers in
+    // a nested vertical scroller; only horizontal overflow is allowed.
+    const timingScroll = screen.getByTestId('timing-table-scroll');
+    expect(timingScroll.className).toContain('overflow-x-auto');
+    expect(timingScroll.className).not.toContain('max-h');
+    expect(timingScroll.className).not.toContain('overflow-y');
+
     expect(screen.getByText('22.9°C')).toBeInTheDocument();
     expect(screen.getByText('37.8°C')).toBeInTheDocument();
     expect(screen.getAllByText(/CHEQUERED FLAG/i).length).toBeGreaterThanOrEqual(2);

@@ -9,9 +9,23 @@ from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
+# Reverse proxies whose forwarded headers are trusted. Empty means "keep the
+# legacy behaviour" (honour X-Real-IP / X-Forwarded-For from any peer), which
+# is fine for local dev but spoofable if the API port is ever exposed directly.
+_TRUSTED_PROXIES = frozenset(
+    p.strip() for p in os.getenv("TRUSTED_PROXIES", "").split(",") if p.strip()
+)
+
 
 def get_real_client_ip(request: Request) -> str:
     """Resolve client IP from reverse-proxy headers, falling back to socket peer."""
+    peer = get_remote_address(request)
+
+    # Only trust the spoofable forwarded headers when the immediate peer is a
+    # known proxy (or no allowlist is configured, for backward compatibility).
+    if _TRUSTED_PROXIES and peer not in _TRUSTED_PROXIES:
+        return peer
+
     real_ip = request.headers.get("X-Real-IP", "").strip()
     if real_ip:
         return real_ip
@@ -20,7 +34,7 @@ def get_real_client_ip(request: Request) -> str:
         first_ip = forwarded_for.split(",")[0].strip()
         if first_ip:
             return first_ip
-    return get_remote_address(request)
+    return peer
 
 # ---------------------------------------------------------------------------
 # Rate limiting configuration

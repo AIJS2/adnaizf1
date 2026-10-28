@@ -21,7 +21,6 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { NumericString, DriverProfile } from '../types/f1';
 import type { ChampionshipPayload } from '../services/api';
-import html2canvas from 'html2canvas';
 import DriverRadarChart from '../components/DriverRadarChart';
 
 /** One row of the head-to-head comparison bars in the Overview tab. */
@@ -138,6 +137,7 @@ const DriverComparePage = () => {
     const el = document.getElementById('h2h-card');
     if (!el) return;
     try {
+      const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(el, { backgroundColor: '#0a0a0a', scale: 2 });
       const image = canvas.toDataURL('image/png');
       const link = document.createElement('a');

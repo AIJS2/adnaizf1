@@ -16,6 +16,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   backend:
     build:
@@ -32,24 +37,50 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - ENVIRONMENT=production
       - CORS_ORIGINS=http://localhost:5173,http://localhost
+      - API_KEY=${API_KEY:-}
+    volumes:
+      - backend_logs:/app/logs
+      - backend_cache:/app/cache
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        # Frontend fetches /api/ + /ws/ secara relative; nginx akan proxy ke backend.
-        - VITE_API_URL=http://localhost:5173
+    args:
+      # Empty = relative. The browser then calls the same origin and nginx
+      # proxies /api/ + /ws/ to the backend. Baking an absolute localhost URL
+      # here (the old `http://localhost:5173`) made every remote/deployed client
+      # call its OWN 127.0.0.1 and fail.
+      - VITE_API_URL=
     container_name: f1-frontend
     ports:
       - "5173:80"
     depends_on:
       - backend
     restart: unless-stopped
+    volumes:
+      - nginx_cache:/var/cache/nginx/f1_api_cache
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   redis_data:
+    name: f1-redis_data
+  backend_logs:
+    name: f1-backend_logs
+  backend_cache:
+    name: f1-backend_cache
+  nginx_cache:
+    name: f1-nginx_cache

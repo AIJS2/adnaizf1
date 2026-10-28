@@ -14,4 +14,10 @@ pip-log.txt
 .git
 .gitignore
 .dockerignore
-cache/
+cache/fastf1/
+cache/*.sqlite
+cache/telemetry_v2_*
+# Runtime cache artifacts (incl. any committed championship/dashboard/races
+# snapshots) must never be baked into the image, or production serves stale data.
+cache/*.json
+cache/f1_official_standings_*

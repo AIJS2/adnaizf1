@@ -106,7 +106,7 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2,
 
   if (!profile1 || !profile2) {
     return (
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-6">
+      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-6 h-full flex flex-col justify-center">
         <EmptyState
           icon={RadarIcon}
           title="No driver comparison available"
@@ -121,7 +121,7 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2,
   const color2 = customColor2 || getDriverColor(profile2.name, profile2.team, color1 === getDriverColor(profile2.name, profile2.team));
 
   return (
-    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
+    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl relative overflow-hidden group h-full flex flex-col">
       <div className="absolute inset-0 bg-linear-to-br from-neutral-800/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
       
       <div className="flex flex-col items-center justify-center mb-4 relative z-10">
@@ -133,7 +133,7 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2,
         </p>
       </div>
 
-      <div className="h-[350px] w-full relative z-10">
+      <div className="h-[380px] w-full shrink-0 relative z-10">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
             <PolarGrid stroke="#333" strokeDasharray="3 3" />
@@ -180,6 +180,50 @@ const DriverRadarChart: React.FC<DriverRadarChartProps> = ({ profile1, profile2,
             />
           </RadarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Attribute edge strip — vertical rows stretch to absorb the height of
+          the taller metrics column, so the radar card never leaves a hole. */}
+      <div className="relative z-10 mt-2 flex flex-1 flex-col gap-2">
+        {chartData.map((point) => {
+          const aWins = point.A >= point.B;
+          const edge = Math.abs(point.A - point.B);
+          const edgeName = aWins
+            ? (profile1.name || '').split(' ').pop()
+            : (profile2.name || '').split(' ').pop();
+          return (
+            <div
+              key={point.subject}
+              className="flex min-h-[62px] flex-1 flex-col justify-center rounded-md border border-neutral-800/70 bg-neutral-950/50 px-3 py-2"
+            >
+              <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-widest">
+                <span className="truncate text-neutral-400">{point.subject}</span>
+                <span className="shrink-0 font-mono tabular-nums">
+                  <span style={{ color: color1 }}>{point.A}</span>
+                  <span className="text-neutral-700"> / </span>
+                  <span style={{ color: color2 }}>{point.B}</span>
+                  <span className={`ml-2 ${aWins ? 'text-emerald-400' : 'text-cyan-400'}`}>
+                    {edgeName} +{edge}
+                  </span>
+                </span>
+              </div>
+              <div className="mt-1.5 space-y-1">
+                <div className="h-1.5 overflow-hidden rounded-full bg-neutral-800/80">
+                  <div
+                    className="h-full rounded-full transition-[width] duration-700"
+                    style={{ width: `${point.A}%`, backgroundColor: color1 }}
+                  />
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-neutral-800/80">
+                  <div
+                    className="h-full rounded-full transition-[width] duration-700"
+                    style={{ width: `${point.B}%`, backgroundColor: color2 }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

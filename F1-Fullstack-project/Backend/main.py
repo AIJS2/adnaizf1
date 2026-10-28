@@ -66,6 +66,26 @@ async def add_security_headers(request: Request, call_next):
         response.headers.setdefault(header_name, header_value)
     return response
 
+
+@app.middleware("http")
+async def add_cache_control_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Only set default Cache-Control if not already explicitly specified by the route
+    if "cache-control" not in response.headers:
+        path = request.url.path
+        if path.startswith("/health") or "/team_radio" in path or "/ws" in path or "/clear_cache" in path:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        elif request.method in ("GET", "HEAD") and response.status_code == 200:
+            import re
+            # Historical seasons (2018-2025) are finished and permanent -> long cache
+            is_historical = bool(re.search(r"/(?:201[8-9]|202[0-5])(?:/|$)", path))
+            if is_historical:
+                response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=3600"
+            elif path.startswith("/api/"):
+                # Active season/live data microcache
+                response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
+    return response
+
 # ---------------------------------------------------------------------------
 # CORS — support localhost dev ports + production domain via env.
 #
@@ -113,6 +133,17 @@ async def health() -> dict:
     return {
         "status": "ok" if redis_state["connected"] else "degraded",
         "cache": redis_state,
+    }
+
+
+@app.get("/")
+async def root() -> dict:
+    return {
+        "app": "Analyziz F1 API",
+        "status": "online",
+        "docs": "/docs",
+        "health": "/health",
+        "frontend": "http://localhost:5173",
     }
 
 

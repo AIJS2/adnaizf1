@@ -53,16 +53,16 @@ async def get_telemetry_compare(
         "cache",
         f"telemetry_v2_{year}_{round_number}_{'_'.join(driver_list)}_lap{lap}.json",
     )
-    cached_data = get_advanced_cache(CACHE_FILE, hours=24)  # Telemetry cached longer
+    cached_data = await asyncio.to_thread(get_advanced_cache, CACHE_FILE, 24)
     if cached_data:
-        print("o. Menyajikan data dari REDIS/CACHE (Telemetry).")
+        logging.info("o. Menyajikan data dari REDIS/CACHE (Telemetry).")
         return cached_data
 
     try:
         result = await asyncio.to_thread(
             process_telemetry_compare, year, round_number, driver_list, lap
         )
-        set_advanced_cache(CACHE_FILE, result)
+        await asyncio.to_thread(set_advanced_cache, CACHE_FILE, result, 24)
         return result
     except Exception as e:
         logging.error(f"Error memproses telemetry: {e}", exc_info=True)

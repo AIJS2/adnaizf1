@@ -2,10 +2,12 @@ import { DriverProfile, Race, TeamProfile } from '../types/f1';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { getTeamColor, getDriverColor, teamLogos } from '../data/teamData';
 import { Calculator, Trophy, ArrowUp, ArrowDown, Minus, RefreshCw, Zap, Flag, FlaskConical, Activity, Crosshair, Users, Timer, CalendarDays, Crown } from 'lucide-react';
 import { fetchAllRaces, fetchChampionship } from '../services/api';
 import type { ChampionshipPayload, RacesPayload } from '../services/api';
+import AnimatedNumber from '../components/ui/AnimatedNumber';
 
 // Design tokens — spacing, color surfaces, radius
 const tokens = `
@@ -69,8 +71,12 @@ const SimulatorPage = () => {
 
   const standings: DriverProfile[] = useMemo(() => {
     const rows = data?.drivers ?? [];
-    const sorted = [...rows].sort((a, b) => (b.points || 0) - (a.points || 0));
-    sorted.forEach((d, i) => { d.position = i + 1; });
+    // Clone each row before assigning a simulator-local position, otherwise
+    // the position mutation leaks back into the shared react-query cache and
+    // changes the order every other page displays.
+    const sorted = [...rows]
+      .sort((a, b) => (b.points || 0) - (a.points || 0))
+      .map((d, i) => ({ ...d, position: i + 1 }));
     return sorted;
   }, [data]);
 
@@ -304,6 +310,27 @@ const SimulatorPage = () => {
     return sorted;
   }, [drivers]);
 
+  // Scenario story: the podium the picks project, plus the biggest mover on the
+  // grid. Rendered under the standings so the panel never ends on empty space.
+  const projectedPodium = drivers.slice(0, 3);
+  const biggestSwing = useMemo(() => {
+    let best: { name: string; team: string; delta: number } | null = null;
+    drivers.forEach((d) => {
+      const original = originalDrivers.find((o) => driverKey(o) === driverKey(d));
+      const delta = (d.points || 0) - (original?.points || 0);
+      if (delta <= 0) return;
+      if (!best || delta > best.delta) {
+        best = { name: d.name || d.id || '', team: d.team, delta };
+      }
+    });
+    return best as { name: string; team: string; delta: number } | null;
+  }, [drivers, originalDrivers]);
+
+  const titleGap = useMemo(() => {
+    if (drivers.length < 2) return null;
+    return (drivers[0].points || 0) - (drivers[1].points || 0);
+  }, [drivers]);
+
   if (error) {
     return (
       <div className="bg-neutral-950 min-h-screen text-white font-sans flex items-center justify-center">
@@ -400,7 +427,7 @@ const SimulatorPage = () => {
 
               {/* Grand Prix selector — only the remaining rounds are simulatable */}
               <div className="relative group">
-                <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
+                <label htmlFor="sim-grand-prix" className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
                   <span className="flex items-center gap-1"><CalendarDays size={12} className="text-red-400" /> Grand Prix</span>
                   {selectedRace && (
                     <span className={selectedRace.is_sprint ? 'text-orange-400 drop-shadow-[0_0_5px_rgba(251,146,60,0.8)]' : 'text-neutral-500'}>
@@ -409,6 +436,7 @@ const SimulatorPage = () => {
                   )}
                 </label>
                 <select
+                  id="sim-grand-prix"
                   aria-label="Grand Prix"
                   value={selectedRound}
                   onChange={e => setSelectedRound(e.target.value === '' ? '' : Number(e.target.value))}
@@ -431,11 +459,11 @@ const SimulatorPage = () => {
 
               {/* P1 Input */}
               <div className="relative group">
-                <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
+                <label htmlFor="sim-p1-winner" className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
                   <span className="flex items-center gap-1"><Trophy size={12} className="text-yellow-400" /> P1 Winner</span> <span className="text-yellow-400 ">+25 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P1 Winner" value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select id="sim-p1-winner" aria-label="P1 Winner" value={p1} onChange={e => setP1(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-yellow-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P1 --</option>
                   {originalDrivers.map(d => <option key={`p1-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -443,11 +471,11 @@ const SimulatorPage = () => {
 
               {/* P2 Input */}
               <div className="relative group">
-                <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
+                <label htmlFor="sim-p2-runnerup" className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
                   <span className="flex items-center gap-1"><Crosshair size={12} className="text-slate-300" /> P2 Runner-up</span> <span className="text-slate-300 ">+18 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-slate-300/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P2 Runner-up" value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select id="sim-p2-runnerup" aria-label="P2 Runner-up" value={p2} onChange={e => setP2(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-slate-300/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-slate-300 focus:ring-4 focus:ring-slate-300/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P2 --</option>
                   {originalDrivers.map(d => <option key={`p2-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -455,11 +483,11 @@ const SimulatorPage = () => {
 
               {/* P3 Input */}
               <div className="relative group">
-                <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
+                <label htmlFor="sim-p3-podium" className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
                   <span className="flex items-center gap-1"><Activity size={12} className="text-amber-500" /> P3 Podium</span> <span className="text-amber-500 ">+15 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="P3 Podium" value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select id="sim-p3-podium" aria-label="P3 Podium" value={p3} onChange={e => setP3(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-amber-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select P3 --</option>
                   {originalDrivers.map(d => <option key={`p3-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -467,11 +495,11 @@ const SimulatorPage = () => {
 
               {/* Fastest Lap Input */}
               <div className="relative group">
-                <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
+                <label htmlFor="sim-fastest-lap" className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
                   <span className="flex items-center gap-1"><Zap size={12} className="text-purple-500" /> Fastest Lap</span> <span className="text-purple-400 ">+1 PTS</span>
                 </label>
                 <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="Fastest Lap" value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
+                <select id="sim-fastest-lap" aria-label="Fastest Lap" value={fastestLap} onChange={e => setFastestLap(e.target.value)} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-purple-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-ui shadow-inner appearance-none cursor-pointer">
                   <option value="">-- Select Fastest Lap --</option>
                   {originalDrivers.map(d => <option key={`fl-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -479,14 +507,14 @@ const SimulatorPage = () => {
 
               {/* Sprint Winner Input — only active at Sprint weekends */}
               <div className="relative group">
-                <label className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
+                <label htmlFor="sim-sprint-winner" className="block text-[11px] uppercase font-black text-neutral-400 mb-1.5 tracking-widest flex justify-between">
                   <span className="flex items-center gap-1"><Timer size={12} className={isSprintWeekend ? 'text-cyan-500' : 'text-neutral-600'} /> Sprint Winner</span>
                   {isSprintWeekend
                     ? <span className="text-cyan-400 ">+8 PTS</span>
                     : <span className="text-neutral-600">NO SPRINT</span>}
                 </label>
                 <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-md opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none"></div>
-                <select aria-label="Sprint Winner" value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} disabled={!isSprintWeekend} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <select id="sim-sprint-winner" aria-label="Sprint Winner" value={sprintWinner} onChange={e => setSprintWinner(e.target.value)} disabled={!isSprintWeekend} className="relative w-full bg-neutral-950/90 border border-white/10 hover:border-cyan-500/50 rounded-md p-3.5 text-white font-bold focus:outline-hidden focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 transition-ui shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   <option value="">-- Select Sprint Winner --</option>
                   {originalDrivers.map(d => <option key={`sw-${driverKey(d)}`} value={driverKey(d)}>{d.name} ({d.team})</option>)}
                 </select>
@@ -502,7 +530,7 @@ const SimulatorPage = () => {
                 <div className="flex items-center justify-between mb-3 text-[11px] font-black uppercase tracking-widest">
                   <span className="text-neutral-500">Scenario Impact</span>
                   <span className={hasPicks ? 'text-purple-400' : 'text-neutral-600'}>
-                    {hasPicks ? `+${appliedPoints} pts awarded` : 'No picks yet'}
+                    {hasPicks ? <AnimatedNumber value={appliedPoints} prefix="+" suffix=" pts awarded" /> : 'No picks yet'}
                   </span>
                 </div>
 
@@ -592,7 +620,7 @@ const SimulatorPage = () => {
                             {/* Max possible progress bar */}
                             <div className="mt-1.5 h-1 bg-neutral-800 rounded-full overflow-hidden">
                               <div
-                                className="h-full rounded-full transition-all duration-500"
+                                className="h-full rounded-full transition-[width] duration-500 ease-out"
                                 style={{
                                   width: `${Math.min(progress, 100)}%`,
                                   backgroundColor: c.eliminated ? '#525252' : getDriverColor(c.name, c.team)
@@ -601,7 +629,7 @@ const SimulatorPage = () => {
                             </div>
                           </div>
                           <div className="text-right">
-                            <span className="block text-sm font-black font-mono text-white">{c.points}</span>
+                            <AnimatedNumber value={c.points} className="block text-sm font-black font-mono text-white" />
                             <span className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest">max {c.maxPossible}</span>
                           </div>
                           <span
@@ -678,10 +706,12 @@ const SimulatorPage = () => {
                   <p className="text-sm text-neutral-600 max-w-sm">Waiting for championship data to load. Check your connection or refresh the page.</p>
                 </div>
               ) : (
-                <div className="space-y-3 flex-1" role="region" aria-live="polite" aria-label="Simulated championship standings">
+                <div className="flex flex-col gap-3 flex-1" role="region" aria-live="polite" aria-label="Simulated championship standings">
 
                   {/* Drivers View */}
-                  {viewMode === 'drivers' && drivers.slice(0, 10).map((d) => {
+                  {viewMode === 'drivers' && (
+                    <motion.div layout className="flex flex-col gap-3">
+                      {drivers.slice(0, 10).map((d) => {
                     const original = originalDrivers.find(o => driverKey(o) === driverKey(d));
                     const posChange = (original?.position || 0) - (d.position || 0);
                     const ptsGained = (d.points || 0) - (original?.points || 0);
@@ -689,9 +719,13 @@ const SimulatorPage = () => {
                     const teamLogo = teamLogos[d.team];
 
                     return (
-                      <div
+                      <motion.div
+                        layout
                         key={driverKey(d)}
-                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-lg p-4 flex items-center gap-4 md:gap-6 transition-ui duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ layout: { type: 'spring', stiffness: 420, damping: 38 }, duration: 0.25 }}
+                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-lg p-4 flex items-center gap-4 md:gap-6 transition-colors duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
                       >
                         <div className="absolute left-0 top-0 bottom-0 w-1.5 " style={{ backgroundColor: teamColor, color: teamColor }}></div>
 
@@ -730,7 +764,7 @@ const SimulatorPage = () => {
                           </div>
                           <div className="w-16 md:w-24">
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: ptsGained > 0 ? '#fff' : '#e5e5e5', textShadow: ptsGained > 0 ? '0 0 10px rgba(255,255,255,0.5)' : 'none' }}>
-                              {d.points}
+                              <AnimatedNumber value={d.points || 0} />
                             </span>
                             <span className="block text-[11px] md:text-[11px] text-neutral-500 font-black tracking-widest uppercase -mt-1">PTS</span>
                           </div>
@@ -738,12 +772,26 @@ const SimulatorPage = () => {
                         {ptsGained > 0 && (
                           <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-2xl rounded-full pointer-events-none"></div>
                         )}
-                      </div>
+                        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/5" aria-hidden="true">
+                          <div
+                            className="h-full rounded-r-full transition-[width] duration-700 ease-out"
+                            style={{
+                              width: `${Math.min(100, (ptsGained / 25) * 100)}%`,
+                              backgroundColor: teamColor,
+                              boxShadow: ptsGained > 0 ? `0 0 10px ${teamColor}` : 'none',
+                            }}
+                          />
+                        </div>
+                      </motion.div>
                     );
-                  })}
+                      })}
+                    </motion.div>
+                  )}
 
                   {/* Constructors View */}
-                  {viewMode === 'constructors' && simulatedConstructors.map((team: TeamProfile) => {
+                  {viewMode === 'constructors' && (
+                    <motion.div layout className="flex flex-col gap-3">
+                      {simulatedConstructors.map((team: TeamProfile) => {
                     const original = originalConstructors.find(o => o.id === team.id);
                     const posChange = (original?.position || 0) - (team.position || 0);
                     const ptsGained = (team.points || 0) - (original?.points || 0);
@@ -751,9 +799,13 @@ const SimulatorPage = () => {
                     const logo = teamLogos[team.id];
                     
                     return (
-                      <div 
+                      <motion.div 
+                        layout
                         key={team.id} 
-                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-lg p-4 flex items-center gap-4 md:gap-6 transition-ui duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ layout: { type: 'spring', stiffness: 420, damping: 38 }, duration: 0.25 }}
+                        className={`group relative bg-neutral-950/80 backdrop-blur-md border ${ptsGained > 0 ? 'border-red-500/40 bg-red-950/30' : 'border-white/5 hover:border-white/10'} rounded-lg p-4 flex items-center gap-4 md:gap-6 transition-colors duration-300 overflow-hidden shadow-lg hover:bg-neutral-900/90`}
                       >
                         <div className="absolute left-0 top-0 bottom-0 w-1.5 " style={{ backgroundColor: teamColor, color: teamColor }}></div>
                         
@@ -789,7 +841,7 @@ const SimulatorPage = () => {
                           </div>
                           <div className="w-16 md:w-24">
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: ptsGained > 0 ? '#fff' : '#e5e5e5', textShadow: ptsGained > 0 ? '0 0 10px rgba(255,255,255,0.5)' : 'none' }}>
-                              {team.points}
+                              <AnimatedNumber value={team.points || 0} />
                             </span>
                             <span className="block text-[11px] md:text-[11px] text-neutral-500 font-black tracking-widest uppercase -mt-1">PTS</span>
                           </div>
@@ -797,11 +849,133 @@ const SimulatorPage = () => {
                         {ptsGained > 0 && (
                           <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/10 blur-2xl rounded-full pointer-events-none"></div>
                         )}
-                      </div>
+                        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/5" aria-hidden="true">
+                          <div
+                            className="h-full rounded-r-full transition-[width] duration-700 ease-out"
+                            style={{
+                              width: `${Math.min(100, (ptsGained / 43) * 100)}%`,
+                              backgroundColor: teamColor,
+                              boxShadow: ptsGained > 0 ? `0 0 10px ${teamColor}` : 'none',
+                            }}
+                          />
+                        </div>
+                      </motion.div>
                     );
-                  })}
-                  
-                  <div className="pt-4 text-center border-t border-white/5">
+                      })}
+                    </motion.div>
+                  )}
+
+                  {/* Scenario story: projected podium + swing read-out */}
+                  <div className="mt-3 pt-5 border-t border-white/10">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <span className="text-[11px] font-black uppercase tracking-widest text-neutral-500">
+                        Projected Podium
+                      </span>
+                      <span className={`text-[11px] font-black uppercase tracking-widest ${hasPicks ? 'text-red-400' : 'text-neutral-600'}`}>
+                        {hasPicks ? 'What-if applied' : 'Current order'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {projectedPodium.map((d, i) => {
+                        const podiumTone = i === 0
+                          ? 'border-yellow-500/40 bg-yellow-500/5'
+                          : i === 1
+                            ? 'border-slate-400/30 bg-slate-400/5'
+                            : 'border-amber-700/40 bg-amber-700/5';
+                        return (
+                          <motion.div
+                            key={driverKey(d)}
+                            layout
+                            className={`relative overflow-hidden rounded-lg border ${podiumTone} p-3`}
+                          >
+                            <span className="absolute right-2 top-2 text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                              P{i + 1}
+                            </span>
+                            <span className="block h-1 w-8 rounded-full" style={{ backgroundColor: getDriverColor(d.name, d.team) }} />
+                            <div className="mt-2 truncate text-xs md:text-sm font-black uppercase italic text-white">
+                              {d.name}
+                            </div>
+                            <div className="truncate text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                              {d.team}
+                            </div>
+                            <div className="mt-2 flex items-baseline gap-1">
+                              <AnimatedNumber value={d.points || 0} className="text-xl md:text-2xl font-black italic tracking-tighter text-white" />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">pts</span>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="flex items-center justify-between rounded-md border border-white/5 bg-neutral-950/60 px-3 py-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Title gap</span>
+                        <span className="text-sm font-black text-white">
+                          <AnimatedNumber value={titleGap ?? 0} suffix=" PTS" />
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-white/5 bg-neutral-950/60 px-3 py-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Biggest swing</span>
+                        {biggestSwing ? (
+                          <span className="truncate text-sm font-black text-emerald-400">
+                            {biggestSwing.name.split(' ').pop()} +{biggestSwing.delta}
+                          </span>
+                        ) : (
+                          <span className="text-sm font-black text-neutral-600">—</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Run-in calendar: fills the tall card and shows which rounds
+                      the what-if is still able to influence. */}
+                  {remainingRaces.length > 0 && (
+                    <div className="mt-3 flex flex-1 flex-col rounded-lg border border-white/5 bg-neutral-950/40 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                          <CalendarDays size={12} className="text-red-500/80" /> Run-in
+                        </span>
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-neutral-600">
+                          {remainingRaces.length} rounds left
+                        </span>
+                      </div>
+                      <ol className="flex flex-1 flex-col justify-between gap-1">
+                        {remainingRaces.map((r) => {
+                          const isSelectedRound = Number(r.round) === selectedRound;
+                          return (
+                            <li
+                              key={`runin-${r.round}`}
+                              className={`flex items-center gap-2 rounded-md border px-2 py-1.5 transition-colors duration-300 ${
+                                isSelectedRound
+                                  ? 'border-red-500/40 bg-red-500/10'
+                                  : 'border-white/5 bg-neutral-950/40'
+                              }`}
+                            >
+                              <span className={`w-7 shrink-0 font-mono text-[10px] font-black ${isSelectedRound ? 'text-red-400' : 'text-neutral-600'}`}>
+                                R{r.round}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-neutral-300">
+                                {r.name}
+                              </span>
+                              {r.is_sprint && (
+                                <span className="shrink-0 rounded-xs border border-orange-500/40 bg-orange-500/10 px-1 py-0.5 text-[9px] font-black uppercase tracking-wider text-orange-300">
+                                  Sprint
+                                </span>
+                              )}
+                              <span className="shrink-0 font-mono text-[10px] font-bold text-neutral-500">
+                                {r.date
+                                  ? new Date(`${r.date}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                  : '—'}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    </div>
+                  )}
+
+                  <div className="mt-auto pt-4 text-center border-t border-white/5">
                     <p className="text-neutral-500 text-xs font-bold tracking-normal pt-2">
                       * Showing top 10 simulated {viewMode} standings
                     </p>

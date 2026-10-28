@@ -83,7 +83,7 @@ const TeamProfilePage = () => {
   const dnfTotal = Number(profile.dnfs) || 0;
   const dnsTotal = Number(profile.dnss) || 0;
   const stats: TeamStatCard[] = [
-    { label: 'Championship Rank', value: `P${profile.position}`, icon: Trophy, color: profile.position === 1 ? 'text-yellow-500' : 'text-white' },
+    { label: 'Championship Rank', value: `P${profile.position ?? '—'}`, icon: Trophy, color: profile.position === 1 ? 'text-yellow-500' : 'text-white' },
     { label: 'Total Points', value: profile.points, icon: PieChart, color: 'text-white' },
     { label: 'Race Wins', value: profile.wins, icon: Flag, color: 'text-yellow-400' },
     { label: 'Podium Finishes', value: profile.podiums, icon: Award, color: 'text-slate-300' },

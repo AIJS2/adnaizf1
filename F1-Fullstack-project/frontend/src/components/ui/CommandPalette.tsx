@@ -754,6 +754,13 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             ref={inputRef}
             type="search"
             name="command-search"
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-controls="command-palette-results"
+            aria-autocomplete="list"
+            aria-activedescendant={
+              filteredItems[selectedIndex] ? `command-palette-item-${filteredItems[selectedIndex].id}` : undefined
+            }
             aria-label="Search drivers, teams, circuits or tools"
             autoComplete="off"
             spellCheck={false}
@@ -782,7 +789,9 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
           {CATEGORIES.map(cat => (
             <button
               key={cat}
+              type="button"
               onClick={() => setSelectedCategory(cat)}
+              aria-pressed={selectedCategory === cat}
               className={`px-3 py-1 rounded-full font-medium transition-ui duration-150 shrink-0 ${
                 selectedCategory === cat 
                   ? 'bg-red-600 text-white shadow-xs shadow-red-600/30 font-semibold'
@@ -800,6 +809,9 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
         {/* Results List */}
         <div 
           ref={listRef}
+          id="command-palette-results"
+          role="listbox"
+          aria-label="Search suggestions"
           className="flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-neutral-800/20 max-h-[50vh] scrollbar-thin scrollbar-thumb-neutral-700"
         >
           {filteredItems.length === 0 ? (
@@ -813,12 +825,15 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
               const isSelected = idx === selectedIndex;
               const Icon = item.icon || Sparkles;
               const accentColor = item.team 
-                ? (item.type === 'driver' ? getDriverColor(item.title, item.team) : getTeamColor(item.team))
+                ? ((item.type === 'Drivers' || item.type === 'driver') ? getDriverColor(item.title, item.team) : getTeamColor(item.team))
                 : '#EF4444';
 
               return (
                 <div
                   key={item.id}
+                  id={`command-palette-item-${item.id}`}
+                  role="option"
+                  aria-selected={isSelected}
                   data-index={idx}
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}

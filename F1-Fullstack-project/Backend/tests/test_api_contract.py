@@ -141,7 +141,7 @@ class ApiContractTests(unittest.TestCase):
 
     def test_clear_cache_requires_valid_api_key(self):
         missing = self.client.get("/api/clear_cache/2026")
-        self.assertEqual(missing.status_code, 422)
+        self.assertEqual(missing.status_code, 401)
 
         wrong = self.client.get(
             "/api/clear_cache/2026", headers={"X-API-Key": "wrong-key"}
@@ -162,6 +162,7 @@ class ApiContractTests(unittest.TestCase):
         self.assertIn("all_races_cache_2026.json", keys)
         self.assertIn("race_detail_cache_2026_1.json", keys)
         self.assertIn("race_detail_cache_2026_24.json", keys)
+        self.assertIn("race_detail_cache_2026_25.json", keys)
 
     def test_live_timing_websocket_idle_snapshot(self):
         with patch("routers.livetiming._check_live_session", return_value=False):

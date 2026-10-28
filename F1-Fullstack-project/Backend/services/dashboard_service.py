@@ -12,9 +12,6 @@ from services.fastf1_safe import (
 RACE_LOAD_KWARGS = dict(telemetry=False, weather=False, laps=False, messages=False)
 ANALYTICS_LOAD_KWARGS = dict(laps=False, telemetry=False, weather=False, messages=False)
 
-F1_SEASON_START = 1950
-F1_SEASON_END = 2100
-
 
 def _empty_season(year: int, message: str) -> dict:
     """The honest payload for a season with no data to report."""
@@ -118,6 +115,7 @@ def _build_driver_standings(
             sub = results[needed].copy()
             sub["Points"] = pd.to_numeric(sub["Points"], errors="coerce").fillna(0.0)
             sub["Position"] = pd.to_numeric(sub["Position"], errors="coerce")
+            sub["RoundNumber"] = int(round_number)
             all_driver_results.append(sub)
             if is_last_race:
                 last_race_driver_results.append(sub)
@@ -135,7 +133,10 @@ def _build_driver_standings(
         return None, None
 
     df_all_drivers = pd.concat(all_driver_results, ignore_index=True)
-    print(f"DEBUG DASHBOARD: total session rows = {len(df_all_drivers)}")
+    # Chronological order before `agg(team=("TeamName","last"))` so a driver
+    # who changed teams is attributed to the team at their LATEST round.
+    df_all_drivers = df_all_drivers.sort_values("RoundNumber", kind="stable")
+    logging.info(f"DEBUG DASHBOARD: total session rows = {len(df_all_drivers)}")
     df_all_teams = df_all_drivers[["TeamName", "Points"]]
     total_team_standings = df_all_teams.groupby("TeamName", as_index=False)[
         "Points"
@@ -200,7 +201,7 @@ def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp
 
     try:
         official = schedule[schedule["EventName"].str.contains("Grand Prix", na=False)]
-        event_date = official["EventDate"].dt.normalize()
+        event_date = pd.to_datetime(official["EventDate"], utc=True).dt.normalize()
         completed = official[event_date < today]
         ongoing = official[event_date == today]
         upcoming = official[event_date > today]
@@ -213,7 +214,7 @@ def _build_race_analytics(schedule: pd.DataFrame, year: int, today: pd.Timestamp
 
     for _, race in races_for_analytics.iterrows():
         try:
-            race_date = pd.to_datetime(race["EventDate"], errors="coerce").normalize()
+            race_date = pd.to_datetime(race["EventDate"], utc=True, errors="coerce").normalize()
             if pd.isna(race_date):
                 continue
         except (TypeError, ValueError, OSError):
@@ -260,16 +261,19 @@ def compute_fastf1_dashboard(year: int):
     # A year outside the F1 era cannot have a schedule. Report pre-season with
     # empty standings instead of surfacing FastF1's own lookup failure.
     if not is_valid_year(year):
-        print(f"  -> Tahun {year} di luar rentang musim F1. Mengirim pre_season.")
+        logging.info(f"  -> Tahun {year} di luar rentang musim F1. Mengirim pre_season.")
         return _empty_season(year, f"The {year} season has no data.")
 
     logging.info("[Dashboard] Computing dashboard data...")
-    today = pd.to_datetime("today").normalize()
+    # UTC calendar date: a race's EventDate is a calendar date, so "today" must
+    # be the UTC date, not the server-local wall clock (which drifts up to ~7h
+    # and mislabels a just-finished race as "Upcoming").
+    today = pd.Timestamp.now(tz="UTC").normalize()
     now_utc = pd.to_datetime("now", utc=True)
 
     schedule = load_event_schedule(year, include_testing=False)
     if schedule is None or schedule.empty:
-        print(f"  -> Tidak ada jadwal untuk musim {year}. Mengirim status pre_season.")
+        logging.info(f"  -> Tidak ada jadwal untuk musim {year}. Mengirim status pre_season.")
         return _empty_season(
             year,
             f"The {year} season has not started yet. Data will be available "
@@ -280,7 +284,7 @@ def compute_fastf1_dashboard(year: int):
         official_races = schedule[
             schedule["EventName"].str.contains("Grand Prix", na=False)
         ]
-        event_dates = official_races["EventDate"].dt.normalize()
+        event_dates = pd.to_datetime(official_races["EventDate"], utc=True).dt.normalize()
         completed_races = official_races[event_dates < today].copy()
         ongoing_races = official_races[event_dates == today].copy()
     except Exception as e:  # noqa: BLE001
@@ -289,7 +293,7 @@ def compute_fastf1_dashboard(year: int):
 
     # Penanganan Pra-Musim (sudah diupdate dengan logika countdown)
     if completed_races.empty and ongoing_races.empty:
-        print(f"  -> Musim {year} belum dimulai. Mengirim status pre_season.")
+        logging.info(f"  -> Musim {year} belum dimulai. Mengirim status pre_season.")
         pre_season_data = _empty_season(
             year,
             f"The {year} season has not started yet. Data will be available "
@@ -306,7 +310,7 @@ def compute_fastf1_dashboard(year: int):
     except (TypeError, ValueError):
         last_race_round = 0
     if last_race is not None:
-        print(
+        logging.info(
             f"  -> Balapan terakhir teridentifikasi: {last_race_name} (Ronde {last_race_round})"
         )
 
@@ -332,13 +336,13 @@ def compute_fastf1_dashboard(year: int):
 
     next_race_event = _find_next_session(schedule, now_utc)
     if next_race_event:
-        print(
+        logging.info(
             f"  -> Sesi selanjutnya ditemukan: {next_race_event['name']} "
             f"pada {next_race_event['date']}"
         )
         final_data["next_race_event"] = next_race_event
     else:
-        print(f"  -> Tidak ada sesi balapan selanjutnya di musim {year}.")
+        logging.info(f"  -> Tidak ada sesi balapan selanjutnya di musim {year}.")
 
     final_data["race_analytics"] = _build_race_analytics(schedule, year, today)
 

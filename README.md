@@ -1,18 +1,18 @@
 # ANALYZIZ — Formula 1 2026 Telemetry, Analytics & Live Pit-Wall 🏎️⚡
 
 [![CI](https://github.com/AIJS2/adnaizf1/actions/workflows/ci.yml/badge.svg)](https://github.com/AIJS2/adnaizf1/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat-square&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB.svg?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=flat-square&logo=fastapi&logoColor=white)
-![React](https://img.shields.io/badge/React-18.3-61DAFB.svg?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6.svg?style=flat-square&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5.4-646CFF.svg?style=flat-square&logo=vite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC.svg?style=flat-square&logo=tailwind-css&logoColor=white)
+![React](https://img.shields.io/badge/React-19.1-61DAFB.svg?style=flat-square&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6.svg?style=flat-square&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7.3-646CFF.svg?style=flat-square&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.3-38B2AC.svg?style=flat-square&logo=tailwind-css&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)
 ![Security Hardened](https://img.shields.io/badge/Security-Hardened%20(A+)-brightgreen.svg?style=flat-square&logo=shield)
 
 **ANALYZIZ (`adnaizf1`)** is an enterprise-grade, broadcast-quality Formula 1 telemetry analysis, live timing pit-wall, and championship intelligence platform built for the 2026 FIA Formula One World Championship season.
 
-Engineered with a high-performance decoupled full-stack architecture (**FastAPI + React 18 + TypeScript + Vite + Redis + SQLite**), ANALYZIZ connects directly to live Formula 1 SignalR WebSocket timing streams, processes multi-driver telemetry down to millisecond precision, and provides interactive analytics and simulation tools used by race strategists and motorsport analysts.
+Engineered with a high-performance decoupled full-stack architecture (**FastAPI + React 19 + TypeScript + Vite + Redis + SQLite**), ANALYZIZ connects directly to live Formula 1 SignalR WebSocket timing streams, processes multi-driver telemetry down to millisecond precision, and provides interactive analytics and simulation tools used by race strategists and motorsport analysts.
 
 ---
 
@@ -93,8 +93,8 @@ Engineered with a high-performance decoupled full-stack architecture (**FastAPI 
                                                 │
                                                 ▼
   ┌──────────────────────┐          ┌───────────────────────┐          ┌──────────────────────┐
-  │   React 18 + Vite    │ ◄──────► │  FastAPI Python 3.11  │ ◄──────► │ FastF1 / OpenF1 / DB │
-  │   TypeScript 5.5     │  REST &  │  Asynchronous Core    │  Worker  │ SQLite + JSON Cache  │
+  │   React 19 + Vite    │ ◄──────► │  FastAPI Python 3.11+ │ ◄──────► │ FastF1 / OpenF1 / DB │
+  │   TypeScript 5.7     │  REST &  │  Asynchronous Core    │  Worker  │ SQLite + JSON Cache  │
   │   Tailwind + Recharts│  WSS     │  Rate-Limit + Security│  Pool    │ Redis In-Memory TTL  │
   └──────────────────────┘          └───────────────────────┘          └──────────────────────┘
          ▲                                      ▲
@@ -108,10 +108,10 @@ Engineered with a high-performance decoupled full-stack architecture (**FastAPI 
 
 | Layer | Technologies & Tools |
 |---|---|
-| **Frontend UI/UX** | React 18.3, TypeScript 5.5, Vite 5.4, Tailwind CSS 3.4, Lucide React |
+| **Frontend UI/UX** | React 19.1, TypeScript 5.7, Vite 7.3, Tailwind CSS 4.3, Lucide React |
 | **Data Visualization** | Recharts, SVG Geometry Manipulation (`getPointAtLength`), Custom Audio Equalizer |
-| **State & Networking** | TanStack React Query, Native WebSocket Client, Axios |
-| **Backend Core** | FastAPI 0.115+, Python 3.11, Uvicorn (ASGI), Pydantic v2 |
+| **State & Networking** | TanStack React Query 5, Native Fetch API, Native WebSocket Client |
+| **Backend Core** | FastAPI 0.115+, Python 3.11+, Uvicorn (ASGI), Pydantic v2 |
 | **F1 Data Engines** | Custom SignalR Protocol Client, FastF1 3.4+, OpenF1 API Client |
 | **Storage & Caching** | SQLite 3 (Structured DB), Redis 7 (In-Memory Key/Value), Atomic JSON Store |
 | **Security & Auditing** | `slowapi` (Rate Limiter), `secrets` (Timing Attack Mitigation), CSP Middleware |
@@ -152,7 +152,7 @@ adnaizf1/
     └── frontend/
         ├── Dockerfile           # Optimized Vite build + Nginx Alpine runner
         ├── package.json         # Frontend dependencies and scripts
-        ├── vite.config.ts       # Vite configuration with proxy and path aliases
+        ├── vite.config.js       # Vite configuration with proxy, test, and host bindings
         ├── tailwind.config.js   # Tailored motorsport dark-mode design system
         └── src/
             ├── pages/           # LiveTimingPage, TelemetryPage, DashboardPage, StatsPage...

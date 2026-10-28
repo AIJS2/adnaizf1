@@ -44,7 +44,7 @@ fastf1.Cache.enable_cache(_FASTF1_CACHE_DIR)
 # %TEMP%\fastf1 in a process that skips this import.
 os.environ.setdefault("FASTF1_CACHE", _FASTF1_CACHE_DIR)
 
-CACHE_DURATION_HOURS = 6
+CACHE_DURATION_HOURS = int(os.environ.get("CACHE_DURATION_HOURS", str(24 * 7)))
 
 # ---------------------------------------------------------------------------
 # Stale-While-Revalidate (SWR) policy.
@@ -70,6 +70,16 @@ redis_client: Optional["redis.Redis"] = None
 _redis_last_failure: float = 0.0
 
 
+def _safe_redis_url() -> str:
+    """Redis URL with any password stripped, safe for logs and /health.
+
+    Never log the raw REDIS_URL: redis://:secret@host leaks the credential.
+    """
+    if not REDIS_URL:
+        return "disabled"
+    return REDIS_URL.split("@")[-1] if "@" in REDIS_URL else REDIS_URL
+
+
 def _build_client() -> Optional["redis.Redis"]:
     """Create a pooled Redis client, or None when Redis is unconfigured or unreachable."""
     if not REDIS_URL or REDIS_URL.lower() in ("none", "disabled", "false"):
@@ -85,13 +95,10 @@ def _build_client() -> Optional["redis.Redis"]:
         )
         client = redis.Redis(connection_pool=pool)
         client.ping()  # fail fast rather than on the first real command
-        logging.info(
-            f"Successfully connected to Redis cache at "
-            f"{REDIS_URL.split('@')[-1] if '@' in REDIS_URL else REDIS_URL}"
-        )
+        logging.info(f"Successfully connected to Redis cache at {_safe_redis_url()}")
         return client
     except Exception as e:
-        logging.warning(f"Failed to connect to Redis at {REDIS_URL}: {e}")
+        logging.warning(f"Failed to connect to Redis at {_safe_redis_url()}: {e}")
         return None
 
 
@@ -140,11 +147,7 @@ def redis_status() -> dict:
             _invalidate_redis()
     return {
         "connected": connected,
-        "url": (
-            (REDIS_URL.split("@")[-1] if "@" in REDIS_URL else REDIS_URL)
-            if REDIS_URL
-            else "disabled (in-memory/file cache fallback)"
-        ),
+        "url": _safe_redis_url() if REDIS_URL else "disabled (in-memory/file cache fallback)",
     }
 
 
@@ -218,6 +221,44 @@ async def get_advanced_cache_swr(
         return None, "cold"
 
 
+async def fetch_with_coalescing(
+    key: str,
+    fetch: Any,
+    hours: int = CACHE_DURATION_HOURS,
+) -> Any:
+    """
+    Single-flight coalesced fetch: guards against cache stampedes / thundering herds.
+
+    When concurrent requests miss the cache for `key`, only the first caller acquires
+    the per-key lock and runs `fetch()`. Other callers wait on the same lock, then
+    read the freshly populated cache directly.
+    """
+    # 1. Fast path: check cache without lock
+    cached = await asyncio.to_thread(get_advanced_cache, key)
+    if cached is not None:
+        return cached
+
+    # 2. Slow path: acquire per-key lock to coalesce concurrent executions
+    lock = await _get_cache_lock(key)
+    async with lock:
+        # Re-check inside the lock: another task may have populated it while waiting
+        cached = await asyncio.to_thread(get_advanced_cache, key)
+        if cached is not None:
+            return cached
+
+        # Execute fetch
+        if asyncio.iscoroutinefunction(fetch):
+            result = await fetch()
+        elif callable(fetch):
+            result = await asyncio.to_thread(fetch)
+        else:
+            result = fetch
+
+        if result is not None:
+            await set_advanced_cache_async(key, result, hours=hours)
+        return result
+
+
 async def _background_refresh(
     key: str, fetch: Any, hours: int = CACHE_DURATION_HOURS
 ) -> None:
@@ -244,10 +285,12 @@ def _get_file_cache_path(key: str) -> str:
     return os.path.join(_CACHE_DIR, clean_name)
 
 
-def get_advanced_cache(key: str, hours: int = CACHE_DURATION_HOURS) -> Optional[Any]:
-    """
-    Retrieve data from Redis cache or file fallback cache.
-    Returns (data) if found, otherwise None.
+def _read_cache(key: str) -> Optional[Any]:
+    """Read from Redis then the file fallback, with no age check.
+
+    Split out so TTL-aware readers (`get_advanced_cache`) and raw readers
+    (`get_advanced_cache_with_meta`, which applies its own TTL policy) can
+    share one I/O path.
     """
     client = _get_redis()
     if client is not None:
@@ -271,11 +314,47 @@ def get_advanced_cache(key: str, hours: int = CACHE_DURATION_HOURS) -> Optional[
     return None
 
 
+def get_advanced_cache(key: str, hours: int = CACHE_DURATION_HOURS) -> Optional[Any]:
+    """
+    Retrieve data from Redis cache or file fallback cache.
+
+    Redis entries expire via SETEX, but the disk fallback previously never
+    expired — a committed or stale snapshot was served forever. Now the file
+    copy honours `hours` (mtime-based) the same way Redis honours its TTL.
+    """
+    client = _get_redis()
+    if client is not None:
+        try:
+            cached_data = client.get(key)
+            if cached_data:
+                return json.loads(cached_data)
+        except Exception as e:
+            logging.warning(f"Error reading from Redis cache for key '{key}': {e}")
+            _invalidate_redis()  # reconnect on the next call
+
+    try:
+        filepath = _get_file_cache_path(key)
+        if os.path.exists(filepath):
+            age_seconds = time.time() - os.path.getmtime(filepath)
+            if age_seconds > int(hours) * 3600:
+                return None
+            with open(filepath, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        logging.warning(f"Error reading from file cache for key '{key}': {e}")
+
+    return None
+
+
 def get_advanced_cache_with_meta(key: str) -> Optional[dict]:
     """
     Retrieve cached data and its file metadata (modified_time, mtime_epoch).
+
+    Deliberately age-agnostic: callers (`race_details`) apply their own
+    per-status TTL, so this must not drop an entry that is still valid under
+    their policy just because the generic 6h window has passed.
     """
-    data = get_advanced_cache(key)
+    data = _read_cache(key)
     if data is None:
         return None
 
@@ -374,3 +453,39 @@ def clear_advanced_cache(keys: Optional[List[str]] = None) -> None:
                         pass
     except Exception as e:
         logging.error(f"Failed to clear file cache: {e}")
+
+
+def clear_cache_by_prefix(prefixes: List[str]) -> int:
+    """Delete disk-cache files whose name starts with any of `prefixes`.
+
+    Used by ``/api/clear_cache/{year}?include_telemetry=true`` to purge the
+    variable-named telemetry caches and the ``fastf1_no_laps_*`` negative
+    markers, which cannot be enumerated as a fixed key list. Also drops the
+    matching Redis keys (best effort — Redis keys may carry a legacy ``cache/``
+    prefix). Returns the number of files removed.
+    """
+    removed = 0
+    try:
+        for name in os.listdir(_CACHE_DIR):
+            if any(name.startswith(p) for p in prefixes):
+                try:
+                    os.remove(os.path.join(_CACHE_DIR, name))
+                    removed += 1
+                except OSError:
+                    pass
+    except OSError as e:
+        logging.error(f"Failed to list cache dir for prefix purge: {e}")
+
+    client = _get_redis()
+    if client is not None:
+        try:
+            for p in prefixes:
+                for key in client.scan_iter(match=f"{p}*"):
+                    client.delete(key)
+                for key in client.scan_iter(match=f"cache/{p}*"):
+                    client.delete(key)
+        except Exception as e:
+            logging.error(f"Failed to clear Redis cache for prefixes {prefixes}: {e}")
+            _invalidate_redis()
+
+    return removed

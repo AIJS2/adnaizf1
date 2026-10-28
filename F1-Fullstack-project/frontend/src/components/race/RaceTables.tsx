@@ -566,7 +566,7 @@ const SpeedSectorsTable: React.FC<SpeedSectorsTableProps> = ({ speedTraps, secto
                     </td>
                     <td className="p-4 text-right">
                       <span className="inline-block px-2 py-0.5 rounded-sm bg-red-900/20 text-red-400 border border-red-900/30 font-mono text-xs font-bold">
-                        +{d.potential_gain}s
+                        {d.potential_gain != null ? `+${d.potential_gain}s` : '—'}
                       </span>
                     </td>
                   </tr>

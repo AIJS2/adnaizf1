@@ -5,7 +5,7 @@ import secrets
 import time
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Path, Request, status as http_status
-from config.cache import get_advanced_cache_with_meta, set_advanced_cache
+from config.cache import get_advanced_cache_with_meta
 from services.race_details_service import compute_fastf1_race_details
 from config.limiter import limiter
 
@@ -147,7 +147,9 @@ async def get_race_details(
     if isinstance(final_data, dict) and "error" in final_data:
         return final_data
 
-    set_advanced_cache(CACHE_FILE, final_data)
+    # compute_fastf1_race_details already persists the payload via
+    # set_advanced_cache(cache_file, ...), so writing again here was redundant
+    # (and did a blocking json.dump + Redis setex on the event loop).
     final_data_copy = dict(final_data)
     final_data_copy["_cache_state"] = "fresh"
     return final_data_copy

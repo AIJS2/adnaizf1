@@ -5,7 +5,6 @@ import {
   Activity, RefreshCw, AlertTriangle, Zap, 
   Radio, Flag, ChevronLeft, ChevronRight, Crosshair
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
 import { teamColors, teamLogos, DRIVER_TEAM_COLORS_2026, getTeamColor, getDriverColor } from '../../data/teamData';
 
 import TrackDominationMap from './TrackDominationMap';
@@ -332,6 +331,7 @@ const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
     const el = document.getElementById('telemetry-card');
     if (!el) return;
     try {
+      const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(el, { backgroundColor: '#0a0a0a', scale: 2 });
       const image = canvas.toDataURL('image/png');
       const link = document.createElement('a');

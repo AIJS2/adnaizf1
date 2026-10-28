@@ -123,7 +123,9 @@ describe('SimulatorPage race-aware simulation', () => {
     });
     // 6 remaining rounds x (25 win + 1 fastest lap) = 156.
     expect(screen.getByText('+156')).toBeInTheDocument();
-    expect(screen.getByText(/6 rounds left/i)).toBeInTheDocument();
+    // The round count now appears in both the Title Fight card and the Run-in
+    // strip at the bottom of the standings card.
+    expect(screen.getAllByText(/6 rounds left/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/no Sprint sessions left/i)).toBeInTheDocument();
     expect(screen.getByText(/Title fight mathematically open/i)).toBeInTheDocument();
   });
@@ -146,9 +148,10 @@ describe('SimulatorPage race-aware simulation', () => {
     fireEvent.change(p1Select, { target: { value: 'george_russell' } });
     fireEvent.click(screen.getByRole('button', { name: /compute/i }));
 
-    // 238 + 25 = 263 and the "+25" gain badge appears.
+    // 238 + 25 = 263 and the "+25" gain badge appears. The total appears in
+    // both the standings row and the projected-podium card now.
     await waitFor(() => {
-      expect(screen.getByText('263')).toBeInTheDocument();
+      expect(screen.getAllByText('263').length).toBeGreaterThan(0);
     });
     // The drivers table and the teams table both show a "+25" gain badge.
     expect(screen.getAllByText('+25').length).toBeGreaterThan(0);
@@ -170,9 +173,10 @@ describe('SimulatorPage race-aware simulation', () => {
     fireEvent.change(sprintSelect, { target: { value: 'george_russell' } });
     fireEvent.click(screen.getByRole('button', { name: /compute/i }));
 
-    // 238 + 8 sprint win = 246.
+    // 238 + 8 sprint win = 246. The total appears in the standings row and in
+    // the projected-podium card.
     await waitFor(() => {
-      expect(screen.getByText('246')).toBeInTheDocument();
+      expect(screen.getAllByText('246').length).toBeGreaterThan(0);
     });
 
     // Switching to a conventional round clears the sprint pick.

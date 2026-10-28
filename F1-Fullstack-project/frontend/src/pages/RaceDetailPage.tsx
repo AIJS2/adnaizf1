@@ -1,20 +1,20 @@
 // src/RaceDetailPage - FIXED: shared teamData & config, improved error state
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/layout/ErrorState';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Trophy, Calendar, Activity, TrendingUp, Wrench, Route, Gauge, Sun, List, LayoutGrid, Timer, Flag, Clock, ChevronDown } from 'lucide-react';
 import { API_URL } from '../config';
-import TelemetryTab from '../components/ui/TelemetryTab';
 import { TrackMap } from '../components/ui/TrackMap';
 
-// =======================================================================
+// Lazy loaded heavy chart and telemetry components
+const TelemetryTab = lazy(() => import('../components/ui/TelemetryTab'));
+const LapChartComponent = lazy(() => import('../components/race/LapChart'));
+const GapChartComponent = lazy(() => import('../components/race/GapChart'));
+const LapTimesChartComponent = lazy(() => import('../components/race/LapTimesChart'));
+const RaceControlMessages = lazy(() => import('../components/race/RaceControlMessages'));
 
-import LapChartComponent from '../components/race/LapChart';
-import GapChartComponent from '../components/race/GapChart';
-import LapTimesChartComponent from '../components/race/LapTimesChart';
-import RaceControlMessages from '../components/race/RaceControlMessages';
 import { PracticeResultTable, QualifyingResultTable, SprintQualifyingResultTable, SprintResultTable, RaceResultTable, GridTable, TyreStrategyTable, SpeedSectorsTable, WeatherChart } from '../components/race/RaceTables';
 import { type SummaryCardData } from '../components/race/RaceMiniComponents';
 import type { Race, SessionResultRow, SectorMatrixEntry } from '../types/f1';
@@ -143,6 +143,10 @@ function RaceDetailPage() {
   // Keyboard navigation: arrow keys cycle through tabs
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.matches('input, textarea, select, [contenteditable="true"]')) {
+        return;
+      }
       if (!availableTabs || availableTabs.length === 0) return;
       const currentIndex = availableTabs.indexOf(activeTab);
       if (e.key === 'ArrowRight') {
@@ -364,7 +368,7 @@ function RaceDetailPage() {
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
             {/* Winner Card */}
             {raceWinnerData && (
-              <div className="bg-linear-to-br from-amber-950/40 to-neutral-900/60 backdrop-blur-sm border border-amber-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="bg-linear-to-br from-amber-950/40 to-neutral-900/60 backdrop-blur-sm border border-amber-700/30 rounded-lg p-5 relative overflow-hidden group motion-safe:hover:scale-[1.02] transition-transform">
                 <div className="absolute inset-0 bg-linear-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
@@ -379,7 +383,7 @@ function RaceDetailPage() {
 
             {/* Pole Position */}
             {poleSitterData && (
-              <div className="bg-linear-to-br from-red-950/40 to-neutral-900/60 backdrop-blur-sm border border-red-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="bg-linear-to-br from-red-950/40 to-neutral-900/60 backdrop-blur-sm border border-red-700/30 rounded-lg p-5 relative overflow-hidden group motion-safe:hover:scale-[1.02] transition-transform">
                 <div className="absolute inset-0 bg-linear-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
@@ -394,7 +398,7 @@ function RaceDetailPage() {
 
             {/* Fastest Lap */}
             {fastestLapData && (
-              <div className="bg-linear-to-br from-purple-950/40 to-neutral-900/60 backdrop-blur-sm border border-purple-700/30 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="bg-linear-to-br from-purple-950/40 to-neutral-900/60 backdrop-blur-sm border border-purple-700/30 rounded-lg p-5 relative overflow-hidden group motion-safe:hover:scale-[1.02] transition-transform">
                 <div className="absolute inset-0 bg-linear-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
@@ -408,7 +412,7 @@ function RaceDetailPage() {
             )}
 
             {/* Race Status */}
-            <div className="bg-linear-to-br from-neutral-900/60 to-neutral-900/80 backdrop-blur-sm border border-neutral-700/50 rounded-lg p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+            <div className="bg-linear-to-br from-neutral-900/60 to-neutral-900/80 backdrop-blur-sm border border-neutral-700/50 rounded-lg p-5 relative overflow-hidden group motion-safe:hover:scale-[1.02] transition-transform">
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar size={18} className="text-neutral-400" />
@@ -502,7 +506,9 @@ function RaceDetailPage() {
         {/* Main Content Area */}
         <section className="mb-12">
           <div className="bg-neutral-900/40 backdrop-blur-xl border border-neutral-800/80 shadow-2xl rounded-lg overflow-hidden">
-            {renderActiveContent()}
+            <Suspense fallback={<div className="p-12 text-center text-neutral-400 font-mono animate-pulse">Loading session view…</div>}>
+              {renderActiveContent()}
+            </Suspense>
           </div>
         </section>
       </main>

@@ -1,6 +1,7 @@
 import { Race } from '../types/f1';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { motion, useReducedMotion } from 'framer-motion';
 import ErrorState from '../components/layout/ErrorState';
 import { Calendar, Trophy, Clock, Info, MapPin, ChevronDown, Zap, ArrowDown, CheckCircle2, Timer } from 'lucide-react';
 import { CountryFlag } from '../components/ui/CountryFlag';
@@ -136,17 +137,23 @@ const FilterTabs = ({ active, onChange, counts }: { active: string; onChange: (k
     { key: 'upcoming', label: 'Upcoming', icon: Clock, count: counts.upcoming },
   ];
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter races by status">
       {tabs.map(t => (
-        <button key={t.key} onClick={() => onChange(t.key)}
-          className={`group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-ui duration-200
-            ${active === t.key
+        <button
+          key={t.key}
+          type="button"
+          role="tab"
+          aria-selected={active === t.key}
+          onClick={() => onChange(t.key)}
+          className={`group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-ui duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-500 ${
+            active === t.key
               ? 'bg-red-600/90 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] border border-red-500'
               : 'bg-neutral-900/60 text-neutral-400 hover:text-white hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600'
-            }`}>
-          <t.icon size={14} className={active === t.key ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'} />
+          }`}
+        >
+          <t.icon size={14} aria-hidden="true" className={active === t.key ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-300'} />
           {t.label}
-          <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[11px] font-mono ${active === t.key ? 'bg-white/20 text-white' : 'bg-neutral-800 text-neutral-500'}`}>
+          <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[11px] font-mono ${active === t.key ? 'bg-white/20 text-white' : 'bg-neutral-800 text-neutral-300'}`}>
             {t.count}
           </span>
         </button>
@@ -173,6 +180,7 @@ const MonthDivider = ({ month, year, raceCount }: { month: string; year: number;
 
 // --- RACE CARD ---
 const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race: Race; isNextRace: boolean; nextRacePhase?: 'future' | 'race_day' | 'live'; index: number }) => {
+  const shouldReduceMotion = useReducedMotion();
   const raceDate = parseRaceDate(countdownTarget(race.date) ?? race.date);
   const formattedDate = raceDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const trackImage = getTrackMap(race);
@@ -200,138 +208,148 @@ const RaceCard = ({ race, isNextRace, nextRacePhase = 'future', index }: { race:
   const statusConfig = getStatusConfig(effectiveStatus);
 
   return (
-    <Link to={`/race/${CURRENT_YEAR}/${race.round}`} className="block h-full group" data-race-round={race.round}>
-      <div className={`relative bg-neutral-900/40 backdrop-blur-md border rounded-3xl p-6 flex flex-col justify-between h-full transition-ui duration-300 transform group-hover:shadow-[0_15px_40px_rgba(220,38,38,0.15)] overflow-hidden
-        ${isNextRace
-          ? 'border-red-500/50 ring-1 ring-red-500/20 shadow-[0_0_30px_rgba(220,38,38,0.12)]'
-          : race.status === 'Ongoing'
-            ? 'border-red-500/30'
-            : 'border-neutral-800/80 group-hover:border-neutral-600'
-        }`}
-        style={{ animationDelay: `${index * 50}ms` }}
-      >
-        {/* Next Race Badge */}
-        {isNextRace && (
-          <div className="absolute top-0 right-0">
-            <div className="bg-red-600 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-md rounded-tr-lg flex items-center gap-1.5 shadow-[0_2px_10px_rgba(220,38,38,0.5)]">
-              <Zap size={10} className="" /> NEXT RACE
-            </div>
-          </div>
-        )}
-        
-        {/* Track Outline Watermark */}
-        {trackImage && (
-          <img src={trackImage} alt={`${race.location} track layout`}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-auto opacity-[0.03] group-hover:opacity-10 pointer-events-none transition-ui duration-500 invert" 
-          />
-        )}
-        
-        {/* Glow behind card if finished and has winner */}
-        {race.status === 'Finished' && (
-          <div className="absolute -right-10 -bottom-10 w-40 h-40 rounded-full blur-[80px] opacity-10 pointer-events-none transition-opacity group-hover:opacity-30" style={{ backgroundColor: winnerTeamColor }} />
-        )}
-
-        {/* Next race glow */}
-        {isNextRace && (
-          <div className="absolute -left-5 -top-5 w-32 h-32 rounded-full blur-[60px] opacity-20 pointer-events-none bg-red-500" />
-        )}
-
-        <div className="relative z-10 flex flex-col justify-between h-full">
-          <div>
-            {/* Header: Flag, Name, Round Badge */}
-            <div className="flex justify-between items-start mb-5">
-              <div className="max-w-[70%]">
-                <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <div className=" rounded-xs overflow-hidden">
-                    {flagCode ? (
-                      <CountryFlag
-                        code={flagCode}
-                        alt={`${race.country || race.location || race.name} flag`}
-                        className="w-8 h-auto"
-                      />
-                    ) : (
-                      <div className="w-8 h-5 bg-neutral-800" />
-                    )}
-                  </div>
-                  <h3 className="font-black text-white text-lg md:text-xl leading-tight md:leading-7 uppercase italic tracking-tight group-hover:text-red-400 transition-colors">
-                    {race.name}
-                  </h3>
-                </div>
-                <div className="flex items-center gap-1.5 text-neutral-400 text-xs font-bold tracking-normal">
-                  <MapPin size={12} /> {race.location}
-                </div>
-              </div>
-              
-              {/* Skewed Round Badge */}
-              <div className="shrink-0 bg-red-600 transform -skew-x-12 px-3 py-1.5 border border-red-500">
-                <div className="transform skew-x-12 text-white font-black text-xs tracking-normal">
-                  R{String(race.round).padStart(2, '0')}
-                </div>
+    <motion.div
+      initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: shouldReduceMotion ? 0 : 0.35,
+        delay: shouldReduceMotion ? 0 : Math.min(index * 0.05, 0.4),
+        ease: [0.2, 0.8, 0.2, 1],
+      }}
+      className="h-full"
+    >
+      <Link to={`/race/${CURRENT_YEAR}/${race.round}`} className="block h-full group" data-race-round={race.round}>
+        <div className={`relative bg-neutral-900/40 backdrop-blur-md border rounded-3xl p-6 flex flex-col justify-between h-full transition-ui duration-300 transform group-hover:shadow-[0_15px_40px_rgba(220,38,38,0.15)] overflow-hidden
+          ${isNextRace
+            ? 'border-red-500/50 ring-1 ring-red-500/20 shadow-[0_0_30px_rgba(220,38,38,0.12)]'
+            : race.status === 'Ongoing'
+              ? 'border-red-500/30'
+              : 'border-neutral-800/80 group-hover:border-neutral-600'
+          }`}
+        >
+          {/* Next Race Badge */}
+          {isNextRace && (
+            <div className="absolute top-0 right-0">
+              <div className="bg-red-600 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-md rounded-tr-lg flex items-center gap-1.5 shadow-[0_2px_10px_rgba(220,38,38,0.5)]">
+                <Zap size={10} className="" /> NEXT RACE
               </div>
             </div>
+          )}
+          
+          {/* Track Outline Watermark */}
+          {trackImage && (
+            <img src={trackImage} alt={`${race.location} track layout`}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-auto opacity-[0.03] group-hover:opacity-10 pointer-events-none transition-ui duration-500 invert" 
+            />
+          )}
+          
+          {/* Glow behind card if finished and has winner */}
+          {race.status === 'Finished' && (
+            <div className="absolute -right-10 -bottom-10 w-40 h-40 rounded-full blur-[80px] opacity-10 pointer-events-none transition-opacity group-hover:opacity-30" style={{ backgroundColor: winnerTeamColor }} />
+          )}
 
-            {/* Date & Status */}
-            <div className="flex justify-between items-center border-y border-neutral-800/60 py-3 mb-5">
-              <div className="flex items-center gap-2 text-white font-mono text-sm font-bold bg-neutral-950/50 px-3 py-1 rounded-lg">
-                <Calendar size={14} className="text-red-500" />
-                {formattedDate}
-              </div>
-              <div className={`px-3 py-1 text-[11px] font-black uppercase rounded-lg border flex items-center gap-1.5 tracking-widest ${statusConfig.classes}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
-                <span>{statusConfig.label}</span>
-              </div>
-            </div>
-          </div>
+          {/* Next race glow */}
+          {isNextRace && (
+            <div className="absolute -left-5 -top-5 w-32 h-32 rounded-full blur-[60px] opacity-20 pointer-events-none bg-red-500" />
+          )}
 
-          <div className="flex flex-col gap-2 relative">
-            {/* Small track icon right side */}
-            {trackImage && (
-              <img src={trackImage} alt="track" className="absolute -right-2 top-0 w-16 opacity-30 drop-shadow-md group-hover:opacity-50 transition-ui invert" />
-            )}
-             
-            {race.status === 'Finished' ? (
-              race.winner ? (
-                <>
-                  <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Race Winner</div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-md bg-linear-to-br from-yellow-500/20 to-yellow-700/20 border border-yellow-500/30 flex items-center justify-center">
-                      <Trophy size={16} className="text-yellow-500 " />
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div>
+              {/* Header: Flag, Name, Round Badge */}
+              <div className="flex justify-between items-start mb-5">
+                <div className="max-w-[70%]">
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <div className=" rounded-xs overflow-hidden">
+                      {flagCode ? (
+                        <CountryFlag
+                          code={flagCode}
+                          alt={`${race.country || race.location || race.name} flag`}
+                          className="w-8 h-auto"
+                        />
+                      ) : (
+                        <div className="w-8 h-5 bg-neutral-800" />
+                      )}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-black text-white text-base md:text-lg uppercase italic leading-none md:leading-7">{race.winner}</span>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <div className="w-2 h-2 rounded-full shadow-xs" style={{ backgroundColor: winnerTeamColor }} />
-                        <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">{race.winner_team}</span>
+                    <h3 className="font-black text-white text-lg md:text-xl leading-tight md:leading-7 uppercase italic tracking-tight group-hover:text-red-400 transition-colors">
+                      {race.name}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-neutral-400 text-xs font-bold tracking-normal">
+                    <MapPin size={12} /> {race.location}
+                  </div>
+                </div>
+                
+                {/* Skewed Round Badge */}
+                <div className="shrink-0 bg-red-600 transform -skew-x-12 px-3 py-1.5 border border-red-500">
+                  <div className="transform skew-x-12 text-white font-black text-xs tracking-normal">
+                    R{String(race.round).padStart(2, '0')}
+                  </div>
+                </div>
+              </div>
+
+              {/* Date & Status */}
+              <div className="flex justify-between items-center border-y border-neutral-800/60 py-3 mb-5">
+                <div className="flex items-center gap-2 text-white font-mono text-sm font-bold bg-neutral-950/50 px-3 py-1 rounded-lg">
+                  <Calendar size={14} className="text-red-500" />
+                  {formattedDate}
+                </div>
+                <div className={`px-3 py-1 text-[11px] font-black uppercase rounded-lg border flex items-center gap-1.5 tracking-widest ${statusConfig.classes}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
+                  <span>{statusConfig.label}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 relative">
+              {/* Small track icon right side */}
+              {trackImage && (
+                <img src={trackImage} alt="track" className="absolute -right-2 top-0 w-16 opacity-30 drop-shadow-md group-hover:opacity-50 transition-ui invert" />
+              )}
+               
+              {race.status === 'Finished' ? (
+                race.winner ? (
+                  <>
+                    <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Race Winner</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-md bg-linear-to-br from-yellow-500/20 to-yellow-700/20 border border-yellow-500/30 flex items-center justify-center">
+                        <Trophy size={16} className="text-yellow-500 " />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black text-white text-base md:text-lg uppercase italic leading-none md:leading-7">{race.winner}</span>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="w-2 h-2 rounded-full shadow-xs" style={{ backgroundColor: winnerTeamColor }} />
+                          <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">{race.winner_team}</span>
+                        </div>
                       </div>
                     </div>
+                  </>
+                ) : (
+                  <div className="text-neutral-500 text-sm font-bold uppercase italic mt-2">Results Pending…</div>
+                )
+              ) : isNextRace ? (
+                <div className="mt-1">
+                  <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest mb-2">
+                    {nextRacePhase === 'race_day'
+                      ? 'Race Day — Starts Soon'
+                      : nextRacePhase === 'live'
+                        ? 'Race In Progress'
+                        : 'Race Starts In'}
                   </div>
-                </>
-              ) : (
-                <div className="text-neutral-500 text-sm font-bold uppercase italic mt-2">Results Pending…</div>
-              )
-            ) : isNextRace ? (
-              <div className="mt-1">
-                <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-widest mb-2">
-                  {nextRacePhase === 'race_day'
-                    ? 'Race Day — Starts Soon'
-                    : nextRacePhase === 'live'
-                      ? 'Race In Progress'
-                      : 'Race Starts In'}
+                  <MiniCountdown
+                    targetDate={raceDate}
+                    phase={nextRacePhase}
+                  />
                 </div>
-                <MiniCountdown
-                  targetDate={raceDate}
-                  phase={nextRacePhase}
-                />
-              </div>
-            ) : (
-              <div className="text-neutral-600 text-xs font-bold tracking-normal mt-2 flex items-center gap-2">
-                <Clock size={12} /> Awaiting Race Day
-              </div>
-            )}
+              ) : (
+                <div className="text-neutral-600 text-xs font-bold tracking-normal mt-2 flex items-center gap-2">
+                  <Clock size={12} /> Awaiting Race Day
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 };
 
@@ -372,11 +390,19 @@ const RacesPage = () => {
   const { data: races = [], isLoading: loading, error, refetch: fetchAllRaces } = useQuery({
     queryKey: ['races', CURRENT_YEAR],
     queryFn: async () => {
-      const response = await fetch(`${API_URL}/api/races/${CURRENT_YEAR}`);
-      if (!response.ok) throw new Error(`Failed to fetch. Status: ${response.status}`);
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      return data;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(`${API_URL}/api/races/${CURRENT_YEAR}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Failed to fetch. Status: ${response.status}`);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        return data;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     }
   });
 

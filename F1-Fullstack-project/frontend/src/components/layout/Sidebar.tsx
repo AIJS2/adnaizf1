@@ -123,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <aside
         aria-label="Primary"
         className={`
-          fixed left-0 top-0 h-full z-50 hidden flex-col ${hideDesktop ? '' : 'xl:flex'}
+          fixed left-0 top-0 h-full z-50 hidden flex-col ${hideDesktop ? '' : 'lg:flex'}
           bg-neutral-950 border-r border-neutral-900
           transition-[width] duration-200 ease-pit
           ${isCollapsed ? 'w-20' : 'w-72'}
@@ -174,7 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile drawer scrim */}
       <div
         className={`
-          fixed inset-0 z-40 bg-tarmac/70 backdrop-blur-xs xl:hidden
+          fixed inset-0 z-40 bg-tarmac/70 backdrop-blur-xs lg:hidden
           transition-opacity duration-200
           ${isMobileDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
         `}
@@ -188,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label="Primary"
         inert={!isMobileDrawerOpen}
         className={`
-          fixed left-0 top-0 h-full z-50 xl:hidden flex flex-col
+          fixed left-0 top-0 h-full z-50 lg:hidden flex flex-col
           w-72 max-w-[85vw] bg-neutral-950 border-r border-neutral-900 overscroll-contain
           pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
           transition-transform duration-300 ease-pit
@@ -230,7 +230,7 @@ interface MobileHeaderProps {
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({ isMobileDrawerOpen, onToggleMobileDrawer }) => {
   return (
-    <header className="xl:hidden fixed top-0 left-0 right-0 z-50 bg-tarmac/90 backdrop-blur-lg border-b border-neutral-900 pt-[env(safe-area-inset-top)]">
+    <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-tarmac/95 backdrop-blur-lg border-b border-neutral-900 pt-[env(safe-area-inset-top)]">
       <div className="h-16 flex items-center justify-between px-4">
         <button
           type="button"

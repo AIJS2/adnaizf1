@@ -40,15 +40,15 @@ def compute_fastf1_all_races(year: int):
     logging.info(f"[Races] Computing all races for {year}...")
 
     if not is_valid_year(year):
-        print(
+        logging.info(
             f"  -> Tahun {year} di luar rentang musim F1. Mengembalikan array kosong."
         )
         return []
 
-    today = pd.to_datetime("today").normalize()
+    today = pd.Timestamp.now(tz="UTC").normalize()
     schedule = load_event_schedule(year, include_testing=False)
     if schedule is None or schedule.empty:
-        print(
+        logging.info(
             f"  -> Tidak ada jadwal resmi ditemukan untuk {year}. Mengembalikan array kosong."
         )
         return []
@@ -62,7 +62,7 @@ def compute_fastf1_all_races(year: int):
         return []
 
     if official_races.empty:
-        print(
+        logging.info(
             f"  -> Tidak ada jadwal resmi ditemukan untuk {year}. Mengembalikan array kosong."
         )
         return []
@@ -70,7 +70,7 @@ def compute_fastf1_all_races(year: int):
     all_races_data = []
     for _, race in official_races.iterrows():
         try:
-            race_date = pd.to_datetime(race["EventDate"], errors="coerce").normalize()
+            race_date = pd.to_datetime(race["EventDate"], utc=True, errors="coerce").normalize()
             if pd.isna(race_date):
                 logging.warning(f"Skipping race with unparseable EventDate: {race}")
                 continue

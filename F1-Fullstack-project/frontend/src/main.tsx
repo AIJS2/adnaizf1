@@ -75,6 +75,10 @@ const router = createBrowserRouter([
         element: <LiveTimingPage />,
       },
       {
+        path: "/livetiming",
+        element: <LiveTimingPage />,
+      },
+      {
         path: "/simulator",
         element: <SimulatorPage />,
       },

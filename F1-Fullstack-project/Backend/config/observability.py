@@ -51,12 +51,13 @@ def setup_observability():
 
     logger.add(sys.stderr, format=log_format, level="INFO", colorize=True)
 
-    # Format for production (JSON file)
+    # Format for production (JSON file) with strict rotation and retention
     os.makedirs("logs", exist_ok=True)
     logger.add(
         "logs/app.log",
         rotation="10 MB",
-        retention="7 days",
+        retention=5,
+        compression="zip",
         level="INFO",
         serialize=True,  # Structured JSON logging
     )

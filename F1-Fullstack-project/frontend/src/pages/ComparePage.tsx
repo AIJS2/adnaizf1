@@ -13,7 +13,6 @@ import { fetchChampionship, fetchDriverProfile } from '../services/api';
 import type { ChampionshipPayload, DriverProfilePayload } from '../services/api';
 import { toNumber } from '../utils/data';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import html2canvas from 'html2canvas';
 import DriverRadarChart from '../components/DriverRadarChart';
 
 interface CompareDriver {
@@ -144,15 +143,22 @@ const DriverSelector = ({
     );
   }, [drivers, filter]);
 
+  const labelId = `driver-select-label-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  const listboxId = `driver-select-list-${label.toLowerCase().replace(/\s+/g, '-')}`;
+
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      <span className="block text-[11px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5 font-bold">
+      <label id={labelId} className="block text-[11px] font-mono uppercase tracking-widest text-neutral-300 mb-1.5 font-bold">
         {label}
-      </span>
+      </label>
       <button
         type="button"
+        aria-labelledby={labelId}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={listboxId}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-neutral-900/90 hover:bg-neutral-850 border border-neutral-800 rounded-md text-left transition-ui shadow-lg group focus:outline-hidden focus:border-neutral-600"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-neutral-900/90 hover:bg-neutral-850 border border-neutral-800 rounded-md text-left transition-colors shadow-lg group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-500"
         style={{ borderLeftColor: accentColor, borderLeftWidth: '4px' }}
       >
         {selectedDriver ? (
@@ -167,17 +173,17 @@ const DriverSelector = ({
                 <span className="text-white font-black text-sm uppercase italic truncate">
                   {selectedDriver.name}
                 </span>
-                <span className="text-[11px] font-mono font-bold text-neutral-500">
+                <span className="text-[11px] font-mono font-bold text-neutral-400">
                   {selectedDriver.abbreviation}
                 </span>
               </div>
-              <span className="text-[11px] text-neutral-400 truncate block font-medium">
+              <span className="text-[11px] text-neutral-300 truncate block font-medium">
                 {selectedDriver.team}
               </span>
             </div>
           </div>
         ) : (
-          <span className="text-neutral-500 text-sm font-mono">Select driver…</span>
+          <span className="text-neutral-400 text-sm font-mono">Select driver…</span>
         )}
         <div className="flex items-center gap-2 shrink-0">
           {selectedDriver && (
@@ -194,17 +200,24 @@ const DriverSelector = ({
           )}
           <ChevronDown
             size={16}
-            className={`text-neutral-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+            className={`text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-lg shadow-2xl p-2 max-h-72 flex flex-col">
+        <div 
+          id={listboxId}
+          role="listbox"
+          aria-labelledby={labelId}
+          className="absolute top-full left-0 right-0 mt-2 z-50 bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-lg shadow-2xl p-2 max-h-72 flex flex-col"
+        >
           <div className="relative mb-2">
             <Search
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
+              aria-hidden="true"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
             />
             <input
               type="search"
@@ -215,8 +228,7 @@ const DriverSelector = ({
               placeholder="Search driver, team, or #…"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 font-mono focus:outline-hidden focus:border-red-500"
-              autoFocus
+              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 font-mono focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:border-red-500"
             />
           </div>
 
@@ -230,6 +242,8 @@ const DriverSelector = ({
                 <button
                   key={driver.id}
                   type="button"
+                  role="option"
+                  aria-selected={isSelected}
                   onClick={() => {
                     onSelect(driver.id);
                     setIsOpen(false);
@@ -687,6 +701,7 @@ const ComparePage = () => {
     const el = document.getElementById('h2h-card');
     if (!el) return;
     try {
+      const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(el, { backgroundColor: '#0a0a0a', scale: 2 });
       const image = canvas.toDataURL('image/png');
       const link = document.createElement('a');
@@ -957,8 +972,8 @@ const ComparePage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                    <div className="w-full">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                    <div className="w-full h-full">
                       <DriverRadarChart
                         profile1={{
                           name: driver1.name,

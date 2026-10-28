@@ -219,7 +219,7 @@ const DriverProfilePage = () => {
               <div className="relative flex flex-col items-center justify-center w-36 h-36 bg-neutral-900 border border-neutral-700 rounded-full shadow-2xl">
                 <span className="text-[11px] uppercase font-bold text-neutral-500 tracking-[0.2em] mb-1">Position</span>
                 <div className="text-5xl font-black text-white font-mono leading-none tracking-tighter">
-                  P{profile.position}
+                  P{profile.position ?? '—'}
                 </div>
                 {profile.position === 1 && (
                   <Trophy size={16} className="text-yellow-500 mt-2 absolute bottom-4" />

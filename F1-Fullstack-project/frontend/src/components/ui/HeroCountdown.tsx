@@ -74,7 +74,7 @@ const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, phase = 'futu
   }
 
   return (
-    <div className="flex items-stretch gap-1.5 sm:gap-2" role="timer" aria-label="Time until the session starts">
+    <div className="flex items-stretch gap-1.5 sm:gap-2.5" role="timer" aria-label="Time until the session starts">
       {[
         { val: timeLeft.days, label: 'DAYS' },
         { val: timeLeft.hours, label: 'HRS' },
@@ -83,12 +83,13 @@ const HeroCountdown: React.FC<HeroCountdownProps> = ({ targetDate, phase = 'futu
       ].map((item) => (
         <div
           key={item.label}
-          className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 sm:px-4 sm:py-2.5 text-center min-w-[58px] sm:min-w-[68px]"
+          className="relative overflow-hidden bg-neutral-950/90 border border-neutral-800/90 hover:border-neutral-700 rounded-lg px-2.5 py-2 sm:px-4 sm:py-2.5 text-center min-w-[56px] sm:min-w-[68px] shadow-inner transition-colors"
         >
-          <div className="font-black text-2xl sm:text-3xl text-chalk leading-none sm:leading-9 tabular-nums">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-red-600/70" aria-hidden="true" />
+          <div className="font-mono font-black text-2xl sm:text-3xl text-white leading-none sm:leading-tight tabular-nums tracking-tight">
             {String(item.val).padStart(2, '0')}
           </div>
-          <div className="text-[10px] tracking-wide text-neutral-500 font-bold mt-1.5">
+          <div className="text-[10px] tracking-wider text-neutral-400 font-bold mt-1.5 uppercase">
             {item.label}
           </div>
         </div>

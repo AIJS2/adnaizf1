@@ -9,3 +9,7 @@ yarn-error.log
 .git
 .gitignore
 .dockerignore
+coverage/
+*.test.ts
+*.test.tsx
+__tests__/

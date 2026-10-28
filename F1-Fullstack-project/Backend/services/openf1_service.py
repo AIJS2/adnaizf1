@@ -47,6 +47,9 @@ DEFAULT_TIMEOUT = 4.0
 # 429 is transient, so retry it. Retry-After is honoured when present.
 MAX_RETRIES = 3
 RETRY_BACKOFF = 0.6
+# Never trust a huge Retry-After verbatim: parking a worker thread for an hour
+# (or indefinitely, on a hostile/erroneous value) starves the shared pool.
+MAX_RETRY_AFTER_SECONDS = 10.0
 
 # OpenF1's free tier is historical-only. While an F1 session is live (from
 # 30 minutes before to 30 minutes after), the API answers 401/403 for every
@@ -190,6 +193,18 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
             if e.response.status_code in (401, 403):
                 note_paywall(e.response.status_code, e.response.text)
                 return None
+            # 5xx is transient; retry like a connection error.
+            if e.response.status_code >= 500:
+                last_error = f"HTTP {e.response.status_code}"
+                logger.warning(
+                    "OpenF1 %s -> HTTP %s, retrying (attempt %d/%d)",
+                    path,
+                    e.response.status_code,
+                    attempt + 1,
+                    MAX_RETRIES,
+                )
+                time.sleep(RETRY_BACKOFF * (attempt + 1))
+                continue
             # Other 4xx is a permanent answer for this request.
             logger.warning(
                 "OpenF1 %s -> HTTP %s: %s",
@@ -233,11 +248,15 @@ def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
 
 
 def _retry_delay(response: httpx.Response, attempt: int) -> float:
-    """Sleep length for a 429: the server's Retry-After if it sent one."""
+    """Sleep length for a 429: the server's Retry-After if it sent one.
+
+    The value is clamped so an unreasonable Retry-After cannot park a worker
+    thread for minutes/hours; we still cap our total retries at MAX_RETRIES.
+    """
     raw = response.headers.get("Retry-After")
     if raw:
         try:
-            return float(raw)
+            return max(0.0, min(float(raw), MAX_RETRY_AFTER_SECONDS))
         except ValueError:
             pass  # HTTP-date form; fall back to backoff
     return RETRY_BACKOFF * (attempt + 1)

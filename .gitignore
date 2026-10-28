@@ -1,8 +1,56 @@
+# ─────────────────────────────────────────
+#  .gitignore — F1 Fullstack Project
+# ─────────────────────────────────────────
+
+# ===== FRONTEND =====
+**/node_modules/
+**/dist/
+frontend/.env.local
+frontend/.env.production
+frontend/.env.*.local
+
+# ===== BACKEND =====
+# Virtual environment Python
+**/venv/
+**/.venv/
+
+# Cache FastF1 (bisa sangat besar, regenerasi otomatis)
+**/Backend/cache/fastf1/
+**/Backend/cache/*.sqlite
+**/Backend/cache/telemetry_v2_*
+# Runtime JSON snapshots & negative markers (never commit a point-in-time cache)
+**/Backend/cache/*.json
 *.sqlite
 *.db
-cache/
+
+# Python cache
+**/__pycache__/
+*.pyc
+*.pyo
+
+# ===== UMUM =====
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
 logs/
-**/venv/
-__pycache__/
-node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment & Secrets
 .env
+Backend/.env
+agentic-awesome-skills*
+
+# Local dev-tool config (contains a localhost API key)
+opencode.json

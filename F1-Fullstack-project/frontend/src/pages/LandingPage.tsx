@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import CountdownTimer from '../components/ui/CountdownTimer';
 import { resolveNextRaceFromSources, countdownTarget, type ResolvedNextRace } from '../utils/nextRace';
 import {
-  Activity, Users, Calculator, Trophy, Flag, BookOpen, Search, ChevronRight, LayoutDashboard,
+  Activity, Users, Calculator, Trophy, Flag, BookOpen, Search, ChevronRight, LayoutDashboard, Radio,
 } from 'lucide-react';
 
 // The hero's one orchestrated moment: five start lights come on one by one,
@@ -48,6 +48,13 @@ const tools = [
     desc: 'Results, tyre strategy, speed traps and race control for every round.',
     icon: Flag,
     link: '/races',
+  },
+  {
+    id: 'live',
+    title: 'Live timing',
+    desc: 'Follow every car live on track, with gaps, intervals, sectors and tyre age.',
+    icon: Radio,
+    link: '/live',
   },
   {
     id: 'stats',
@@ -148,7 +155,12 @@ function NextRacePanel({ nextRace }: { nextRace: ResolvedNextRace | null }) {
 
 function LandingPage() {
   const [nextRace, setNextRace] = useState<ResolvedNextRace | null>(null);
+  const [isMac, setIsMac] = useState(false);
   const currentYear = new Date().getFullYear();
+
+  useEffect(() => {
+    setIsMac(typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform));
+  }, []);
 
   useEffect(() => {
     // No cache-busting query param: the backend already serves this payload
@@ -242,7 +254,9 @@ function LandingPage() {
             >
               <Search size={17} aria-hidden="true" />
               Search Drivers
-              <kbd className="ml-1 rounded-sm border border-neutral-700 px-1.5 text-xs font-semibold text-neutral-500">Ctrl&nbsp;K</kbd>
+              <kbd className="ml-1 rounded-sm border border-neutral-700 px-1.5 text-xs font-semibold text-neutral-300">
+                {isMac ? '⌘K' : 'Ctrl K'}
+              </kbd>
             </button>
           </div>
         </div>

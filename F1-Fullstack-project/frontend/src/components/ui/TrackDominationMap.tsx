@@ -4,6 +4,7 @@ import EmptyState, { EMPTY_TABLE_MESSAGES } from './EmptyState';
 import { TelemetryDataPoint, TeamDriverInfo } from '../../types/f1';
 import { teamColors, DRIVER_TEAM_COLORS_2026, getDriverColor } from '../../data/teamData';
 import { getCircuitGeometry, sampleCircuitPosition, CircuitLookup } from '../../data/circuitPaths';
+import { Track3D } from './Track3D';
 
 export interface TrackDominationMapProps {
   telemetry: TelemetryDataPoint[];
@@ -104,8 +105,8 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
   circuitInfo,
 }) => {
   const [hoveredDriver, setHoveredDriver] = React.useState<string | null>(null);
-  const [tooltipPos, setTooltipPos] = React.useState<{ x: number; y: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
+  const tooltipRef = React.useRef<HTMLDivElement>(null);
 
   const circuitGeom = React.useMemo(() => {
     return getCircuitGeometry(circuitInfo);
@@ -270,22 +271,81 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
       .join(' ');
   }, [circuitGeom, mappedTelemetry, maxY, minY]);
 
+  const pointerRef = React.useRef({ x: 0, y: 0 });
+  // Legend pills render the tooltip above themselves; the track uses the cursor.
+  const placementRef = React.useRef<'cursor' | 'above'>('cursor');
+
+  const placeTooltip = React.useCallback(() => {
+    const tooltip = tooltipRef.current;
+    if (!tooltip) return;
+    // The tooltip is anchored to the card, not the SVG: the map viewport is
+    // overflow-hidden, which used to clip the tooltip near the right edge and
+    // hide it completely when hovering the driver pills below the map.
+    const parent = tooltip.offsetParent as HTMLElement | null;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
+    const width = tooltip.offsetWidth;
+    const height = tooltip.offsetHeight;
+    const gap = 16;
+    const pad = 8;
+
+    let x = pointerRef.current.x - rect.left + gap;
+    let centerY = pointerRef.current.y - rect.top;
+
+    if (placementRef.current === 'above') {
+      // Centre the bubble above the pill instead of covering it.
+      x = pointerRef.current.x - rect.left - width / 2;
+      centerY -= height / 2 + 6;
+    } else if (x + width > rect.width - pad) {
+      // Flip to the left of the cursor when there is no room on the right.
+      x = pointerRef.current.x - rect.left - width - gap;
+    }
+    x = Math.max(pad, Math.min(x, rect.width - width - pad));
+
+    // Keep the vertically centred tooltip inside the card as well.
+    const minCenter = height / 2 + pad;
+    const maxCenter = rect.height - height / 2 - pad;
+    const y = Math.max(minCenter, Math.min(centerY, maxCenter));
+
+    tooltip.style.transform = `translate3d(${x}px, ${y}px, 0) translateY(-50%)`;
+  }, []);
+
+  // Position after the tooltip mounts so the first hover does not flash at 0,0.
+  React.useLayoutEffect(() => {
+    if (hoveredDriver) placeTooltip();
+  }, [hoveredDriver, placeTooltip]);
+
+  const trackPointer = (clientX: number, clientY: number) => {
+    pointerRef.current = { x: clientX, y: clientY };
+    placeTooltip();
+  };
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    setTooltipPos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
+    placementRef.current = 'cursor';
+    trackPointer(e.clientX, e.clientY);
+  };
+
+  const handleDriverHover = (driver: string, e: React.MouseEvent) => {
+    placementRef.current = 'cursor';
+    pointerRef.current = { x: e.clientX, y: e.clientY };
+    setHoveredDriver(driver);
+    placeTooltip();
+  };
+
+  const handlePillHover = (driver: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    placementRef.current = 'above';
+    pointerRef.current = { x: rect.left + rect.width / 2, y: rect.top - 4 };
+    setHoveredDriver(driver);
+    placeTooltip();
   };
 
   const handleMouseLeave = () => {
     setHoveredDriver(null);
-    setTooltipPos(null);
   };
 
   return (
-    <div className="bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl mb-8">
+    <div className="relative bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl mb-8">
       <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
         <Compass size={20} className="text-red-500" /> Track Domination Map
       </h3>
@@ -293,11 +353,13 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
         Color-coded segments show which driver was fastest at each part of the track
       </p>
       <div
+        data-testid="domination-map"
         className="w-full h-[400px] bg-linear-to-br from-neutral-950 to-neutral-900 rounded-lg p-4 flex items-center justify-center overflow-hidden border border-neutral-800/50 relative"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <svg ref={svgRef} viewBox={viewBox} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+        <Track3D className="w-full h-full" tone="cyan" tilt={8} interactive={false}>
+          <svg ref={svgRef} viewBox={viewBox} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
           {/* Background track outline */}
           <polyline
             points={allPoints}
@@ -318,9 +380,11 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
               <g
                 key={i}
                 style={{ cursor: 'pointer' }}
-                onMouseEnter={() => setHoveredDriver(line.driver)}
+                onMouseEnter={(e) => handleDriverHover(line.driver, e)}
               >
-                {/* Shadow/glow effect */}
+                {/* Wide low-opacity layer instead of an SVG blur filter: blur
+                    filters repaint the whole map on every hover change and
+                    caused visible flicker in Chromium. */}
                 <polyline
                   points={line.points.join(' ')}
                   stroke={style.color}
@@ -328,9 +392,8 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
-                  opacity={isDimmed ? 0.1 : isHovered ? 0.5 : 0.3}
-                  filter="blur(4px)"
-                  style={{ transition: 'all 0.2s ease' }}
+                  opacity={isDimmed ? 0.06 : isHovered ? 0.45 : 0.22}
+                  style={{ transition: 'stroke-width 0.2s ease, opacity 0.2s ease' }}
                 />
                 {/* Main colored line */}
                 <polyline
@@ -342,7 +405,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
                   strokeLinejoin="round"
                   fill="none"
                   opacity={isDimmed ? 0.2 : 1}
-                  style={{ transition: 'all 0.2s ease' }}
+                  style={{ transition: 'stroke-width 0.2s ease, opacity 0.2s ease' }}
                 />
               </g>
             );
@@ -369,41 +432,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
             </g>
           )}
         </svg>
-
-        {/* Tooltip overlay */}
-        {hoveredDriver && tooltipPos && (
-          <div
-            className="absolute pointer-events-none z-50"
-            style={{
-              left: tooltipPos.x + 16,
-              top: tooltipPos.y - 40,
-              transform: 'translateY(-50%)'
-            }}
-          >
-            <div
-              className="px-4 py-2 rounded-full border-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-150"
-              style={{
-                backgroundColor: 'rgba(10, 10, 10, 0.95)',
-                borderColor: driverStyles[hoveredDriver]?.color || '#ffffff'
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: driverStyles[hoveredDriver]?.color || '#ffffff' }}
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm font-black text-white leading-none">
-                    {hoveredDriver}
-                  </span>
-                  <span className="text-[11px] text-neutral-400 font-medium leading-none mt-0.5">
-                    {driver_info[hoveredDriver]?.name || driver_info[hoveredDriver]?.team}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </Track3D>
       </div>
       <div className="flex flex-wrap justify-center gap-6 mt-6">
         {drivers.map(drv => {
@@ -415,13 +444,14 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
           return (
             <div
               key={drv}
-              className="flex items-center gap-3 bg-neutral-900/80 border rounded-full px-4 py-2 transition-ui cursor-pointer"
+              className={`flex items-center gap-3 rounded-full border px-4 py-2 transition-colors duration-200 cursor-pointer ${
+                isActive ? 'bg-neutral-800/90' : 'bg-neutral-900/80'
+              }`}
               style={{
                 borderColor: isActive ? style.color : teamColor,
-                transform: isActive ? 'scale(1.1)' : 'scale(1)',
                 boxShadow: isActive ? `0 0 20px ${style.color}40` : 'none'
               }}
-              onMouseEnter={() => setHoveredDriver(drv)}
+              onMouseEnter={(e) => handlePillHover(drv, e)}
               onMouseLeave={() => setHoveredDriver(null)}
             >
               <svg width="36" height="10" viewBox="0 0 36 10">
@@ -444,6 +474,37 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
           );
         })}
       </div>
+
+      {/* Tooltip overlay — lives on the card so the map viewport cannot clip it */}
+      {hoveredDriver && (
+        <div
+          ref={tooltipRef}
+          className="pointer-events-none absolute left-0 top-0 z-50 will-change-transform"
+        >
+          <div
+            className="px-4 py-2 rounded-full border-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-150"
+            style={{
+              backgroundColor: 'rgba(10, 10, 10, 0.95)',
+              borderColor: driverStyles[hoveredDriver]?.color || '#ffffff'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: driverStyles[hoveredDriver]?.color || '#ffffff' }}
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-black text-white leading-none">
+                  {hoveredDriver}
+                </span>
+                <span className="text-[11px] text-neutral-400 font-medium leading-none mt-0.5">
+                  {driver_info[hoveredDriver]?.name || driver_info[hoveredDriver]?.team}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

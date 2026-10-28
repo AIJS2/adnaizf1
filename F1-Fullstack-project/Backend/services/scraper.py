@@ -162,7 +162,12 @@ async def apply_f1_official_standings(data: dict) -> dict:
                     cols = row.find_all(["th", "td"])
                     if len(cols) >= 3:
                         t_name = cols[1].text.strip()
-                        t_points = float(cols[2].text.strip())
+                        try:
+                            t_points = float(cols[2].text.strip())
+                        except ValueError:
+                            # Non-numeric cell (e.g. "–"): skip just this row,
+                            # never abort the whole scrape.
+                            continue
                         official_teams[t_name] = t_points
 
             # Parse Drivers
@@ -176,7 +181,10 @@ async def apply_f1_official_standings(data: dict) -> dict:
                         # Strip the concatenated 3-letter abbreviation, but only
                         # when it is a genuine driver code (see above).
                         d_name = strip_driver_abbreviation(d_name)
-                        d_points = float(cols[4].text.strip())
+                        try:
+                            d_points = float(cols[4].text.strip())
+                        except ValueError:
+                            continue
                         official_drivers[d_name] = d_points
 
         logging.info(
@@ -202,7 +210,10 @@ async def apply_f1_official_standings(data: dict) -> dict:
             )
 
     if not official_teams and not official_drivers:
+        data["standings_source"] = "fastf1"
         return data  # Fallback to FastF1
+
+    applied = False
 
     try:
         # Update dashboard data
@@ -210,6 +221,7 @@ async def apply_f1_official_standings(data: dict) -> dict:
             for t in data["team_standings"]:
                 if t["name"] in official_teams:
                     t["points"] = official_teams[t["name"]]
+                    applied = True
             data["team_standings"] = sorted(
                 data["team_standings"], key=lambda x: x["points"], reverse=True
             )
@@ -218,6 +230,7 @@ async def apply_f1_official_standings(data: dict) -> dict:
             for d in data["driver_standings"]:
                 if d["name"] in official_drivers:
                     d["points"] = official_drivers[d["name"]]
+                    applied = True
             data["driver_standings"] = sorted(
                 data["driver_standings"], key=lambda x: x["points"], reverse=True
             )
@@ -227,6 +240,7 @@ async def apply_f1_official_standings(data: dict) -> dict:
             for t in data["teams"]:
                 if t["name"] in official_teams:
                     t["points"] = official_teams[t["name"]]
+                    applied = True
             data["teams"] = sorted(
                 data["teams"], key=lambda x: x["points"], reverse=True
             )
@@ -237,6 +251,7 @@ async def apply_f1_official_standings(data: dict) -> dict:
             for d in data["drivers"]:
                 if d["name"] in official_drivers:
                     d["points"] = official_drivers[d["name"]]
+                    applied = True
             data["drivers"] = sorted(
                 data["drivers"], key=lambda x: x["points"], reverse=True
             )
@@ -245,5 +260,7 @@ async def apply_f1_official_standings(data: dict) -> dict:
 
     except Exception as e:
         logging.error(f"Failed to apply official standings: {e}", exc_info=True)
+        applied = False
 
+    data["standings_source"] = "fastf1+official_overlay" if applied else "fastf1"
     return data

@@ -22,9 +22,6 @@ REQUIRED_COLUMNS = [
     "GridPosition",
 ]
 
-F1_SEASON_START = 1950
-F1_SEASON_END = 2100
-
 
 def _empty_season(year: int, message: str) -> dict:
     """The honest payload for a season with no standings to report."""
@@ -110,15 +107,15 @@ def compute_fastf1_championship(year: int):
     # with empty standings is the honest payload, instead of a 500 or a
     # misleading "internal error" from FastF1's own schedule lookup.
     if not is_valid_year(year):
-        print(f"  -> Tahun {year} di luar rentang musim F1. Mengirim pre_season.")
+        logging.info(f"  -> Tahun {year} di luar rentang musim F1. Mengirim pre_season.")
         return _empty_season(
             year, f"No championship data exists for the {year} season."
         )
 
-    print("Menghitung total klasemen (Teams & Drivers) dengan data lengkap...")
+    logging.info("Menghitung total klasemen (Teams & Drivers) dengan data lengkap...")
     schedule = load_event_schedule(year, include_testing=False)
     if schedule is None or schedule.empty:
-        print(f"  -> Tidak ada jadwal untuk musim {year}. Mengirim status pre_season.")
+        logging.info(f"  -> Tidak ada jadwal untuk musim {year}. Mengirim status pre_season.")
         return _empty_season(
             year,
             f"The {year} season schedule is not available. Championship "
@@ -128,13 +125,13 @@ def compute_fastf1_championship(year: int):
     official_races = schedule[
         schedule["EventName"].str.contains("Grand Prix", na=False)
     ]
-    today = pd.to_datetime("today").normalize()
+    today = pd.Timestamp.now(tz="UTC").normalize()
     races_to_process = official_races[
-        official_races["EventDate"].dt.normalize() <= today
+        pd.to_datetime(official_races["EventDate"], utc=True).dt.normalize() <= today
     ]
 
     if races_to_process.empty:
-        print(
+        logging.info(
             f"  -> Musim {year} belum dimulai. Mengirim status pre_season untuk Championship."
         )
         return _empty_season(
@@ -144,7 +141,7 @@ def compute_fastf1_championship(year: int):
         )
 
     last_race_round = races_to_process["RoundNumber"].max()
-    print(f"  -> Ronde balapan terakhir teridentifikasi: {last_race_round}")
+    logging.info(f"  -> Ronde balapan terakhir teridentifikasi: {last_race_round}")
 
     all_results_df = _collect_results(year, races_to_process)
     if not all_results_df:
@@ -160,7 +157,10 @@ def compute_fastf1_championship(year: int):
         )
 
     df_full = pd.concat(all_results_df, ignore_index=True)
-    print(f"DEBUG CHAMPIONSHIP: total session rows = {len(df_full)}")
+    # Chronological order before `agg(team=("TeamName","last"))` so a mid-season
+    # transfer resolves to the team at the latest round, not the last row seen.
+    df_full = df_full.sort_values("RoundNumber", kind="stable")
+    logging.info(f"DEBUG CHAMPIONSHIP: total session rows = {len(df_full)}")
     df_full.dropna(subset=["FirstName", "LastName"], inplace=True)
     df_full["FullName"] = df_full["FirstName"] + " " + df_full["LastName"]
 

@@ -16,6 +16,8 @@ import {
   REAL_DATA_ONLY_NOTE,
 } from '../utils/liveTimingCopy';
 import { getDriverColor } from '../data/teamData';
+import { getCircuitGeometry } from '../data/circuitPaths';
+import { Track3D } from '../components/ui/Track3D';
 
 const LiveTimingPage: React.FC = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -59,12 +61,21 @@ const LiveTimingPage: React.FC = () => {
     last_session: null,
   });
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'lost'>('connecting');
+  const [gaveUp, setGaveUp] = useState(false);
 
   useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let batchTimer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
     let attempt = 0;
+    let lastMessageAt = Date.now();
+
+    // A half-open socket (sleep, Wi-Fi switch, proxy idle timeout) emits no
+    // close event, so without a watchdog the page would keep showing the last
+    // snapshot as "LIVE" indefinitely. If no frame arrives in this window we
+    // force a close so the reconnect backoff runs.
+    const STALL_TIMEOUT_MS = 20000;
 
     const connect = () => {
       if (disposed) return;
@@ -81,38 +92,76 @@ const LiveTimingPage: React.FC = () => {
 
       ws.onopen = () => {
         attempt = 0;
+        lastMessageAt = Date.now();
         setConnectionStatus('connected');
       };
 
+      let lastRenderTime = 0;
+      let pendingBatch: Record<string, unknown> | null = null;
+
+      const applyDataUpdate = (msg: Record<string, unknown>) => {
+        setData(prev => ({
+          lines: (msg.lines as typeof prev.lines) ?? prev.lines,
+          trackStatus: (msg.trackStatus as typeof prev.trackStatus) ?? prev.trackStatus,
+          weather: (msg.weather as typeof prev.weather) ?? prev.weather,
+          messages: (msg.messages as typeof prev.messages) ?? prev.messages,
+          radio: (msg.radio as typeof prev.radio) ?? prev.radio,
+          status: (msg.status as typeof prev.status) ?? prev.status,
+          reason: (msg.reason as typeof prev.reason) ?? prev.reason,
+          isLiveSession: (msg.is_live_session as typeof prev.isLiveSession) ?? prev.isLiveSession,
+          session_state: 'session_state' in msg ? (msg.session_state as typeof prev.session_state) : prev.session_state,
+          session_title: 'session_title' in msg ? (msg.session_title as typeof prev.session_title) : prev.session_title,
+          session_status: 'session_status' in msg ? (msg.session_status as typeof prev.session_status) : prev.session_status,
+          archive_status: 'archive_status' in msg ? (msg.archive_status as typeof prev.archive_status) : prev.archive_status,
+          circuit: 'circuit' in msg ? (msg.circuit as typeof prev.circuit) : prev.circuit,
+          lap: 'lap' in msg ? (msg.lap as typeof prev.lap) : prev.lap,
+          total_laps: 'total_laps' in msg ? (msg.total_laps as typeof prev.total_laps) : prev.total_laps,
+          last_session: 'last_session' in msg ? (msg.last_session as typeof prev.last_session) : prev.last_session,
+        }));
+        lastRenderTime = Date.now();
+      };
+
       ws.onmessage = (event: MessageEvent) => {
+        lastMessageAt = Date.now();
         try {
           const msg = JSON.parse(event.data);
           if (msg && msg.type === 'TimingData') {
-            setData(prev => ({
-              lines: msg.lines ?? prev.lines,
-              trackStatus: msg.trackStatus ?? prev.trackStatus,
-              weather: msg.weather ?? prev.weather,
-              messages: msg.messages ?? prev.messages,
-              radio: msg.radio ?? prev.radio,
-              status: msg.status ?? prev.status,
-              reason: msg.reason ?? prev.reason,
-              isLiveSession: msg.is_live_session ?? prev.isLiveSession,
-              session_state: 'session_state' in msg ? msg.session_state : prev.session_state,
-              session_title: 'session_title' in msg ? msg.session_title : prev.session_title,
-              session_status: 'session_status' in msg ? msg.session_status : prev.session_status,
-              archive_status: 'archive_status' in msg ? msg.archive_status : prev.archive_status,
-              circuit: 'circuit' in msg ? msg.circuit : prev.circuit,
-              lap: 'lap' in msg ? msg.lap : prev.lap,
-              total_laps: 'total_laps' in msg ? msg.total_laps : prev.total_laps,
-              last_session: 'last_session' in msg ? msg.last_session : prev.last_session,
-            }));
+            const now = Date.now();
+            const isCriticalState = msg.status && msg.status !== 'live';
+            if (isCriticalState || now - lastRenderTime >= 80) {
+              if (batchTimer) {
+                clearTimeout(batchTimer);
+                batchTimer = undefined;
+              }
+              pendingBatch = null;
+              applyDataUpdate(msg);
+            } else {
+              pendingBatch = msg;
+              if (!batchTimer) {
+                batchTimer = setTimeout(() => {
+                  batchTimer = undefined;
+                  if (!disposed && pendingBatch) {
+                    applyDataUpdate(pendingBatch);
+                    pendingBatch = null;
+                  }
+                }, 80);
+              }
+            }
           }
         } catch (err) {
           console.error('Failed to parse Live Timing WebSocket payload:', err);
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event: CloseEvent) => {
+        if (disposed) return;
+        // 1008 = origin rejected, 1013 = server at capacity. Neither is
+        // transient; retrying with unbounded backoff only hammers the server.
+        if (event.code === 1008 || event.code === 1013) {
+          setConnectionStatus('lost');
+          setGaveUp(true);
+          return;
+        }
         setConnectionStatus('lost');
         const delay = Math.min(3000 * 2 ** attempt, 30000);
         attempt += 1;
@@ -121,9 +170,18 @@ const LiveTimingPage: React.FC = () => {
     };
 
     connect();
+    const watchdog = setInterval(() => {
+      if (disposed || !ws || ws.readyState !== WebSocket.OPEN) return;
+      if (Date.now() - lastMessageAt > STALL_TIMEOUT_MS) {
+        ws.close(); // triggers onclose -> reconnect
+      }
+    }, 5000);
+
     return () => {
       disposed = true;
       clearTimeout(reconnectTimer);
+      if (batchTimer) clearTimeout(batchTimer);
+      clearInterval(watchdog);
       if (ws) {
         ws.onclose = null;
         ws.close();
@@ -216,6 +274,51 @@ const LiveTimingPage: React.FC = () => {
       ? 'bg-neutral-900 text-neutral-400 border-neutral-700 text-sm sm:text-base'
       : `border-black/50 text-xl ${getStatusColor(activeData.trackStatus)}`;
 
+  // When there is no live session the backend sends no circuit payload, which
+  // used to leave the map card as an empty placeholder. The next round's
+  // canonical geometry is bundled locally, so preview it instead: the card
+  // stays informative and the page keeps its track-map anchor.
+  const previewCircuit = useMemo<LiveTimingCircuit | null>(() => {
+    if (activeData.circuit || !nextEvent) return null;
+    const geom = getCircuitGeometry({
+      round: nextEvent.round,
+      name: nextEvent.name,
+      location: nextEvent.location,
+    });
+    if (!geom) return null;
+
+    const xs = geom.points.map((p) => p.x);
+    const ys = geom.points.map((p) => p.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const width = Math.max(maxX - minX, 1);
+    const height = Math.max(maxY - minY, 1);
+
+    // Canonical geometry is stored in raw surveying units (tens of thousands),
+    // so stroke widths of 5–18 would render sub-pixel. Rescale to a 1000-unit
+    // canvas with padding, matching the backend's live circuit viewBoxes.
+    const span = Math.max(width, height);
+    const scale = 900 / span;
+    const offsetX = 50 + ((span - width) * scale) / 2;
+    const offsetY = 50 + ((span - height) * scale) / 2;
+    const path = geom.points
+      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${(offsetX + (p.x - minX) * scale).toFixed(1)} ${(offsetY + (p.y - minY) * scale).toFixed(1)}`)
+      .join(' ') + ' Z';
+
+    return {
+      key: `preview-${geom.round}`,
+      name: geom.name,
+      location: geom.location,
+      country: geom.country,
+      viewBox: `0 0 ${(span * scale + 100).toFixed(0)} ${(span * scale + 100).toFixed(0)}`,
+      path,
+    };
+  }, [activeData.circuit, nextEvent]);
+
+  const trackCircuit = activeData.circuit ?? previewCircuit;
+
   return (
     <div className="bg-black min-h-screen text-white font-mono selection:bg-red-600 w-full overflow-hidden" style={{ overflowAnchor: 'none' }}>
       <main className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10">
@@ -241,7 +344,7 @@ const LiveTimingPage: React.FC = () => {
                 {connectionStatus === 'connecting'
                   ? 'AWAITING CONNECTION…'
                   : connectionStatus === 'lost'
-                    ? 'CONNECTION LOST - RECONNECTING…'
+                    ? (gaveUp ? 'LIVE TIMING UNAVAILABLE' : 'CONNECTION LOST - RECONNECTING…')
                     : isViewingPrevious
                       ? '🏁 PREVIOUS SESSION — FINAL CLASSIFICATION'
                       : isFinished
@@ -323,7 +426,11 @@ const LiveTimingPage: React.FC = () => {
               </div>
             )}
 
-            <div className="overflow-auto flex-1 max-h-[calc(100vh-280px)]" style={{ overflowAnchor: 'none' }}>
+            <div
+              data-testid="timing-table-scroll"
+              className={`flex-1 overflow-x-auto ${hasNoSessionData ? 'flex flex-col justify-center' : ''}`}
+              style={{ overflowAnchor: 'none' }}
+            >
               {hasNoSessionData ? (
                 isUnavailable ? (
                   <div className="flex flex-col items-center justify-center text-center py-16 px-6">
@@ -498,6 +605,21 @@ const LiveTimingPage: React.FC = () => {
               </table>
               )}
             </div>
+
+            {/* Session strip keeps the card anchored at the bottom even on
+                quiet sessions with only a handful of timing rows. */}
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-[#1a1a1a] px-4 py-2.5 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+              <span className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${activeData.isLiveSession ? 'bg-green-400 motion-safe:animate-pulse' : 'bg-neutral-600'}`} />
+                {activeData.session_title || (isNoSession ? 'No session' : 'Session feed')}
+              </span>
+              <span className="tabular-nums">
+                Lap {activeData.lap ?? '—'}/{activeData.total_laps ?? '—'}
+              </span>
+              <span className="tabular-nums">
+                {sortedLines.length > 0 ? `${sortedLines.length} cars` : 'Awaiting cars'}
+              </span>
+            </div>
           </div>
 
           {/* Right Sidebar */}
@@ -507,11 +629,22 @@ const LiveTimingPage: React.FC = () => {
             <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
               <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
               <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
-                <Activity size={14} /> {activeData.circuit ? `${activeData.circuit.name.toUpperCase()} — TRACK MAP` : 'TRACK MAP'}
+                <Activity size={14} /> {!previewCircuit && trackCircuit ? `${trackCircuit.name.toUpperCase()} — TRACK MAP` : 'TRACK MAP'}
+                {previewCircuit && (
+                  <span className="ml-auto shrink-0 rounded-xs border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] tracking-widest text-cyan-300">
+                    NEXT ROUND
+                  </span>
+                )}
               </h3>
               <div className="relative w-full aspect-square bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
-                {activeData.circuit ? (
-                  <CircuitTrackMap circuit={activeData.circuit} lines={sortedLines} />
+                {trackCircuit ? (
+                  <Track3D className="w-full h-full p-1" tone={previewCircuit ? 'cyan' : 'red'} tilt={12}>
+                    <CircuitTrackMap
+                      circuit={trackCircuit}
+                      lines={activeData.circuit ? sortedLines : []}
+                      preview={Boolean(previewCircuit)}
+                    />
+                  </Track3D>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full px-6 text-center">
                     <Activity size={28} className="text-neutral-700 mb-2" />
@@ -524,6 +657,13 @@ const LiveTimingPage: React.FC = () => {
                     </p>
                   </div>
                 )}
+                {previewCircuit && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-3 pb-2 pt-6">
+                    <p className="truncate text-center text-[9px] font-bold uppercase tracking-[0.2em] text-cyan-200/80">
+                      Next · {heroRaceName ?? 'Grand Prix'}
+                    </p>
+                  </div>
+                )}
                 {isUnavailable && activeData.circuit && (
                   <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-4">
                     <p className="text-[11px] text-neutral-300 font-bold uppercase tracking-wider text-center leading-relaxed">
@@ -532,10 +672,10 @@ const LiveTimingPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              {activeData.circuit && (
+              {trackCircuit && (
                 <div className="mt-2 flex w-full items-center justify-between text-[9px] uppercase tracking-widest text-neutral-600">
-                  <span>{activeData.circuit.location}</span>
-                  <span>{activeData.circuit.country}</span>
+                  <span>{trackCircuit.location}</span>
+                  <span>{trackCircuit.country}</span>
                 </div>
               )}
             </div>
@@ -630,6 +770,8 @@ const LiveTimingPage: React.FC = () => {
 interface CircuitTrackMapProps {
   circuit: LiveTimingCircuit;
   lines: LiveTimingLine[];
+  /** Renders a calmer, dashed "next round" treatment when no session is live. */
+  preview?: boolean;
 }
 
 interface TrackMapPoint {
@@ -645,7 +787,7 @@ interface TrackMapPoint {
  * running car on it with SVGPathElement.getPointAtLength(). The leader sits at
  * the start/finish point; the rest are spread by their gap in seconds.
  */
-const CircuitTrackMap = memo<CircuitTrackMapProps>(({ circuit, lines }) => {
+const CircuitTrackMap = memo<CircuitTrackMapProps>(({ circuit, lines, preview = false }) => {
   const pathRef = useRef<SVGPathElement | null>(null);
   const [points, setPoints] = useState<TrackMapPoint[]>([]);
 
@@ -710,7 +852,7 @@ const CircuitTrackMap = memo<CircuitTrackMapProps>(({ circuit, lines }) => {
       <path
         d={circuit.path}
         fill="none"
-        stroke="#080808"
+        stroke={preview ? '#0b1a22' : '#080808'}
         strokeWidth="18"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -718,11 +860,26 @@ const CircuitTrackMap = memo<CircuitTrackMapProps>(({ circuit, lines }) => {
       <path
         d={circuit.path}
         fill="none"
-        stroke="#3b3b3b"
+        stroke={preview ? '#64748b' : '#3b3b3b'}
         strokeWidth="5"
         strokeLinejoin="round"
         strokeLinecap="round"
+        vectorEffect={preview ? 'non-scaling-stroke' : undefined}
       />
+      {preview && (
+        <path
+          d={circuit.path}
+          fill="none"
+          stroke="#22d3ee"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          strokeDasharray="12 18"
+          opacity="0.95"
+          vectorEffect="non-scaling-stroke"
+          className="track-dash"
+        />
+      )}
       <path
         ref={pathRef}
         d={circuit.path}
@@ -765,6 +922,30 @@ CircuitTrackMap.displayName = 'CircuitTrackMap';
 interface TimingRowProps {
   row: LiveTimingLine;
 }
+
+const areTimingRowsEqual = (prevProps: TimingRowProps, nextProps: TimingRowProps): boolean => {
+  const p = prevProps.row;
+  const n = nextProps.row;
+  return (
+    p.position === n.position &&
+    p.driver === n.driver &&
+    p.team === n.team &&
+    p.status === n.status &&
+    p.gap === n.gap &&
+    p.interval === n.interval &&
+    p.lastLap === n.lastLap &&
+    p.lap_color === n.lap_color &&
+    p.sector1 === n.sector1 &&
+    p.s1_color === n.s1_color &&
+    p.sector2 === n.sector2 &&
+    p.s2_color === n.s2_color &&
+    p.sector3 === n.sector3 &&
+    p.s3_color === n.s3_color &&
+    p.pits === n.pits &&
+    p.tyre === n.tyre &&
+    p.tyre_age === n.tyre_age
+  );
+};
 
 const TimingRow = memo<TimingRowProps>(({ row }) => {
   const teamColor = getDriverColor(row.driver, row.team);
@@ -813,7 +994,7 @@ const TimingRow = memo<TimingRowProps>(({ row }) => {
       <td className="p-2.5 text-center text-neutral-600 font-mono font-bold tabular-nums">{row.pits}</td>
     </tr>
   );
-});
+}, areTimingRowsEqual);
 TimingRow.displayName = 'TimingRow';
 
 interface TyreIconProps {

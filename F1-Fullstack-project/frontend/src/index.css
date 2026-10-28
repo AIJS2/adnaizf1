@@ -413,7 +413,8 @@ select[aria-label="P2 Runner-up"],
 select[aria-label="P3 Podium"],
 select[aria-label="Fastest Lap"],
 select[aria-label="Sprint Winner"] {
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 0.75rem center;
   background-repeat: no-repeat;
@@ -447,7 +448,11 @@ select[aria-label="Sprint Winner"]:focus {
 
 /* Pill buttons with refined hovers */
 button:has(> svg) {
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.15s ease,
+              border-color 0.15s ease,
+              color 0.15s ease;
 }
 
 button:has(> svg):hover {
@@ -466,7 +471,8 @@ button:has(> svg):active {
 
 /* Standing rows with refined depth */
 .group.relative.bg-neutral-950\/80 {
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .group.relative.bg-neutral-950\/80:hover {
@@ -492,7 +498,9 @@ button:has(> svg):active {
 
 /* Refined toggle switch */
 button[class*="flex-1"].text-xs {
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 button[class*="bg-neutral-800"].text-white {
@@ -501,7 +509,9 @@ button[class*="bg-neutral-800"].text-white {
 
 /* Title fight contender cards with accent border glow */
 .space-y-2 > div[class*="bg-neutral-950"] {
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .space-y-2 > div[class*="bg-neutral-950"]:hover {
@@ -618,4 +628,170 @@ span[class*="px-3"][class*="py-1"][class*="rounded-full"] {
   .via-red-500\/40 { --tw-gradient-via: rgb(245 50 31 / 0.4); }
   .via-slate-800\/10 { --tw-gradient-via: rgb(30 41 59 / 0.1); }
   .via-yellow-900\/10 { --tw-gradient-via: rgb(113 63 18 / 0.1); }
+}
+/* ==========================================================================
+   Track3D — shared circuit-map presentation layer.
+   A CSS-only "wind tunnel" look: perspective tilt, extruded shadow stack,
+   glowing floor reflection and a slow scan sheen. No WebGL, no DOM copies.
+   ========================================================================== */
+.track3d {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  perspective: 1000px;
+  isolation: isolate;
+}
+
+.track3d__pivot {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotateX(var(--track3d-tilt, 14deg)) rotateZ(-1.5deg) translateZ(0);
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.track3d--interactive:hover .track3d__pivot,
+.track3d--interactive:focus-within .track3d__pivot {
+  transform: rotateX(5deg) rotateZ(0deg) scale(1.025) translateZ(18px);
+}
+
+.track3d__art {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter:
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.85))
+    drop-shadow(0 2px 0 rgba(0, 0, 0, 0.7))
+    drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55))
+    drop-shadow(0 10px 18px rgba(0, 0, 0, 0.65))
+    drop-shadow(0 0 16px var(--track3d-glow, rgba(230, 57, 70, 0.4)));
+  transition: filter 0.5s ease;
+}
+
+.track3d--interactive:hover .track3d__art {
+  filter:
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.85))
+    drop-shadow(0 3px 0 rgba(0, 0, 0, 0.65))
+    drop-shadow(0 7px 0 rgba(0, 0, 0, 0.45))
+    drop-shadow(0 16px 26px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 26px var(--track3d-glow, rgba(230, 57, 70, 0.5)));
+}
+
+.track3d__floor {
+  position: absolute;
+  z-index: 0;
+  left: 18%;
+  right: 18%;
+  bottom: 9%;
+  height: 16%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--track3d-glow, rgba(230, 57, 70, 0.4)) 0%, transparent 72%);
+  filter: blur(16px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.track3d__halo {
+  position: absolute;
+  z-index: 0;
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, var(--track3d-glow, rgba(230, 57, 70, 0.4)) 0%, transparent 68%);
+  filter: blur(34px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.track3d__scan {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mask-image: linear-gradient(to bottom, transparent, black 35%, black 65%, transparent);
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track3d__pivot,
+  .track3d--interactive:hover .track3d__pivot,
+  .track3d--interactive:focus-within .track3d__pivot {
+    transform: none;
+    transition: none;
+  }
+  .track3d__scan { display: none; }
+}
+
+/* ==========================================================================
+   Micro-interactions shared across pages
+   ========================================================================== */
+@keyframes cardLiftIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card-lift {
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+@media (hover: hover) {
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-lift,
+  .card-lift:hover { transform: none; transition: none; }
+}
+
+/* Racing stripe used by the global footer bottom edge */
+@keyframes footerSweep {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.footer-stripe {
+  background-image: linear-gradient(90deg, transparent, #e10600, #fbbf24, #e10600, transparent);
+  background-size: 200% 100%;
+  animation: footerSweep 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-stripe { animation: none; }
+}
+
+@keyframes trackDash {
+  to { stroke-dashoffset: -30; }
+}
+
+.track-dash {
+  animation: trackDash 2.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-dash { animation: none; }
 }

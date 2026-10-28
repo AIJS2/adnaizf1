@@ -16,6 +16,8 @@ RUN npm run build
 # Stage 2: Serve the application using Nginx
 FROM nginx:alpine
 
+RUN mkdir -p /var/cache/nginx/f1_api_cache && chown -R nginx:nginx /var/cache/nginx
+
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf

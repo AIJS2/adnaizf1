@@ -23,10 +23,15 @@ const DriverProfilePage = lazy(() => import('./pages/DriverProfilePage'));
 const TeamProfilePage = lazy(() => import('./pages/TeamProfilePage'));
 const ComparePage = lazy(() => import('./pages/ComparePage'));
 const LiveTimingPage = lazy(() => import('./pages/LiveTimingPage'));
+const OverlayLivePage = lazy(() => import('./pages/OverlayLivePage'));
 const SimulatorPage = lazy(() => import('./pages/SimulatorPage'));
 const GuidePage = lazy(() => import('./pages/GuidePage'));
 
 const router = createBrowserRouter([
+  {
+    path: "/overlay/live",
+    element: <OverlayLivePage />,
+  },
   {
     element: <Layout />,
     children: [

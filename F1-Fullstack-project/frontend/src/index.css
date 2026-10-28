@@ -688,6 +688,24 @@ span[class*="px-3"][class*="py-1"][class*="rounded-full"] {
     drop-shadow(0 0 26px var(--track3d-glow, rgba(230, 57, 70, 0.5)));
 }
 
+/* Flat mode is for maps that need pixel-accurate hover hit-testing or a
+   broadcast-clean SVG. The expensive filter stack and the tilted pivot both
+   distort pointer coordinates, so remove them entirely. */
+.track3d--flat .track3d__pivot {
+  transform: none;
+  transition: none;
+  will-change: auto;
+}
+
+.track3d--flat .track3d__art {
+  filter: none;
+  transition: none;
+}
+
+.track3d--flat .track3d__scan {
+  display: none;
+}
+
 .track3d__floor {
   position: absolute;
   z-index: 0;

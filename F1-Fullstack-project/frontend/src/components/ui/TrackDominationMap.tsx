@@ -107,6 +107,8 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
   const [hoveredDriver, setHoveredDriver] = React.useState<string | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
   const tooltipRef = React.useRef<HTMLDivElement>(null);
+  const tooltipSizeRef = React.useRef({ width: 0, height: 0 });
+  const rafRef = React.useRef<number | null>(null);
 
   const circuitGeom = React.useMemo(() => {
     return getCircuitGeometry(circuitInfo);
@@ -284,8 +286,10 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
     const parent = tooltip.offsetParent as HTMLElement | null;
     if (!parent) return;
     const rect = parent.getBoundingClientRect();
-    const width = tooltip.offsetWidth;
-    const height = tooltip.offsetHeight;
+    // Measure once per hover. Reading offsetWidth/offsetHeight on every
+    // mousemove forced a layout flush and made the bubble visibly stutter.
+    const { width, height } = tooltipSizeRef.current;
+    if (!width || !height) return;
     const gap = 16;
     const pad = 8;
 
@@ -310,14 +314,43 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
     tooltip.style.transform = `translate3d(${x}px, ${y}px, 0) translateY(-50%)`;
   }, []);
 
+  const scheduleTooltip = React.useCallback(() => {
+    if (typeof window.requestAnimationFrame !== 'function') {
+      placeTooltip();
+      return;
+    }
+    if (rafRef.current !== null) return;
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = null;
+      placeTooltip();
+    });
+  }, [placeTooltip]);
+
+  React.useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, []);
+
   // Position after the tooltip mounts so the first hover does not flash at 0,0.
   React.useLayoutEffect(() => {
-    if (hoveredDriver) placeTooltip();
+    if (!hoveredDriver) return;
+    const tooltip = tooltipRef.current;
+    if (tooltip) {
+      tooltipSizeRef.current = {
+        width: tooltip.offsetWidth,
+        height: tooltip.offsetHeight,
+      };
+    }
+    placeTooltip();
   }, [hoveredDriver, placeTooltip]);
 
   const trackPointer = (clientX: number, clientY: number) => {
     pointerRef.current = { x: clientX, y: clientY };
-    placeTooltip();
+    scheduleTooltip();
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -329,7 +362,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
     placementRef.current = 'cursor';
     pointerRef.current = { x: e.clientX, y: e.clientY };
     setHoveredDriver(driver);
-    placeTooltip();
+    scheduleTooltip();
   };
 
   const handlePillHover = (driver: string, e: React.MouseEvent<HTMLDivElement>) => {
@@ -337,7 +370,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
     placementRef.current = 'above';
     pointerRef.current = { x: rect.left + rect.width / 2, y: rect.top - 4 };
     setHoveredDriver(driver);
-    placeTooltip();
+    scheduleTooltip();
   };
 
   const handleMouseLeave = () => {
@@ -358,7 +391,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <Track3D className="w-full h-full" tone="cyan" tilt={8} interactive={false}>
+        <Track3D className="w-full h-full" tone="cyan" tilt={8} interactive={false} flat>
           <svg ref={svgRef} viewBox={viewBox} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
           {/* Background track outline */}
           <polyline
@@ -388,24 +421,39 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
                 <polyline
                   points={line.points.join(' ')}
                   stroke={style.color}
-                  strokeWidth={isHovered ? glowStrokeWidth : baseStrokeWidth * 0.85}
+                  strokeWidth={glowStrokeWidth}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
-                  opacity={isDimmed ? 0.06 : isHovered ? 0.45 : 0.22}
-                  style={{ transition: 'stroke-width 0.2s ease, opacity 0.2s ease' }}
+                  opacity={isDimmed ? 0.05 : isHovered ? 0.46 : 0.2}
+                  pointerEvents="none"
+                  style={{ transition: 'opacity 160ms ease' }}
                 />
-                {/* Main colored line */}
+                {/* Main colored line. Widths stay constant in both states so
+                    the painted hit area cannot grow under the cursor and
+                    oscillate between neighbouring segments. */}
                 <polyline
                   points={line.points.join(' ')}
                   stroke={style.color}
-                  strokeWidth={isHovered ? baseStrokeWidth : baseStrokeWidth * 0.75}
+                  strokeWidth={baseStrokeWidth * 0.78}
                   strokeDasharray={style.strokeDasharray}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
-                  opacity={isDimmed ? 0.2 : 1}
-                  style={{ transition: 'stroke-width 0.2s ease, opacity 0.2s ease' }}
+                  opacity={isDimmed ? 0.22 : 1}
+                  pointerEvents="none"
+                  style={{ transition: 'opacity 160ms ease' }}
+                />
+                {/* Invisible, constant-width hit target. The visible layers
+                    never participate in hit testing. */}
+                <polyline
+                  points={line.points.join(' ')}
+                  stroke="rgba(0,0,0,0)"
+                  strokeWidth={baseStrokeWidth * 1.25}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                  pointerEvents="stroke"
                 />
               </g>
             );
@@ -482,9 +530,9 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
           className="pointer-events-none absolute left-0 top-0 z-50 will-change-transform"
         >
           <div
-            className="px-4 py-2 rounded-full border-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-150"
+            className="px-4 py-2 rounded-full border-2 shadow-2xl"
             style={{
-              backgroundColor: 'rgba(10, 10, 10, 0.95)',
+              backgroundColor: 'rgba(10, 10, 10, 0.98)',
               borderColor: driverStyles[hoveredDriver]?.color || '#ffffff'
             }}
           >

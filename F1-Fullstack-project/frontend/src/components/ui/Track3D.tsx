@@ -11,6 +11,8 @@ interface Track3DProps {
   tilt?: number;
   /** When false the map does not react to hover (used by interactive maps). */
   interactive?: boolean;
+  /** Render a flat, filter-free map. Used by interactive/streaming maps. */
+  flat?: boolean;
 }
 
 const TONE_GLOW: Record<TrackTone, string> = {
@@ -31,6 +33,7 @@ export function Track3D({
   tone = 'red',
   tilt = 14,
   interactive = true,
+  flat = false,
 }: Track3DProps) {
   const style = {
     '--track3d-glow': TONE_GLOW[tone],
@@ -39,7 +42,7 @@ export function Track3D({
 
   return (
     <div
-      className={`track3d ${interactive ? 'track3d--interactive' : ''} ${className}`.trim()}
+      className={`track3d ${interactive ? 'track3d--interactive' : ''} ${flat ? 'track3d--flat' : ''} ${className}`.trim()}
       style={style}
     >
       <span className="track3d__halo" aria-hidden="true" />

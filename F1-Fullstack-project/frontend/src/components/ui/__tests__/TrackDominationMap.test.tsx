@@ -41,7 +41,7 @@ describe('TrackDominationMap positional data guards', () => {
       />
     );
 
-    // [0] background outline, [1] glow, [2] main domination stroke
+    // [0] background outline, [1] glow, [2] main domination stroke, [3] hit target
     const segment = container.querySelectorAll('polyline')[1];
     fireEvent.mouseEnter(segment);
 
@@ -49,6 +49,32 @@ describe('TrackDominationMap positional data guards', () => {
 
     fireEvent.mouseLeave(screen.getByTestId('domination-map'));
     expect(screen.queryByText('Gabriel Bortoleto')).not.toBeInTheDocument();
+  });
+
+  it('keeps every stroke width constant across hover so segments cannot flicker', () => {
+    const telemetry = [point(0, -1200, 800), point(10, -900, 1200), point(20, 300, 4000)];
+    const { container } = render(
+      <TrackDominationMap
+        telemetry={telemetry}
+        drivers={['BOR']}
+        driver_info={driverInfo}
+        activeDistance={null}
+      />
+    );
+
+    const widths = () =>
+      Array.from(container.querySelectorAll('polyline')).map((node) =>
+        node.getAttribute('stroke-width'),
+      );
+
+    const before = widths();
+    expect(before.length).toBeGreaterThan(0);
+    expect(before.every((width) => width !== null)).toBe(true);
+
+    fireEvent.mouseEnter(container.querySelectorAll('polyline')[1]);
+    expect(screen.getByText('Gabriel Bortoleto')).toBeInTheDocument();
+
+    expect(widths()).toEqual(before);
   });
 
   it('shows the empty state when coordinates are all zero (no position data)', () => {

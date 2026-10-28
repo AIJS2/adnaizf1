@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
-import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Clock } from 'lucide-react';
+import React, { useState, useMemo, memo } from 'react';
+import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Clock, MonitorPlay } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { API_URL, webSocketUrl } from '../config';
+import { API_URL } from '../config';
 import { fetchDashboardData } from '../services/api';
 import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
 import HeroCountdown from '../components/ui/HeroCountdown';
@@ -18,6 +18,9 @@ import {
 import { getDriverColor } from '../data/teamData';
 import { getCircuitGeometry } from '../data/circuitPaths';
 import { Track3D } from '../components/ui/Track3D';
+import { LiveCircuitMap } from '../components/ui/LiveCircuitMap';
+import { useLiveTimingFeed } from '../hooks/useLiveTimingFeed';
+import { buildPreviewCircuit } from '../utils/liveCircuit';
 
 const LiveTimingPage: React.FC = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -45,149 +48,7 @@ const LiveTimingPage: React.FC = () => {
   const targetCountdownDate = countdownTarget(nextEvent?.date);
   const heroPhase = nextEvent?.phase ?? 'future';
 
-  const [data, setData] = useState<LiveTimingData>({
-    lines: [],
-    trackStatus: 'GREEN',
-    weather: { air: '--', track: '--', humidity: '--', rain: '--' },
-    messages: [],
-    radio: [],
-    status: 'no_session',
-    isLiveSession: false,
-    session_state: 'no_session',
-    session_title: '',
-    circuit: null,
-    lap: null,
-    total_laps: null,
-    last_session: null,
-  });
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'lost'>('connecting');
-  const [gaveUp, setGaveUp] = useState(false);
-
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-    let batchTimer: ReturnType<typeof setTimeout> | undefined;
-    let disposed = false;
-    let attempt = 0;
-    let lastMessageAt = Date.now();
-
-    // A half-open socket (sleep, Wi-Fi switch, proxy idle timeout) emits no
-    // close event, so without a watchdog the page would keep showing the last
-    // snapshot as "LIVE" indefinitely. If no frame arrives in this window we
-    // force a close so the reconnect backoff runs.
-    const STALL_TIMEOUT_MS = 20000;
-
-    const connect = () => {
-      if (disposed) return;
-      if (ws) {
-        ws.onclose = null;
-        ws.close();
-        ws = null;
-      }
-
-      setConnectionStatus(prev => prev === 'connected' ? 'lost' : 'connecting');
-      const wsUrl = webSocketUrl('/ws/livetiming');
-
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        attempt = 0;
-        lastMessageAt = Date.now();
-        setConnectionStatus('connected');
-      };
-
-      let lastRenderTime = 0;
-      let pendingBatch: Record<string, unknown> | null = null;
-
-      const applyDataUpdate = (msg: Record<string, unknown>) => {
-        setData(prev => ({
-          lines: (msg.lines as typeof prev.lines) ?? prev.lines,
-          trackStatus: (msg.trackStatus as typeof prev.trackStatus) ?? prev.trackStatus,
-          weather: (msg.weather as typeof prev.weather) ?? prev.weather,
-          messages: (msg.messages as typeof prev.messages) ?? prev.messages,
-          radio: (msg.radio as typeof prev.radio) ?? prev.radio,
-          status: (msg.status as typeof prev.status) ?? prev.status,
-          reason: (msg.reason as typeof prev.reason) ?? prev.reason,
-          isLiveSession: (msg.is_live_session as typeof prev.isLiveSession) ?? prev.isLiveSession,
-          session_state: 'session_state' in msg ? (msg.session_state as typeof prev.session_state) : prev.session_state,
-          session_title: 'session_title' in msg ? (msg.session_title as typeof prev.session_title) : prev.session_title,
-          session_status: 'session_status' in msg ? (msg.session_status as typeof prev.session_status) : prev.session_status,
-          archive_status: 'archive_status' in msg ? (msg.archive_status as typeof prev.archive_status) : prev.archive_status,
-          circuit: 'circuit' in msg ? (msg.circuit as typeof prev.circuit) : prev.circuit,
-          lap: 'lap' in msg ? (msg.lap as typeof prev.lap) : prev.lap,
-          total_laps: 'total_laps' in msg ? (msg.total_laps as typeof prev.total_laps) : prev.total_laps,
-          last_session: 'last_session' in msg ? (msg.last_session as typeof prev.last_session) : prev.last_session,
-        }));
-        lastRenderTime = Date.now();
-      };
-
-      ws.onmessage = (event: MessageEvent) => {
-        lastMessageAt = Date.now();
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg && msg.type === 'TimingData') {
-            const now = Date.now();
-            const isCriticalState = msg.status && msg.status !== 'live';
-            if (isCriticalState || now - lastRenderTime >= 80) {
-              if (batchTimer) {
-                clearTimeout(batchTimer);
-                batchTimer = undefined;
-              }
-              pendingBatch = null;
-              applyDataUpdate(msg);
-            } else {
-              pendingBatch = msg;
-              if (!batchTimer) {
-                batchTimer = setTimeout(() => {
-                  batchTimer = undefined;
-                  if (!disposed && pendingBatch) {
-                    applyDataUpdate(pendingBatch);
-                    pendingBatch = null;
-                  }
-                }, 80);
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Failed to parse Live Timing WebSocket payload:', err);
-        }
-      };
-
-      ws.onclose = (event: CloseEvent) => {
-        if (disposed) return;
-        // 1008 = origin rejected, 1013 = server at capacity. Neither is
-        // transient; retrying with unbounded backoff only hammers the server.
-        if (event.code === 1008 || event.code === 1013) {
-          setConnectionStatus('lost');
-          setGaveUp(true);
-          return;
-        }
-        setConnectionStatus('lost');
-        const delay = Math.min(3000 * 2 ** attempt, 30000);
-        attempt += 1;
-        reconnectTimer = setTimeout(connect, delay);
-      };
-    };
-
-    connect();
-    const watchdog = setInterval(() => {
-      if (disposed || !ws || ws.readyState !== WebSocket.OPEN) return;
-      if (Date.now() - lastMessageAt > STALL_TIMEOUT_MS) {
-        ws.close(); // triggers onclose -> reconnect
-      }
-    }, 5000);
-
-    return () => {
-      disposed = true;
-      clearTimeout(reconnectTimer);
-      if (batchTimer) clearTimeout(batchTimer);
-      clearInterval(watchdog);
-      if (ws) {
-        ws.onclose = null;
-        ws.close();
-      }
-    };
-  }, []);
+  const { data, connectionStatus, gaveUp } = useLiveTimingFeed();
 
   const getStatusColor = (status: string) => {
     if (status.includes('YELLOW')) return 'bg-yellow-500 text-black';
@@ -285,36 +146,7 @@ const LiveTimingPage: React.FC = () => {
       name: nextEvent.name,
       location: nextEvent.location,
     });
-    if (!geom) return null;
-
-    const xs = geom.points.map((p) => p.x);
-    const ys = geom.points.map((p) => p.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const width = Math.max(maxX - minX, 1);
-    const height = Math.max(maxY - minY, 1);
-
-    // Canonical geometry is stored in raw surveying units (tens of thousands),
-    // so stroke widths of 5–18 would render sub-pixel. Rescale to a 1000-unit
-    // canvas with padding, matching the backend's live circuit viewBoxes.
-    const span = Math.max(width, height);
-    const scale = 900 / span;
-    const offsetX = 50 + ((span - width) * scale) / 2;
-    const offsetY = 50 + ((span - height) * scale) / 2;
-    const path = geom.points
-      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${(offsetX + (p.x - minX) * scale).toFixed(1)} ${(offsetY + (p.y - minY) * scale).toFixed(1)}`)
-      .join(' ') + ' Z';
-
-    return {
-      key: `preview-${geom.round}`,
-      name: geom.name,
-      location: geom.location,
-      country: geom.country,
-      viewBox: `0 0 ${(span * scale + 100).toFixed(0)} ${(span * scale + 100).toFixed(0)}`,
-      path,
-    };
+    return geom ? buildPreviewCircuit(geom) : null;
   }, [activeData.circuit, nextEvent]);
 
   const trackCircuit = activeData.circuit ?? previewCircuit;
@@ -394,6 +226,14 @@ const LiveTimingPage: React.FC = () => {
                 Previous
               </button>
             </div>
+
+            <Link
+              to="/overlay/live?preview=1"
+              className="inline-flex items-center gap-2 rounded-md border border-red-500/40 bg-red-600/10 px-3 py-2 text-[11px] font-black uppercase tracking-widest text-red-300 transition-ui hover:border-red-400 hover:bg-red-600/20 hover:text-white"
+              title="Open the transparent stream overlay"
+            >
+              <MonitorPlay size={14} /> Stream Overlay
+            </Link>
 
             <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold bg-tarmac border border-[#222] rounded-md px-4 py-2 uppercase tracking-wider shadow-inner w-full md:w-auto">
               <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500 "></div> Overall Best</span>
@@ -639,7 +479,7 @@ const LiveTimingPage: React.FC = () => {
               <div className="relative w-full aspect-square bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
                 {trackCircuit ? (
                   <Track3D className="w-full h-full p-1" tone={previewCircuit ? 'cyan' : 'red'} tilt={12}>
-                    <CircuitTrackMap
+                    <LiveCircuitMap
                       circuit={trackCircuit}
                       lines={activeData.circuit ? sortedLines : []}
                       preview={Boolean(previewCircuit)}
@@ -767,157 +607,6 @@ const LiveTimingPage: React.FC = () => {
   );
 };
 
-interface CircuitTrackMapProps {
-  circuit: LiveTimingCircuit;
-  lines: LiveTimingLine[];
-  /** Renders a calmer, dashed "next round" treatment when no session is live. */
-  preview?: boolean;
-}
-
-interface TrackMapPoint {
-  driver: string;
-  team: string;
-  x: number;
-  y: number;
-  color: string;
-}
-
-/**
- * Draws the real circuit outline bundled by the backend and places every
- * running car on it with SVGPathElement.getPointAtLength(). The leader sits at
- * the start/finish point; the rest are spread by their gap in seconds.
- */
-const CircuitTrackMap = memo<CircuitTrackMapProps>(({ circuit, lines, preview = false }) => {
-  const pathRef = useRef<SVGPathElement | null>(null);
-  const [points, setPoints] = useState<TrackMapPoint[]>([]);
-
-  useEffect(() => {
-    const path = pathRef.current;
-    if (
-      !path ||
-      typeof path.getTotalLength !== 'function' ||
-      typeof path.getPointAtLength !== 'function'
-    ) {
-      setPoints([]);
-      return;
-    }
-
-    let total = 0;
-    try {
-      total = path.getTotalLength();
-    } catch {
-      total = 0;
-    }
-    if (!Number.isFinite(total) || total <= 0) {
-      setPoints([]);
-      return;
-    }
-
-    const next: TrackMapPoint[] = [];
-    lines
-      .filter((line) => line.status === 'TRACK' || line.status === 'OUT')
-      .forEach((line, index) => {
-        const rawProgress =
-          typeof line.progress === 'number' && Number.isFinite(line.progress)
-            ? line.progress
-            : index === 0
-              ? 0
-              : index * 0.02;
-        const progress = Math.max(0, Math.min(rawProgress, 0.98));
-        try {
-          const point = path.getPointAtLength(progress * total);
-          next.push({
-            driver: line.driver,
-            team: line.team,
-            x: point.x,
-            y: point.y,
-            color: getDriverColor(line.driver, line.team),
-          });
-        } catch {
-          // Ignore a malformed point; the remaining drivers still render.
-        }
-      });
-
-    setPoints(next);
-  }, [circuit.path, lines]);
-
-  return (
-    <svg
-      viewBox={circuit.viewBox || '0 0 500 500'}
-      className="w-full h-full p-2"
-      role="img"
-      aria-label={`${circuit.name} track map`}
-      data-testid="circuit-track-map"
-    >
-      <path
-        d={circuit.path}
-        fill="none"
-        stroke={preview ? '#0b1a22' : '#080808'}
-        strokeWidth="18"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      <path
-        d={circuit.path}
-        fill="none"
-        stroke={preview ? '#64748b' : '#3b3b3b'}
-        strokeWidth="5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect={preview ? 'non-scaling-stroke' : undefined}
-      />
-      {preview && (
-        <path
-          d={circuit.path}
-          fill="none"
-          stroke="#22d3ee"
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          strokeDasharray="12 18"
-          opacity="0.95"
-          vectorEffect="non-scaling-stroke"
-          className="track-dash"
-        />
-      )}
-      <path
-        ref={pathRef}
-        d={circuit.path}
-        fill="none"
-        stroke="transparent"
-        strokeWidth="1"
-      />
-      {points.map((point) => (
-        <g
-          key={point.driver}
-          style={{
-            transform: `translate(${point.x}px, ${point.y}px)`,
-            transition: 'transform 2s linear',
-          }}
-        >
-          <circle
-            r="6"
-            fill={point.color}
-            stroke="#000"
-            strokeWidth="1.5"
-            className="drop-shadow-lg"
-          />
-          <text
-            y="-9"
-            fontSize="9"
-            fill="#fff"
-            textAnchor="middle"
-            className="font-mono font-black"
-            style={{ paintOrder: 'stroke', stroke: '#000', strokeWidth: 2 }}
-          >
-            {point.driver}
-          </text>
-        </g>
-      ))}
-    </svg>
-  );
-});
-CircuitTrackMap.displayName = 'CircuitTrackMap';
 
 interface TimingRowProps {
   row: LiveTimingLine;

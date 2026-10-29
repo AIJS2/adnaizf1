@@ -37,7 +37,7 @@ describe('TrackMap Component (Image 1 Style Circuit Layout)', () => {
       screen.getByTestId('circuit-corner-markers').querySelectorAll('line'),
     ).toHaveLength(0);
 
-    // 4. Start/Finish bar & Pit line
+    // 4. Start/Finish bar
     expect(screen.getByTestId('start-finish-bar')).toBeInTheDocument();
 
     // 5. Bottom telemetry stat metrics (Image 1 3-column layout)

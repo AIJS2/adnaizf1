@@ -192,17 +192,8 @@ export function TrackMap({
     const p1 = { x: sf.x - nx * barR, y: flipY(sf.y) - ny * barR };
     const p2 = { x: sf.x + nx * barR, y: flipY(sf.y) + ny * barR };
 
-    // Pit lane parallel line (yellow line on main straight, as shown in Image 1)
-    const pitStraight = geom.points
-      .filter((p) => p.d >= 0.92 || p.d <= 0.04)
-      .map((p) => ({
-        x: p.x + nx * (baseStrokeWidth * 0.95),
-        y: flipY(p.y) + ny * (baseStrokeWidth * 0.95),
-      }));
-
     return {
       sfLine: { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y },
-      pitLine: pitStraight.map((p) => `${p.x},${p.y}`).join(' '),
       anchor: { x: sf.x, y: flipY(sf.y) },
     };
   }, [geom, geomMetrics]);
@@ -436,20 +427,6 @@ export function TrackMap({
                     </g>
                   ))}
                 </g>
-              )}
-
-              {/* Pit straight accent (Yellow line parallel to main straight, as shown in Image 1) */}
-              {startFinishData && startFinishData.pitLine && (
-                <polyline
-                  points={startFinishData.pitLine}
-                  fill="none"
-                  stroke="#eab308"
-                  strokeWidth={geomMetrics.baseStrokeWidth * 0.35}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  opacity={0.9}
-                  className="drop-shadow-[0_0_6px_rgba(234,179,8,0.7)]"
-                />
               )}
 
               {/* Start / Finish Line (Chequered bar) */}

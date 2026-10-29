@@ -213,4 +213,34 @@ describe('TrackDominationMap positional data guards', () => {
     expect(screen.getByText(/0% · No sectors dominated/i)).toBeInTheDocument();
     expect(screen.getByText(/Slower in all track sectors/i)).toBeInTheDocument();
   });
+
+  it('allows clicking a corner badge to view corner technical details and lore', () => {
+    const telemetry = [
+      point(0, 0, 0),
+      point(1000, 0, 0),
+      point(2000, 0, 0),
+      point(4381, 0, 0),
+    ];
+    render(
+      <TrackDominationMap
+        telemetry={telemetry}
+        drivers={['BOR']}
+        driver_info={driverInfo}
+        activeDistance={null}
+        circuitInfo={{ round: 19, name: 'Autódromo Hermanos Rodríguez', country: 'Mexico' }}
+      />
+    );
+
+    // Click Turn 1
+    const turn1 = screen.getByTestId('corner-marker-1');
+    fireEvent.click(turn1);
+
+    expect(screen.getByTestId('corner-detail-card')).toBeInTheDocument();
+    expect(screen.getByTestId('corner-detail-name')).toHaveTextContent(/Moisés Solana Chicane/i);
+    expect(screen.getByTestId('iconic-badge')).toBeInTheDocument();
+
+    // Close
+    fireEvent.click(screen.getByTestId('corner-detail-close'));
+    expect(screen.queryByTestId('corner-detail-card')).not.toBeInTheDocument();
+  });
 });

@@ -4,8 +4,10 @@ import EmptyState, { EMPTY_TABLE_MESSAGES } from './EmptyState';
 import { TelemetryDataPoint, TeamDriverInfo } from '../../types/f1';
 import { teamColors, DRIVER_TEAM_COLORS_2026, getDriverColor } from '../../data/teamData';
 import { getCircuitGeometry, sampleCircuitPosition, CircuitLookup } from '../../data/circuitPaths';
-import { getCircuitCorners } from '../../data/circuitCorners';
+import { getCircuitCorners, CircuitCorner } from '../../data/circuitCorners';
+import { getCornerDetail } from '../../data/cornerDetails';
 import { CircuitCornerMarkers } from './CircuitCornerMarkers';
+import { CornerDetailCard } from './CornerDetailCard';
 import { Track3D } from './Track3D';
 
 export interface TrackDominationMapProps {
@@ -108,6 +110,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
 }) => {
   const [hoveredDriver, setHoveredDriver] = React.useState<string | null>(null);
   const [showCorners, setShowCorners] = React.useState<boolean>(true);
+  const [selectedCorner, setSelectedCorner] = React.useState<CircuitCorner | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
   const tooltipRef = React.useRef<HTMLDivElement>(null);
   const tooltipSizeRef = React.useRef({ width: 0, height: 0 });
@@ -120,6 +123,32 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
   const corners = React.useMemo(() => {
     return getCircuitCorners(circuitInfo);
   }, [circuitInfo]);
+
+  const cornerIndex = React.useMemo(() => {
+    if (!selectedCorner) return -1;
+    return corners.findIndex(
+      (c) =>
+        c.number === selectedCorner.number &&
+        (c.letter ?? '') === (selectedCorner.letter ?? ''),
+    );
+  }, [corners, selectedCorner]);
+
+  const handlePrevCorner = React.useCallback(() => {
+    if (corners.length === 0 || cornerIndex === -1) return;
+    const prevIdx = (cornerIndex - 1 + corners.length) % corners.length;
+    setSelectedCorner(corners[prevIdx]);
+  }, [corners, cornerIndex]);
+
+  const handleNextCorner = React.useCallback(() => {
+    if (corners.length === 0 || cornerIndex === -1) return;
+    const nextIdx = (cornerIndex + 1) % corners.length;
+    setSelectedCorner(corners[nextIdx]);
+  }, [corners, cornerIndex]);
+
+  const activeCornerDetail = React.useMemo(() => {
+    if (!selectedCorner) return null;
+    return getCornerDetail(circuitInfo, selectedCorner.number, selectedCorner.letter);
+  }, [circuitInfo, selectedCorner]);
 
   // Project or sample telemetry points onto canonical circuit geometry
   const mappedTelemetry = React.useMemo(() => {
@@ -576,9 +605,24 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
               trackWidth={baseStrokeWidth}
               radius={maxDim * 0.024}
               tone="overlay"
+              selectedCorner={selectedCorner}
+              onCornerClick={(corner) => setSelectedCorner(corner)}
             />
           )}
         </svg>
+
+        {/* Interactive Corner Spotlight Card */}
+        {showCorners && selectedCorner && activeCornerDetail && (
+          <div className="absolute bottom-3 left-3 right-3 sm:right-auto sm:max-w-sm z-30 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+            <CornerDetailCard
+              detail={activeCornerDetail}
+              circuitName={circuitInfo?.name || circuitInfo?.location || undefined}
+              onClose={() => setSelectedCorner(null)}
+              onPrev={corners.length > 1 ? handlePrevCorner : undefined}
+              onNext={corners.length > 1 ? handleNextCorner : undefined}
+            />
+          </div>
+        )}
         </Track3D>
       </div>
       {/* Legend Pills with Domination Percentages */}

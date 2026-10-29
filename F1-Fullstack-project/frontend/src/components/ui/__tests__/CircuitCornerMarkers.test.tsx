@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CircuitCornerMarkers } from '../CircuitCornerMarkers';
 import { getCircuitCorners } from '../../../data/circuitCorners';
 
@@ -166,5 +166,52 @@ describe('CircuitCornerMarkers', () => {
     expect(
       screen.getByTestId('circuit-corner-markers').querySelectorAll('text'),
     ).toHaveLength(0);
+  });
+
+  it('triggers onCornerClick and highlights selected corner', async () => {
+    const onCornerClick = vi.fn();
+
+    const { rerender } = render(
+      <svg viewBox="0 0 500 500">
+        <CircuitCornerMarkers
+          corners={monacoCorners}
+          path="M 0 0 L 100 0 L 100 100 L 0 100 Z"
+          viewBox="0 0 500 500"
+          onCornerClick={onCornerClick}
+        />
+      </svg>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('corner-marker-1')).toBeInTheDocument();
+    });
+
+    const marker1 = screen.getByTestId('corner-marker-1');
+    expect(marker1).toHaveAttribute('role', 'button');
+    expect(marker1).toHaveAttribute('tabindex', '0');
+
+    // Click corner
+    marker1.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(onCornerClick).toHaveBeenCalledTimes(1);
+    expect(onCornerClick).toHaveBeenCalledWith(expect.objectContaining({ number: 1 }));
+
+    // Rerender with selected corner
+    rerender(
+      <svg viewBox="0 0 500 500">
+        <CircuitCornerMarkers
+          corners={monacoCorners}
+          path="M 0 0 L 100 0 L 100 100 L 0 100 Z"
+          viewBox="0 0 500 500"
+          onCornerClick={onCornerClick}
+          selectedCorner={{ number: 1 }}
+        />
+      </svg>,
+    );
+
+    expect(screen.getByTestId('corner-marker-1')).toHaveAttribute('aria-pressed', 'true');
+    // Active leader line appears for selected corner
+    expect(
+      screen.getByTestId('circuit-corner-markers').querySelectorAll('line'),
+    ).toHaveLength(1);
   });
 });

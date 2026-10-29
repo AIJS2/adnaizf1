@@ -22,6 +22,10 @@ export interface CircuitCornerMarkersProps {
    * Defaults to false for the clean, line-free aesthetic seen in broadcast/console graphics.
    */
   showLeaderLines?: boolean;
+  /** Currently selected corner for active highlight / spotlight */
+  selectedCorner?: { number: number; letter?: string } | null;
+  /** Callback fired when user clicks or presses a corner badge */
+  onCornerClick?: (corner: CircuitCorner) => void;
 }
 
 interface ViewBox {
@@ -90,6 +94,8 @@ export function CircuitCornerMarkers({
   trackWidth = 18,
   radius,
   showLeaderLines = false,
+  selectedCorner,
+  onCornerClick,
 }: CircuitCornerMarkersProps) {
   const probeRef = useRef<SVGPathElement | null>(null);
   const [labels, setLabels] = useState<PlacedCornerBadge[]>([]);
@@ -180,61 +186,140 @@ export function CircuitCornerMarkers({
     trackWidth,
   ]);
 
+  const isInteractive = Boolean(onCornerClick);
+
   return (
-    <g data-testid="circuit-corner-markers" pointerEvents="none" aria-hidden="true">
+    <g
+      data-testid="circuit-corner-markers"
+      pointerEvents={isInteractive ? 'auto' : 'none'}
+      aria-label="Circuit corners"
+    >
       {!hasExplicitGeometry && path && (
-        <path ref={probeRef} d={path} fill="none" stroke="none" />
+        <path ref={probeRef} d={path} fill="none" stroke="none" pointerEvents="none" />
       )}
-      {labels.map((label, index) => (
-        <g
-          key={`${label.number}-${label.letter ?? ''}-${index}`}
-          data-testid={`corner-marker-${label.number}${label.letter ?? ''}`}
-        >
-          {/* Leader line from corner apex to badge perimeter (only when explicitly requested) */}
-          {showLeaderLines && (
-            <line
-              x1={label.anchorX}
-              y1={label.anchorY}
-              x2={label.leaderEndX}
-              y2={label.leaderEndY}
-              stroke={palette.leader}
-              strokeWidth={Math.max(0.75, badgeRadius * 0.08)}
-              strokeLinecap="round"
-            />
-          )}
-          {/* Subtle anchor dot at apex on the circuit centerline */}
-          <circle
-            cx={label.anchorX}
-            cy={label.anchorY}
-            r={Math.max(1.5, badgeRadius * 0.18)}
-            fill={palette.anchor}
-            className="corner-anchor-dot"
-          />
-          {/* Badge circle */}
-          <circle
-            cx={label.x}
-            cy={label.y}
-            r={label.radius}
-            fill={palette.fill}
-            stroke={palette.ring}
-            strokeWidth={Math.max(1, badgeRadius * 0.11)}
-            className="corner-badge-circle drop-shadow-md"
-          />
-          {/* Badge number */}
-          <text
-            x={label.x}
-            y={label.y}
-            fill={palette.text}
-            fontSize={fontSize}
-            textAnchor="middle"
-            dominantBaseline="central"
-            className="font-mono font-black"
+      {labels.map((label, index) => {
+        const isSelected = Boolean(
+          selectedCorner &&
+            selectedCorner.number === label.number &&
+            (selectedCorner.letter ?? '') === (label.letter ?? ''),
+        );
+
+        const cornerObj: CircuitCorner = {
+          number: label.number,
+          letter: label.letter,
+          d: label.d,
+        };
+
+        const handleClick = onCornerClick
+          ? (e: React.MouseEvent) => {
+              e.stopPropagation();
+              onCornerClick(cornerObj);
+            }
+          : undefined;
+
+        const handleKeyDown = onCornerClick
+          ? (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onCornerClick(cornerObj);
+              }
+            }
+          : undefined;
+
+        return (
+          <g
+            key={`${label.number}-${label.letter ?? ''}-${index}`}
+            data-testid={`corner-marker-${label.number}${label.letter ?? ''}`}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            role={isInteractive ? 'button' : undefined}
+            tabIndex={isInteractive ? 0 : undefined}
+            aria-label={`Turn ${label.number}${label.letter ?? ''}`}
+            aria-pressed={isInteractive ? isSelected : undefined}
+            className={isInteractive ? 'cursor-pointer group focus:outline-hidden' : undefined}
+            style={isInteractive ? { pointerEvents: 'auto' } : { pointerEvents: 'none' }}
           >
-            {label.number}
-            {label.letter}
-          </text>
-        </g>
-      ))}
+            {/* Leader line from corner apex to badge perimeter (shown when requested or selected) */}
+            {(showLeaderLines || isSelected) && (
+              <line
+                x1={label.anchorX}
+                y1={label.anchorY}
+                x2={label.leaderEndX}
+                y2={label.leaderEndY}
+                stroke={isSelected ? '#ef4444' : palette.leader}
+                strokeWidth={Math.max(1, badgeRadius * (isSelected ? 0.16 : 0.08))}
+                strokeLinecap="round"
+                pointerEvents="none"
+              />
+            )}
+
+            {/* Anchor dot at apex on the circuit centerline */}
+            <circle
+              cx={label.anchorX}
+              cy={label.anchorY}
+              r={Math.max(isSelected ? 3.2 : 1.5, badgeRadius * (isSelected ? 0.32 : 0.18))}
+              fill={isSelected ? '#ef4444' : palette.anchor}
+              stroke={isSelected ? '#ffffff' : undefined}
+              strokeWidth={isSelected ? 1.5 : 0}
+              className="corner-anchor-dot"
+              pointerEvents="none"
+            />
+
+            {/* Glowing ring when selected */}
+            {isSelected && (
+              <circle
+                cx={label.x}
+                cy={label.y}
+                r={label.radius * 1.45}
+                fill="none"
+                stroke="#ef4444"
+                strokeWidth={Math.max(1.5, badgeRadius * 0.14)}
+                strokeDasharray="3 3"
+                opacity="0.9"
+                className="animate-pulse"
+                pointerEvents="none"
+              />
+            )}
+
+            {/* Invisible expanded hit-target for effortless clicking on desktop & mobile */}
+            {isInteractive && (
+              <circle
+                cx={label.x}
+                cy={label.y}
+                r={Math.max(20, label.radius * 1.6)}
+                fill="transparent"
+                className="cursor-pointer"
+              />
+            )}
+
+            {/* Badge circle */}
+            <circle
+              cx={label.x}
+              cy={label.y}
+              r={isSelected ? label.radius * 1.15 : label.radius}
+              fill={isSelected ? '#7f1d1d' : palette.fill}
+              stroke={isSelected ? '#ef4444' : palette.ring}
+              strokeWidth={Math.max(1.2, badgeRadius * (isSelected ? 0.2 : 0.11))}
+              className="corner-badge-circle drop-shadow-md transition-all duration-150"
+            />
+
+            {/* Badge number */}
+            <text
+              x={label.x}
+              y={label.y}
+              fill={isSelected ? '#fee2e2' : palette.text}
+              fontSize={fontSize * (isSelected ? 1.05 : 1)}
+              textAnchor="middle"
+              dominantBaseline="central"
+              className="font-mono font-black select-none pointer-events-none"
+            >
+              {label.number}
+              {label.letter}
+            </text>
+          </g>
+        );
+      })}
     </g>
   );
 }

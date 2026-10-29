@@ -86,4 +86,46 @@ describe('TrackMap Component (Image 1 Style Circuit Layout)', () => {
     expect(screen.getByTestId('circuit-layout-card')).toBeInTheDocument();
     expect(screen.getByText(/Average Speed/i)).toBeInTheDocument();
   });
+
+  it('displays interactive corner spotlight with iconic lore on corner click and supports navigation', () => {
+    render(
+      <TrackMap
+        raceInfo={{
+          round: 1,
+          name: 'Albert Park Circuit',
+          location: 'Melbourne',
+          country: 'Australia',
+        }}
+      />,
+    );
+
+    // Initial state: click hint is visible and no card is open
+    expect(screen.getByTestId('corner-click-hint')).toBeInTheDocument();
+    expect(screen.queryByTestId('corner-detail-card')).not.toBeInTheDocument();
+
+    // Click Turn 1 (Jones Chicane)
+    const turn1Marker = screen.getByTestId('corner-marker-1');
+    fireEvent.click(turn1Marker);
+
+    // Spotlight card opens
+    expect(screen.getByTestId('corner-detail-card')).toBeInTheDocument();
+    expect(screen.getByTestId('corner-detail-name')).toHaveTextContent('Jones Chicane');
+    expect(screen.getByTestId('iconic-badge')).toHaveTextContent(/Iconic Corner/i);
+    expect(screen.getAllByText(/150 km\/h/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Gear 3rd/i)).toBeInTheDocument();
+    expect(screen.getByTestId('corner-detail-funfact')).toHaveTextContent(/brake from ~325 km\/h/i);
+
+    // Navigate to Next Corner (Turn 2: Brabham Chicane)
+    fireEvent.click(screen.getByTestId('corner-next-btn'));
+    expect(screen.getByTestId('corner-detail-name')).toHaveTextContent('Brabham Chicane');
+    expect(screen.getByText(/180 km\/h/i)).toBeInTheDocument();
+
+    // Navigate back to Prev Corner (Turn 1)
+    fireEvent.click(screen.getByTestId('corner-prev-btn'));
+    expect(screen.getByTestId('corner-detail-name')).toHaveTextContent('Jones Chicane');
+
+    // Close the card
+    fireEvent.click(screen.getByTestId('corner-detail-close'));
+    expect(screen.queryByTestId('corner-detail-card')).not.toBeInTheDocument();
+  });
 });

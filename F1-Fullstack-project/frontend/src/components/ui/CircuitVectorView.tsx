@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { Compass } from 'lucide-react';
 import { Track3D } from './Track3D';
 import {
@@ -6,9 +6,11 @@ import {
   getCircuitGeometry,
   sampleCircuitPosition,
 } from '../../data/circuitPaths';
-import { getCircuitCorners } from '../../data/circuitCorners';
+import { getCircuitCorners, CircuitCorner } from '../../data/circuitCorners';
 import { getCircuitSpec } from '../../data/circuitSpecs';
+import { getCornerDetail } from '../../data/cornerDetails';
 import { CircuitCornerMarkers } from './CircuitCornerMarkers';
+import { CornerDetailCard } from './CornerDetailCard';
 
 export type CircuitVectorMode = 'Tracking' | 'Sectors' | 'DRS' | 'Turns';
 
@@ -19,6 +21,7 @@ export interface CircuitVectorViewProps {
   fallbackImg?: string | null;
   className?: string;
   badgeRadiusScale?: number;
+  interactiveCorners?: boolean;
 }
 
 /**
@@ -37,6 +40,7 @@ export function CircuitVectorView({
   fallbackImg,
   className,
   badgeRadiusScale = 1,
+  interactiveCorners = true,
 }: CircuitVectorViewProps) {
   const geom = useMemo(() => getCircuitGeometry(circuitLookup), [circuitLookup]);
   const corners = useMemo(() => getCircuitCorners(circuitLookup), [circuitLookup]);
@@ -53,6 +57,35 @@ export function CircuitVectorView({
     circuitLookup?.location ||
     geom?.name ||
     'Circuit';
+
+  // Interactive corner spotlight state
+  const [selectedCorner, setSelectedCorner] = useState<CircuitCorner | null>(null);
+
+  const cornerIndex = useMemo(() => {
+    if (!selectedCorner) return -1;
+    return corners.findIndex(
+      (c) =>
+        c.number === selectedCorner.number &&
+        (c.letter ?? '') === (selectedCorner.letter ?? ''),
+    );
+  }, [corners, selectedCorner]);
+
+  const handlePrevCorner = useCallback(() => {
+    if (corners.length === 0 || cornerIndex === -1) return;
+    const prevIdx = (cornerIndex - 1 + corners.length) % corners.length;
+    setSelectedCorner(corners[prevIdx]);
+  }, [corners, cornerIndex]);
+
+  const handleNextCorner = useCallback(() => {
+    if (corners.length === 0 || cornerIndex === -1) return;
+    const nextIdx = (cornerIndex + 1) % corners.length;
+    setSelectedCorner(corners[nextIdx]);
+  }, [corners, cornerIndex]);
+
+  const activeCornerDetail = useMemo(() => {
+    if (!selectedCorner) return null;
+    return getCornerDetail(circuitLookup, selectedCorner.number, selectedCorner.letter);
+  }, [circuitLookup, selectedCorner]);
 
   // Compute ViewBox and geometry metrics
   const geomMetrics = useMemo(() => {
@@ -402,6 +435,8 @@ export function CircuitVectorView({
               radius={geomMetrics.maxDim * 0.025 * badgeRadiusScale}
               tone="clean"
               showLeaderLines={false}
+              selectedCorner={interactiveCorners ? selectedCorner : undefined}
+              onCornerClick={interactiveCorners ? (corner) => setSelectedCorner(corner) : undefined}
             />
           )}
 
@@ -437,6 +472,29 @@ export function CircuitVectorView({
             </g>
           )}
         </svg>
+
+        {/* Turns Mode helper hint pill */}
+        {mode === 'Turns' && interactiveCorners && !selectedCorner && corners.length > 0 && (
+          <div
+            data-testid="corner-click-hint"
+            className="absolute top-3 left-3 z-20 pointer-events-none hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-950/80 border border-neutral-800/80 text-[11px] text-neutral-400 font-medium backdrop-blur-xs shadow-md"
+          >
+            <span className="text-amber-400">💡</span> Click any turn for iconic lore & telemetry
+          </div>
+        )}
+
+        {/* Interactive Corner Spotlight Card */}
+        {mode === 'Turns' && interactiveCorners && selectedCorner && activeCornerDetail && (
+          <div className="absolute bottom-3 left-3 right-3 sm:right-auto sm:max-w-sm z-30 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+            <CornerDetailCard
+              detail={activeCornerDetail}
+              circuitName={circuitName}
+              onClose={() => setSelectedCorner(null)}
+              onPrev={corners.length > 1 ? handlePrevCorner : undefined}
+              onNext={corners.length > 1 ? handleNextCorner : undefined}
+            />
+          </div>
+        )}
       </Track3D>
     );
   }

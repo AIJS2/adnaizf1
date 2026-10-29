@@ -22,6 +22,8 @@ export interface CircuitVectorViewProps {
   className?: string;
   badgeRadiusScale?: number;
   interactiveCorners?: boolean;
+  /** Show the corner's "Lore & History" fun fact in the spotlight card. */
+  showCornerFunFact?: boolean;
 }
 
 /**
@@ -41,6 +43,7 @@ export function CircuitVectorView({
   className,
   badgeRadiusScale = 1,
   interactiveCorners = true,
+  showCornerFunFact = true,
 }: CircuitVectorViewProps) {
   const geom = useMemo(() => getCircuitGeometry(circuitLookup), [circuitLookup]);
   const corners = useMemo(() => getCircuitCorners(circuitLookup), [circuitLookup]);
@@ -489,6 +492,7 @@ export function CircuitVectorView({
             <CornerDetailCard
               detail={activeCornerDetail}
               circuitName={circuitName}
+              showFunFact={showCornerFunFact}
               onClose={() => setSelectedCorner(null)}
               onPrev={corners.length > 1 ? handlePrevCorner : undefined}
               onNext={corners.length > 1 ? handleNextCorner : undefined}

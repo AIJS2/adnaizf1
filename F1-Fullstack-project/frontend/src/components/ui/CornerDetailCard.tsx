@@ -9,6 +9,8 @@ export interface CornerDetailCardProps {
   onNext?: () => void;
   circuitName?: string;
   className?: string;
+  /** Render the "Lore & History" fun fact callout. Defaults to true. */
+  showFunFact?: boolean;
 }
 
 const SPEED_STYLES: Record<CornerDetail['speedCategory'], { badge: string; dot: string }> = {
@@ -41,6 +43,7 @@ export const CornerDetailCard: React.FC<CornerDetailCardProps> = ({
   onNext,
   circuitName,
   className = '',
+  showFunFact = true,
 }) => {
   const speedStyle = SPEED_STYLES[detail.speedCategory] || SPEED_STYLES.Medium;
 
@@ -162,7 +165,7 @@ export const CornerDetailCard: React.FC<CornerDetailCardProps> = ({
       </p>
 
       {/* Fun Fact / Historical Lore Callout */}
-      {detail.funFact && (
+      {showFunFact && detail.funFact && (
         <div
           data-testid="corner-detail-funfact"
           className="p-2.5 rounded-lg bg-amber-950/20 border border-amber-800/30 text-xs text-amber-200/90 flex items-start gap-2 mb-3"

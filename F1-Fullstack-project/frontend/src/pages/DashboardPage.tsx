@@ -374,6 +374,7 @@ function DashboardPage() {
                   mode={dashTrackMode}
                   tone="red"
                   fallbackImg={trackMapImg}
+                  showCornerFunFact={false}
                   className="w-full h-full min-h-[165px] sm:min-h-[195px]"
                 />
               </div>

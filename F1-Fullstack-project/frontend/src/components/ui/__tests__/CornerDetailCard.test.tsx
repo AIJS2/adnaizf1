@@ -92,4 +92,16 @@ describe('CornerDetailCard and cornerDetails lore helper', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('hides the lore callout when showFunFact is false but keeps the technical specs', () => {
+    const detail = getCornerDetail({ name: 'Spa-Francorchamps', country: 'Belgium' }, 2);
+
+    render(<CornerDetailCard detail={detail} showFunFact={false} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('corner-detail-name')).toHaveTextContent('Eau Rouge');
+    expect(screen.getByTestId('corner-detail-desc')).toBeInTheDocument();
+    expect(screen.getByText('Flat Out')).toBeInTheDocument();
+    expect(screen.queryByTestId('corner-detail-funfact')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Lore & History/i)).not.toBeInTheDocument();
+  });
 });

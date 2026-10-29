@@ -1,5 +1,6 @@
 // src/DashboardPage - Next-Gen F1 Telemetry & Championship Dashboard
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDashboardData } from '../services/api';
 
@@ -18,7 +19,8 @@ import TeamCard, { TeamStanding } from '../components/dashboard/TeamCard';
 import DriverStandingsList from '../components/dashboard/DriverStandingsList';
 import RaceAnalyticsCard from '../components/dashboard/RaceAnalyticsCard';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
-import { Track3D } from '../components/ui/Track3D';
+import { CircuitVectorView, CircuitVectorMode } from '../components/ui/CircuitVectorView';
+import { getCircuitGeometry } from '../data/circuitPaths';
 import { safeMax, toNumber } from '../utils/data';
 import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
@@ -30,6 +32,7 @@ function DashboardPage() {
   const currentYear = new Date().getFullYear();
   const prevYear = currentYear - 1;
   const shouldReduceMotion = useReducedMotion();
+  const [dashTrackMode, setDashTrackMode] = useState<CircuitVectorMode>('Turns');
 
   const sectionVariants: Variants = {
     hidden: { opacity: shouldReduceMotion ? 1 : 0, y: shouldReduceMotion ? 0 : 16 },
@@ -118,6 +121,14 @@ function DashboardPage() {
   const countryCode = getCountryCode(
     upcomingRace ?? (nextEvent ? { ...nextEvent, location: nextEvent.location } : { name: heroRaceName })
   );
+
+  const circuitLookup = {
+    round: nextEvent?.round ?? (typeof upcomingRace?.round === 'number' ? upcomingRace.round : Number(upcomingRace?.round)),
+    name: nextEvent?.name ?? upcomingRace?.name ?? heroRaceName,
+    location: nextEvent?.location ?? upcomingRace?.location,
+  };
+
+  const hasVectorGeom = Boolean(getCircuitGeometry(circuitLookup));
 
   const circuitSpec = getCircuitSpec(
     nextEvent?.location || upcomingRace?.location || upcomingRace?.name || heroRaceName
@@ -326,22 +337,45 @@ function DashboardPage() {
                   <Activity size={14} className="text-red-500" />
                   <span>Circuit Telemetry</span>
                 </div>
+                {/* Segmented Mode Selector for Dashboard */}
+                {hasVectorGeom && (
+                  <div
+                    role="tablist"
+                    aria-label="Dashboard Circuit View Modes"
+                    className="inline-flex items-center p-0.5 rounded-full bg-neutral-900/90 border border-neutral-800 shadow-inner"
+                  >
+                    {(['Turns', 'Sectors', 'DRS'] as const).map((mode) => {
+                      const isActive = dashTrackMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => setDashTrackMode(mode)}
+                          className={`px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                            isActive
+                              ? 'bg-red-600 text-white shadow-xs'
+                              : 'text-neutral-400 hover:text-white'
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Circuit Map with Ambient Glow */}
-              <div className="relative flex items-center justify-center py-2 my-auto min-h-[160px] sm:min-h-[190px]">
-                {trackMapImg ? (
-                  <Track3D className="w-full" tone="red">
-                    <div className="absolute inset-0 bg-red-600/5 blur-2xl rounded-full pointer-events-none" aria-hidden="true" />
-                    <img 
-                      src={trackMapImg} 
-                      alt={upcomingRace?.name || "Circuit Map"} 
-                      className="w-full max-w-[270px] sm:max-w-[310px] max-h-[170px] sm:max-h-[195px] object-contain invert transition-transform duration-500 hover:scale-105" 
-                    />
-                  </Track3D>
-                ) : (
-                  <div className="text-neutral-500 text-xs font-mono uppercase tracking-wider">Circuit Map Not Available</div>
-                )}
+              <div className="relative flex items-center justify-center py-2 my-auto min-h-[165px] sm:min-h-[195px] w-full">
+                <CircuitVectorView
+                  circuitLookup={circuitLookup}
+                  mode={dashTrackMode}
+                  tone="red"
+                  fallbackImg={trackMapImg}
+                  className="w-full h-full min-h-[165px] sm:min-h-[195px]"
+                />
               </div>
 
               {/* Circuit Telemetry Metric Badges */}

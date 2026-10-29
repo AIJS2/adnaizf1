@@ -73,13 +73,33 @@ describe('CircuitCornerMarkers', () => {
       Array.from({ length: 19 }, (_, index) => String(index + 1)),
     );
 
-    // Leader lines and anchor dots
-    expect(
-      screen.getByTestId('circuit-corner-markers').querySelectorAll('line'),
-    ).toHaveLength(19);
+    // Anchor dots are rendered at apex
     expect(
       screen.getByTestId('circuit-corner-markers').querySelectorAll('.corner-anchor-dot'),
     ).toHaveLength(19);
+    // Leader lines are clean and omitted by default
+    expect(
+      screen.getByTestId('circuit-corner-markers').querySelectorAll('line'),
+    ).toHaveLength(0);
+  });
+
+  it('renders leader lines when showLeaderLines is explicitly true', async () => {
+    render(
+      <svg viewBox="0 0 500 500">
+        <CircuitCornerMarkers
+          corners={monacoCorners}
+          path="M 0 0 L 100 0 L 100 100 L 0 100 Z"
+          viewBox="0 0 500 500"
+          showLeaderLines
+        />
+      </svg>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('circuit-corner-markers').querySelectorAll('line'),
+      ).toHaveLength(19);
+    });
   });
 
   it('keeps every badge inside the padded viewBox after repulsion and clamping', async () => {

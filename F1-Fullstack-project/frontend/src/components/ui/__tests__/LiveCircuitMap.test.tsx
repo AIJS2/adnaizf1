@@ -79,19 +79,32 @@ describe('LiveCircuitMap', () => {
   beforeEach(installPathMock);
   afterEach(restorePathMock);
 
-  it('renders the circuit outline, car markers and Monaco corner badges', async () => {
+  it('renders the circuit outline and car markers without distracting corner badges by default', () => {
     render(
       <LiveCircuitMap
         circuit={circuit}
         lines={[line('VER', 1, 0), line('NOR', 2, 0.25)]}
-        preview
       />,
     );
 
     expect(screen.getByTestId('circuit-track-map')).toBeInTheDocument();
     expect(screen.getByText('VER')).toBeInTheDocument();
     expect(screen.getByText('NOR')).toBeInTheDocument();
+    // Default during live timing: no corner badges
+    expect(screen.queryByTestId('circuit-corner-markers')).not.toBeInTheDocument();
+  });
 
+  it('renders corner badges when showCorners is explicitly enabled', async () => {
+    render(
+      <LiveCircuitMap
+        circuit={circuit}
+        lines={[line('VER', 1, 0), line('NOR', 2, 0.25)]}
+        showCorners
+        preview
+      />,
+    );
+
+    expect(screen.getByTestId('circuit-track-map')).toBeInTheDocument();
     await waitFor(() => {
       expect(
         screen.getByTestId('circuit-corner-markers').querySelectorAll('.corner-badge-circle'),

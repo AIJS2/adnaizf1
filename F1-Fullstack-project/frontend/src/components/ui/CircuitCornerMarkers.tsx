@@ -12,11 +12,16 @@ export interface CircuitCornerMarkersProps {
   sample?: (d: number) => { x: number; y: number };
   /** Effective SVG viewBox, used to keep edge labels inside the frame. */
   viewBox: string;
-  tone?: 'live' | 'preview' | 'overlay';
+  tone?: 'live' | 'preview' | 'overlay' | 'clean';
   /** Track stroke width in viewBox units. Defaults to 18 for live map. */
   trackWidth?: number;
   /** Badge radius, in viewBox units. */
   radius?: number;
+  /**
+   * Whether to render leader lines from corner apex to badge.
+   * Defaults to false for the clean, line-free aesthetic seen in broadcast/console graphics.
+   */
+  showLeaderLines?: boolean;
 }
 
 interface ViewBox {
@@ -60,6 +65,13 @@ const PALETTES = {
     leader: 'rgba(255, 255, 255, 0.3)',
     anchor: 'rgba(255, 255, 255, 0.85)',
   },
+  clean: {
+    fill: 'rgba(20, 20, 24, 0.95)',
+    ring: 'rgba(255, 255, 255, 0.45)',
+    text: '#ffffff',
+    leader: 'rgba(255, 255, 255, 0.2)',
+    anchor: '#ffffff',
+  },
 } as const;
 
 /**
@@ -77,6 +89,7 @@ export function CircuitCornerMarkers({
   tone = 'live',
   trackWidth = 18,
   radius,
+  showLeaderLines = false,
 }: CircuitCornerMarkersProps) {
   const probeRef = useRef<SVGPathElement | null>(null);
   const [labels, setLabels] = useState<PlacedCornerBadge[]>([]);
@@ -177,16 +190,18 @@ export function CircuitCornerMarkers({
           key={`${label.number}-${label.letter ?? ''}-${index}`}
           data-testid={`corner-marker-${label.number}${label.letter ?? ''}`}
         >
-          {/* Leader line from corner apex to badge perimeter */}
-          <line
-            x1={label.anchorX}
-            y1={label.anchorY}
-            x2={label.leaderEndX}
-            y2={label.leaderEndY}
-            stroke={palette.leader}
-            strokeWidth={Math.max(0.75, badgeRadius * 0.08)}
-            strokeLinecap="round"
-          />
+          {/* Leader line from corner apex to badge perimeter (only when explicitly requested) */}
+          {showLeaderLines && (
+            <line
+              x1={label.anchorX}
+              y1={label.anchorY}
+              x2={label.leaderEndX}
+              y2={label.leaderEndY}
+              stroke={palette.leader}
+              strokeWidth={Math.max(0.75, badgeRadius * 0.08)}
+              strokeLinecap="round"
+            />
+          )}
           {/* Subtle anchor dot at apex on the circuit centerline */}
           <circle
             cx={label.anchorX}

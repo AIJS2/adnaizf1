@@ -161,13 +161,12 @@ export function computeCornerLayout(options: CornerLayoutInput): PlacedCornerBad
     };
   });
 
-  // Staggered distance tiers
+  // Staggered distance tiers (compact to keep badges close to the apex without long gaps)
   const distances = [
-    minClearance + span * 0.004,
-    minClearance + badgeRadius * 1.3,
-    minClearance + badgeRadius * 2.6,
-    minClearance + badgeRadius * 4.0,
-    minClearance + badgeRadius * 5.5,
+    minClearance + span * 0.002,
+    minClearance + badgeRadius * 0.8,
+    minClearance + badgeRadius * 1.6,
+    minClearance + badgeRadius * 2.5,
   ];
 
   // Radial fan-out offsets, plus inward fallback for dense chicanes
@@ -212,8 +211,8 @@ export function computeCornerLayout(options: CornerLayoutInput): PlacedCornerBad
 
         const isInward = Math.abs(aOff) > Math.PI / 2;
         const baseCost =
-          (dist / minClearance) * 8 +
-          Math.abs(aOff) * 10 +
+          (dist / minClearance) * 16 +
+          Math.abs(aOff) * 12 +
           (isInward ? 35 : 0);
         candidates.push({ x, y, dist, aOff, theta, isInward, baseCost });
       }

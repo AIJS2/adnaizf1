@@ -9,7 +9,7 @@ export interface LiveCircuitMapProps {
   lines: LiveTimingLine[];
   /** Renders a calmer, dashed "next round" treatment when no session is live. */
   preview?: boolean;
-  /** Draw the numbered corner badges. Defaults to true. */
+  /** Draw the numbered corner badges. Defaults to false during live timing to keep tracking clean. */
   showCorners?: boolean;
   /** Colour treatment for the corner badges. */
   cornerTone?: 'live' | 'preview' | 'overlay';
@@ -48,7 +48,7 @@ function padViewBox(value: string): string {
  * Corner badges are placed collision-free using multi-tier cartographic staggering.
  */
 export const LiveCircuitMap = memo<LiveCircuitMapProps>(
-  ({ circuit, lines, preview = false, showCorners = true, cornerTone }) => {
+  ({ circuit, lines, preview = false, showCorners = false, cornerTone }) => {
     const pathRef = useRef<SVGPathElement | null>(null);
     const [points, setPoints] = useState<TrackMapPoint[]>([]);
 

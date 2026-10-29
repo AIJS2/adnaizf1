@@ -179,4 +179,38 @@ describe('TrackDominationMap positional data guards', () => {
     expect(toggle).toHaveTextContent(/Turns ON/i);
     expect(screen.getByTestId('circuit-corner-markers')).toBeInTheDocument();
   });
+
+  it('displays domination percentages and clarifies 0% non-dominant drivers', () => {
+    const multiDriverInfo = {
+      NOR: { team: 'McLaren', name: 'Lando Norris' },
+      HAM: { team: 'Ferrari', name: 'Lewis Hamilton' },
+      STR: { team: 'Aston Martin', name: 'Lance Stroll' },
+    };
+
+    // NOR dominates point 0 and 1000 (67%), HAM dominates 2000 (33%), STR dominates 0 (0%)
+    const telemetry: TelemetryDataPoint[] = [
+      { distance: 0, x: 0, y: 0, dominant_driver: 'NOR' },
+      { distance: 1000, x: 1000, y: 0, dominant_driver: 'NOR' },
+      { distance: 2000, x: 2000, y: 0, dominant_driver: 'HAM' },
+    ];
+
+    render(
+      <TrackDominationMap
+        telemetry={telemetry}
+        drivers={['STR', 'NOR', 'HAM']}
+        driver_info={multiDriverInfo}
+        activeDistance={null}
+      />
+    );
+
+    // Legend pills must render percentages
+    expect(screen.getByTestId('driver-pill-NOR')).toHaveTextContent(/NOR.*67%/);
+    expect(screen.getByTestId('driver-pill-HAM')).toHaveTextContent(/HAM.*33%/);
+    expect(screen.getByTestId('driver-pill-STR')).toHaveTextContent(/STR.*0%/);
+
+    // Hovering 0% driver pill clarifies that no sectors were dominated
+    fireEvent.mouseEnter(screen.getByTestId('driver-pill-STR'));
+    expect(screen.getByText(/0% · No sectors dominated/i)).toBeInTheDocument();
+    expect(screen.getByText(/Slower in all track sectors/i)).toBeInTheDocument();
+  });
 });

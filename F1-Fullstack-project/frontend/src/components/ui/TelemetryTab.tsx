@@ -206,6 +206,8 @@ interface TelemetryTabProps {
   } | null;
 }
 
+const MAX_COMPARISON_DRIVERS = 5;
+
 const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
   const [availableDrivers, setAvailableDrivers] = useState<TelemetryDriverOption[]>([]);
@@ -251,8 +253,8 @@ const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
     if (selectedDrivers.includes(drv)) {
       setSelectedDrivers(selectedDrivers.filter(d => d !== drv));
     } else {
-      if (selectedDrivers.length >= 10) {
-        alert("Maximum 10 drivers can be compared at once.");
+      if (selectedDrivers.length >= MAX_COMPARISON_DRIVERS) {
+        alert(`Maximum ${MAX_COMPARISON_DRIVERS} drivers can be compared at once for optimal telemetry clarity.`);
         return;
       }
       setSelectedDrivers([...selectedDrivers, drv]);
@@ -373,7 +375,7 @@ const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
             Lap Telemetry <span className=" text-chalk">Analysis</span>
           </h1>
           <p className="text-neutral-400 mt-2 text-sm">
-            Synchronized throttle, braking, corner speed, and delta time comparison for up to 10 drivers.
+            Synchronized throttle, braking, corner speed, and delta time comparison for up to {MAX_COMPARISON_DRIVERS} drivers.
           </p>
         </div>
       </div>
@@ -385,13 +387,13 @@ const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
           <div className="absolute top-0 w-3/4 left-0 h-1 bg-linear-to-r from-transparent via-blue-600 to-transparent"></div>
           
           <div className="text-[11px] text-neutral-500 font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-            <Radio size={12} className="text-blue-500" /> Select Drivers (Max 10)
+            <Radio size={12} className="text-blue-500" /> Select Drivers (Max {MAX_COMPARISON_DRIVERS})
           </div>
 
           <div className="flex-1 flex flex-wrap gap-2 overflow-y-auto content-start">
             {availableDrivers.map(d => {
               const isSelected = selectedDrivers.includes(d.abbreviation);
-              const isDisabled = !isSelected && selectedDrivers.length >= 10;
+              const isDisabled = !isSelected && selectedDrivers.length >= MAX_COMPARISON_DRIVERS;
               const color = getDriverColor(d.abbreviation, d.team_name);
               return (
                 <button

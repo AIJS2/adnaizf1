@@ -294,6 +294,41 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
   });
   flushLine();
 
+  // Domination statistics: percentage and point count per driver
+  const dominationStats = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    drivers.forEach((d) => {
+      counts[d] = 0;
+    });
+
+    let totalValidPoints = 0;
+    mappedTelemetry.forEach((d) => {
+      if (d.dominant_driver && counts[d.dominant_driver] !== undefined) {
+        counts[d.dominant_driver]++;
+        totalValidPoints++;
+      }
+    });
+
+    const stats: Record<string, { points: number; percent: number }> = {};
+    drivers.forEach((d) => {
+      const count = counts[d] || 0;
+      stats[d] = {
+        points: count,
+        percent: totalValidPoints > 0 ? Math.round((count / totalValidPoints) * 100) : 0,
+      };
+    });
+    return stats;
+  }, [drivers, mappedTelemetry]);
+
+  // Order drivers by domination percentage (highest first, 0% drivers at the end)
+  const sortedDrivers = React.useMemo(() => {
+    return [...drivers].sort((a, b) => {
+      const pA = dominationStats[a]?.percent ?? 0;
+      const pB = dominationStats[b]?.percent ?? 0;
+      return pB - pA;
+    });
+  }, [drivers, dominationStats]);
+
   const allPoints = React.useMemo(() => {
     if (circuitGeom && circuitGeom.points.length > 0) {
       return circuitGeom.points.map(p => `${p.x},${flipY(p.y).toFixed(2)}`).join(' ');
@@ -546,41 +581,62 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
         </svg>
         </Track3D>
       </div>
-      <div className="flex flex-wrap justify-center gap-6 mt-6">
-        {drivers.map(drv => {
+      {/* Legend Pills with Domination Percentages */}
+      <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-6">
+        {sortedDrivers.map((drv) => {
           const style = driverStyles[drv] || { color: '#ffffff', strokeDasharray: undefined };
           const info = driver_info[drv];
           const teamColor = teamColors[info?.team ?? ''] || '#888888';
           const isActive = hoveredDriver === drv;
+          const stat = dominationStats[drv] || { points: 0, percent: 0 };
+          const isZero = stat.percent === 0;
 
           return (
             <div
               key={drv}
-              className={`flex items-center gap-3 rounded-full border px-4 py-2 transition-colors duration-200 cursor-pointer ${
-                isActive ? 'bg-neutral-800/90' : 'bg-neutral-900/80'
+              data-testid={`driver-pill-${drv}`}
+              className={`flex items-center gap-2.5 rounded-full border px-3.5 py-1.5 transition-all duration-200 cursor-pointer ${
+                isActive
+                  ? 'bg-neutral-800/95 scale-105 shadow-lg'
+                  : isZero
+                    ? 'bg-neutral-950/60 opacity-50 hover:opacity-90'
+                    : 'bg-neutral-900/80 hover:bg-neutral-800/80'
               }`}
               style={{
-                borderColor: isActive ? style.color : teamColor,
-                boxShadow: isActive ? `0 0 20px ${style.color}40` : 'none'
+                borderColor: isActive ? style.color : isZero ? '#333338' : teamColor,
+                boxShadow: isActive ? `0 0 20px ${style.color}40` : 'none',
               }}
               onMouseEnter={(e) => handlePillHover(drv, e)}
               onMouseLeave={() => setHoveredDriver(null)}
             >
-              <svg width="36" height="10" viewBox="0 0 36 10">
+              <svg width="28" height="8" viewBox="0 0 28 8">
                 <line
                   x1="0"
-                  y1="5"
-                  x2="36"
-                  y2="5"
-                  stroke={style.color}
-                  strokeWidth={isActive ? "8" : "6"}
+                  y1="4"
+                  x2="28"
+                  y2="4"
+                  stroke={isZero ? '#55555e' : style.color}
+                  strokeWidth={isActive ? '7' : '5'}
                   strokeLinecap="round"
                   strokeDasharray={style.strokeDasharray}
                 />
               </svg>
-              <div className="flex flex-col">
-                <span className="text-sm font-black text-white">{drv}</span>
-                {info?.team && <span className="text-[11px] text-neutral-400 font-medium">{info.team}</span>}
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-black text-white">{drv}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    isZero
+                      ? 'bg-neutral-800/80 text-neutral-400'
+                      : 'bg-neutral-950/90 text-neutral-200 border border-neutral-700/60'
+                  }`}
+                >
+                  {isZero ? '0%' : `${stat.percent}%`}
+                </span>
+                {info?.team && (
+                  <span className="hidden sm:inline text-[10px] text-neutral-400 font-medium">
+                    {info.team}
+                  </span>
+                )}
               </div>
             </div>
           );
@@ -594,23 +650,32 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
           className="pointer-events-none absolute left-0 top-0 z-50 will-change-transform"
         >
           <div
-            className="px-4 py-2 rounded-full border-2 shadow-2xl"
+            className="px-4 py-2.5 rounded-xl border-2 shadow-2xl backdrop-blur-md"
             style={{
               backgroundColor: 'rgba(10, 10, 10, 0.98)',
-              borderColor: driverStyles[hoveredDriver]?.color || '#ffffff'
+              borderColor: driverStyles[hoveredDriver]?.color || '#ffffff',
             }}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div
-                className="w-3 h-3 rounded-full"
+                className="w-3 h-3 rounded-full shrink-0"
                 style={{ backgroundColor: driverStyles[hoveredDriver]?.color || '#ffffff' }}
               />
               <div className="flex flex-col">
-                <span className="text-sm font-black text-white leading-none">
-                  {hoveredDriver}
-                </span>
-                <span className="text-[11px] text-neutral-400 font-medium leading-none mt-0.5">
-                  {driver_info[hoveredDriver]?.name || driver_info[hoveredDriver]?.team}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-white leading-none">
+                    {hoveredDriver}
+                  </span>
+                  <span className="text-xs font-mono font-black text-white/90">
+                    {(dominationStats[hoveredDriver]?.percent ?? 0) === 0
+                      ? '0% · No sectors dominated'
+                      : `${dominationStats[hoveredDriver]?.percent}% track dominated`}
+                  </span>
+                </div>
+                <span className="text-[11px] text-neutral-400 font-medium leading-none mt-1">
+                  {(dominationStats[hoveredDriver]?.percent ?? 0) === 0
+                    ? 'Slower in all track sectors compared to other selected drivers'
+                    : driver_info[hoveredDriver]?.name || driver_info[hoveredDriver]?.team}
                 </span>
               </div>
             </div>

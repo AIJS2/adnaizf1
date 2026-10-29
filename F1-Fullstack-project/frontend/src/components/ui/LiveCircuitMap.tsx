@@ -21,6 +21,8 @@ interface TrackMapPoint {
   x: number;
   y: number;
   color: string;
+  status: string;
+  inPit: boolean;
 }
 
 function padViewBox(value: string): string {
@@ -30,7 +32,7 @@ function padViewBox(value: string): string {
   }
   const [x, y, width, height] = parts;
   if (width <= 0 || height <= 0) return '0 0 500 500';
-  const padding = Math.max(width, height) * 0.05;
+  const padding = Math.max(width, height) * 0.08;
   return `${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`;
 }
 
@@ -39,8 +41,11 @@ function padViewBox(value: string): string {
  * running car on it with SVGPathElement.getPointAtLength(). The leader sits at
  * the start/finish point; the rest are spread by their gap in seconds.
  *
- * Corner badges are sampled from the same path, so they stay aligned whether
- * the outline comes from the live feed or the bundled next-round preview.
+ * All session drivers (including those in PIT lane) are rendered so no driver
+ * mysteriously disappears from the map. Cars in the pit lane are styled with
+ * a subdued amber ring and badge.
+ *
+ * Corner badges are placed collision-free using multi-tier cartographic staggering.
  */
 export const LiveCircuitMap = memo<LiveCircuitMapProps>(
   ({ circuit, lines, preview = false, showCorners = true, cornerTone }) => {
@@ -83,29 +88,30 @@ export const LiveCircuitMap = memo<LiveCircuitMapProps>(
       }
 
       const next: TrackMapPoint[] = [];
-      lines
-        .filter((line) => line.status === 'TRACK' || line.status === 'OUT')
-        .forEach((line, index) => {
-          const rawProgress =
-            typeof line.progress === 'number' && Number.isFinite(line.progress)
-              ? line.progress
-              : index === 0
-                ? 0
-                : index * 0.02;
-          const progress = Math.max(0, Math.min(rawProgress, 0.98));
-          try {
-            const point = path.getPointAtLength(progress * total);
-            next.push({
-              driver: line.driver,
-              team: line.team,
-              x: point.x,
-              y: point.y,
-              color: getDriverColor(line.driver, line.team),
-            });
-          } catch {
-            // Ignore a malformed point; the remaining drivers still render.
-          }
-        });
+      lines.forEach((line, index) => {
+        const rawProgress =
+          typeof line.progress === 'number' && Number.isFinite(line.progress)
+            ? line.progress
+            : index === 0
+              ? 0
+              : index * 0.02;
+        const progress = Math.max(0, Math.min(rawProgress, 0.98));
+        const inPit = (line.status || '').toUpperCase() === 'PIT';
+        try {
+          const point = path.getPointAtLength(progress * total);
+          next.push({
+            driver: line.driver,
+            team: line.team,
+            x: point.x,
+            y: point.y,
+            color: getDriverColor(line.driver, line.team),
+            status: line.status || 'TRACK',
+            inPit,
+          });
+        } catch {
+          // Ignore a malformed point; the remaining drivers still render.
+        }
+      });
 
       setPoints(next);
     }, [circuit.path, lines]);
@@ -161,6 +167,7 @@ export const LiveCircuitMap = memo<LiveCircuitMapProps>(
             corners={corners}
             path={circuit.path}
             viewBox={viewBox}
+            trackWidth={18}
             tone={cornerTone ?? (preview ? 'preview' : 'live')}
           />
         )}
@@ -170,24 +177,28 @@ export const LiveCircuitMap = memo<LiveCircuitMapProps>(
             style={{
               transform: `translate(${point.x}px, ${point.y}px)`,
               transition: 'transform 2s linear',
+              opacity: point.inPit ? 0.75 : 1,
             }}
+            data-testid={`driver-marker-${point.driver}`}
           >
             <circle
-              r="6"
+              r={point.inPit ? '5.5' : '6'}
               fill={point.color}
-              stroke="#000"
-              strokeWidth="1.5"
+              stroke={point.inPit ? '#f59e0b' : '#000'}
+              strokeWidth={point.inPit ? 2 : 1.5}
+              strokeDasharray={point.inPit ? '3 2' : undefined}
               className="drop-shadow-lg"
             />
             <text
               y="-9"
               fontSize="9"
-              fill="#fff"
+              fill={point.inPit ? '#fef08a' : '#fff'}
               textAnchor="middle"
               className="font-mono font-black"
               style={{ paintOrder: 'stroke', stroke: '#000', strokeWidth: 2 }}
             >
               {point.driver}
+              {point.inPit ? '·P' : ''}
             </text>
           </g>
         ))}

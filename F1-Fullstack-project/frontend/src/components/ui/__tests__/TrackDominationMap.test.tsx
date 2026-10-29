@@ -140,4 +140,43 @@ describe('TrackDominationMap positional data guards', () => {
     expect(container.querySelectorAll('polyline').length).toBeGreaterThan(0);
     expect(screen.queryByText(/published after a session finishes/i)).not.toBeInTheDocument();
   });
+
+  it('renders turn number badges and toggles them with the Turns button', () => {
+    const telemetry = [
+      point(0, 0, 0),
+      point(1000, 0, 0),
+      point(2000, 0, 0),
+      point(4381, 0, 0),
+    ];
+    render(
+      <TrackDominationMap
+        telemetry={telemetry}
+        drivers={['BOR']}
+        driver_info={driverInfo}
+        activeDistance={null}
+        circuitInfo={{ round: 19 }} // Mexico (17 corners)
+      />
+    );
+
+    // Toggle button is present and defaults to ON
+    const toggle = screen.getByTestId('toggle-turn-numbers');
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).toHaveTextContent(/Turns ON/i);
+
+    // Corner markers are rendered
+    expect(screen.getByTestId('circuit-corner-markers')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('circuit-corner-markers').querySelectorAll('.corner-badge-circle'),
+    ).toHaveLength(17);
+
+    // Clicking toggle turns badges off
+    fireEvent.click(toggle);
+    expect(toggle).toHaveTextContent(/Turns OFF/i);
+    expect(screen.queryByTestId('circuit-corner-markers')).not.toBeInTheDocument();
+
+    // Clicking again turns them back on
+    fireEvent.click(toggle);
+    expect(toggle).toHaveTextContent(/Turns ON/i);
+    expect(screen.getByTestId('circuit-corner-markers')).toBeInTheDocument();
+  });
 });

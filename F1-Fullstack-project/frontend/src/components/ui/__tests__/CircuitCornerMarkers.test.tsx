@@ -62,7 +62,7 @@ describe('CircuitCornerMarkers', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByTestId('circuit-corner-markers').querySelectorAll('circle'),
+        screen.getByTestId('circuit-corner-markers').querySelectorAll('.corner-badge-circle'),
       ).toHaveLength(19);
     });
 
@@ -72,6 +72,14 @@ describe('CircuitCornerMarkers', () => {
     expect(labels).toEqual(
       Array.from({ length: 19 }, (_, index) => String(index + 1)),
     );
+
+    // Leader lines and anchor dots
+    expect(
+      screen.getByTestId('circuit-corner-markers').querySelectorAll('line'),
+    ).toHaveLength(19);
+    expect(
+      screen.getByTestId('circuit-corner-markers').querySelectorAll('.corner-anchor-dot'),
+    ).toHaveLength(19);
   });
 
   it('keeps every badge inside the padded viewBox after repulsion and clamping', async () => {
@@ -86,10 +94,10 @@ describe('CircuitCornerMarkers', () => {
     );
 
     await waitFor(() => {
-      expect(container.querySelectorAll('circle')).toHaveLength(19);
+      expect(container.querySelectorAll('.corner-badge-circle')).toHaveLength(19);
     });
 
-    for (const circle of Array.from(container.querySelectorAll('circle'))) {
+    for (const circle of Array.from(container.querySelectorAll<SVGCircleElement>('.corner-badge-circle'))) {
       const cx = Number(circle.getAttribute('cx'));
       const cy = Number(circle.getAttribute('cy'));
       const r = Number(circle.getAttribute('r'));
@@ -100,6 +108,28 @@ describe('CircuitCornerMarkers', () => {
       expect(cx + r).toBeLessThanOrEqual(500);
       expect(cy + r).toBeLessThanOrEqual(500);
     }
+  });
+
+  it('supports explicit geometric track points and sampler', async () => {
+    const sample = (d: number) => squarePoint(d * SQUARE_TOTAL);
+    const trackPoints = Array.from({ length: 40 }, (_, i) => sample(i / 40));
+
+    render(
+      <svg viewBox="0 0 500 500">
+        <CircuitCornerMarkers
+          corners={monacoCorners}
+          trackPoints={trackPoints}
+          sample={sample}
+          viewBox="0 0 500 500"
+        />
+      </svg>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('circuit-corner-markers').querySelectorAll('.corner-badge-circle'),
+      ).toHaveLength(19);
+    });
   });
 
   it('renders nothing when there are no corners', () => {

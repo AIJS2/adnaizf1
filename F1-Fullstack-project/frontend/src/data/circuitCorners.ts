@@ -65,6 +65,15 @@ const matchesText = (needle: string, haystack: string): boolean => {
  */
 export function getCircuitCorners(lookup?: CircuitLookup | null): CircuitCorner[] {
   if (!lookup) return [];
+
+  if (lookup.round !== undefined && lookup.round !== null && (lookup.round as unknown) !== '') {
+    const rNum = typeof lookup.round === 'string' ? parseInt(lookup.round, 10) : lookup.round;
+    if (!isNaN(rNum)) {
+      const byRound = CIRCUIT_CORNERS.find((entry) => entry.round === rNum);
+      if (byRound) return byRound.corners;
+    }
+  }
+
   const name = normalise(lookup.name);
   const location = normalise(lookup.location);
   const country = normalise(lookup.country);

@@ -49,11 +49,16 @@ const circuit: LiveTimingCircuit = {
   path: 'M 0 0 L 100 0 L 100 100 L 0 100 Z',
 };
 
-const line = (driver: string, position: number, progress: number): LiveTimingLine => ({
+const line = (
+  driver: string,
+  position: number,
+  progress: number,
+  status: string = 'TRACK',
+): LiveTimingLine => ({
   position,
   driver,
   team: driver === 'VER' ? 'Red Bull Racing' : 'McLaren',
-  status: 'TRACK',
+  status,
   gap: position === 1 ? 'LEADER' : '+2.500',
   interval: position === 1 ? '-' : '+2.500',
   lastLap: '1:12.000',
@@ -64,7 +69,7 @@ const line = (driver: string, position: number, progress: number): LiveTimingLin
   s2_color: 'green',
   sector3: '-',
   s3_color: 'green',
-  pits: 0,
+  pits: status === 'PIT' ? 1 : 0,
   tyre: 'M',
   tyre_age: 3,
   progress,
@@ -89,9 +94,27 @@ describe('LiveCircuitMap', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByTestId('circuit-corner-markers').querySelectorAll('text'),
+        screen.getByTestId('circuit-corner-markers').querySelectorAll('.corner-badge-circle'),
       ).toHaveLength(19);
     });
+  });
+
+  it('renders PIT drivers without dropping them, displaying pit styling', () => {
+    render(
+      <LiveCircuitMap
+        circuit={circuit}
+        lines={[
+          line('VER', 1, 0, 'TRACK'),
+          line('NOR', 2, 0.2, 'PIT'),
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('circuit-track-map')).toBeInTheDocument();
+    expect(screen.getByText('VER')).toBeInTheDocument();
+    // NOR is in pit: must be rendered on the circuit map with ·P label
+    expect(screen.getByText('NOR·P')).toBeInTheDocument();
+    expect(screen.getByTestId('driver-marker-NOR')).toHaveStyle({ opacity: '0.75' });
   });
 
   it('omits corner badges when showCorners is false', () => {

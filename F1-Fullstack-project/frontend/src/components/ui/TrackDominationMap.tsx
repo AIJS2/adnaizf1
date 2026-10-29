@@ -4,6 +4,8 @@ import EmptyState, { EMPTY_TABLE_MESSAGES } from './EmptyState';
 import { TelemetryDataPoint, TeamDriverInfo } from '../../types/f1';
 import { teamColors, DRIVER_TEAM_COLORS_2026, getDriverColor } from '../../data/teamData';
 import { getCircuitGeometry, sampleCircuitPosition, CircuitLookup } from '../../data/circuitPaths';
+import { getCircuitCorners } from '../../data/circuitCorners';
+import { CircuitCornerMarkers } from './CircuitCornerMarkers';
 import { Track3D } from './Track3D';
 
 export interface TrackDominationMapProps {
@@ -105,6 +107,7 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
   circuitInfo,
 }) => {
   const [hoveredDriver, setHoveredDriver] = React.useState<string | null>(null);
+  const [showCorners, setShowCorners] = React.useState<boolean>(true);
   const svgRef = React.useRef<SVGSVGElement>(null);
   const tooltipRef = React.useRef<HTMLDivElement>(null);
   const tooltipSizeRef = React.useRef({ width: 0, height: 0 });
@@ -112,6 +115,10 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
 
   const circuitGeom = React.useMemo(() => {
     return getCircuitGeometry(circuitInfo);
+  }, [circuitInfo]);
+
+  const corners = React.useMemo(() => {
+    return getCircuitCorners(circuitInfo);
   }, [circuitInfo]);
 
   // Project or sample telemetry points onto canonical circuit geometry
@@ -178,12 +185,36 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
   const trackWidth  = maxX - minX;
   const trackHeight = maxY - minY;
   const maxDim      = Math.max(trackWidth, trackHeight, 1);
-  const padding     = maxDim * 0.08;
+  const padding     = maxDim * 0.1;
   const viewBox     = `${minX - padding} ${minY - padding} ${trackWidth + padding * 2} ${trackHeight + padding * 2}`;
 
   const baseStrokeWidth = Math.max(12, maxDim * 0.015);
   const glowStrokeWidth = baseStrokeWidth * 1.15;
   const flipY = (y: number) => maxY + minY - y;
+
+  const trackPointsForCorners = React.useMemo(() => {
+    if (circuitGeom && circuitGeom.points.length > 0) {
+      return circuitGeom.points.map((p) => ({ x: p.x, y: flipY(p.y) }));
+    }
+    return mappedTelemetry
+      .filter((d) => d.x !== undefined && d.y !== undefined && !isNaN(d.x) && !isNaN(d.y))
+      .map((d) => ({ x: d.x as number, y: flipY(d.y as number) }));
+  }, [circuitGeom, mappedTelemetry, maxY, minY]);
+
+  const sampleForCorners = React.useCallback(
+    (d: number) => {
+      if (circuitGeom) {
+        const pt = sampleCircuitPosition(circuitGeom, d);
+        return { x: pt.x, y: flipY(pt.y) };
+      }
+      const total = mappedTelemetry.length;
+      if (total === 0) return { x: 0, y: 0 };
+      const idx = Math.max(0, Math.min(total - 1, Math.round(d * (total - 1))));
+      const pt = mappedTelemetry[idx];
+      return { x: pt.x ?? 0, y: flipY(pt.y ?? 0) };
+    },
+    [circuitGeom, mappedTelemetry, maxY, minY],
+  );
 
   let activePoint: TelemetryDataPoint | null = null;
   if (activeDistance !== null) {
@@ -379,9 +410,29 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
 
   return (
     <div className="relative bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-lg p-6 shadow-2xl mb-8">
-      <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-        <Compass size={20} className="text-red-500" /> Track Domination Map
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          <Compass size={20} className="text-red-500" /> Track Domination Map
+        </h3>
+        {corners.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowCorners((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-colors duration-200 border cursor-pointer ${
+              showCorners
+                ? 'bg-red-500/15 border-red-500/40 text-red-300 shadow-[0_0_12px_rgba(239,68,68,0.2)]'
+                : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-400 hover:text-neutral-200'
+            }`}
+            aria-pressed={showCorners}
+            data-testid="toggle-turn-numbers"
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${showCorners ? 'bg-red-400 motion-safe:animate-pulse' : 'bg-neutral-500'}`}
+            />
+            Turns {showCorners ? 'ON' : 'OFF'}
+          </button>
+        )}
+      </div>
       <p className="text-xs text-neutral-400 mb-4 font-medium">
         Color-coded segments show which driver was fastest at each part of the track
       </p>
@@ -478,6 +529,19 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
                 strokeWidth={Math.max(2, baseStrokeWidth * 0.12)}
               />
             </g>
+          )}
+
+          {/* Turn numbering badges */}
+          {showCorners && corners.length > 0 && trackPointsForCorners.length > 0 && (
+            <CircuitCornerMarkers
+              corners={corners}
+              trackPoints={trackPointsForCorners}
+              sample={sampleForCorners}
+              viewBox={viewBox}
+              trackWidth={baseStrokeWidth}
+              radius={maxDim * 0.024}
+              tone="overlay"
+            />
           )}
         </svg>
         </Track3D>

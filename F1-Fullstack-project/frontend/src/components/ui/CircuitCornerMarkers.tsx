@@ -70,7 +70,7 @@ const PALETTES = {
     ring: 'rgba(255, 255, 255, 0.45)',
     text: '#ffffff',
     leader: 'rgba(255, 255, 255, 0.2)',
-    anchor: '#ffffff',
+    anchor: '#09090b',
   },
 } as const;
 
@@ -206,7 +206,7 @@ export function CircuitCornerMarkers({
           <circle
             cx={label.anchorX}
             cy={label.anchorY}
-            r={Math.max(1.5, badgeRadius * 0.16)}
+            r={Math.max(1.5, badgeRadius * 0.18)}
             fill={palette.anchor}
             className="corner-anchor-dot"
           />

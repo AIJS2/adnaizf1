@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass } from 'lucide-react';
+import { Compass, MousePointerClick, Palette, Trophy } from 'lucide-react';
 import EmptyState, { EMPTY_TABLE_MESSAGES } from './EmptyState';
 import { TelemetryDataPoint, TeamDriverInfo } from '../../types/f1';
 import { teamColors, DRIVER_TEAM_COLORS_2026, getDriverColor } from '../../data/teamData';
@@ -358,6 +358,14 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
     });
   }, [drivers, dominationStats]);
 
+  // Highest-scoring driver, used for the plain-language summary under the map.
+  const dominationLeader = React.useMemo(() => {
+    const top = sortedDrivers[0];
+    if (!top) return null;
+    const percent = dominationStats[top]?.percent ?? 0;
+    return percent > 0 ? { driver: top, percent } : null;
+  }, [sortedDrivers, dominationStats]);
+
   const allPoints = React.useMemo(() => {
     if (circuitGeom && circuitGeom.points.length > 0) {
       return circuitGeom.points.map(p => `${p.x},${flipY(p.y).toFixed(2)}`).join(' ');
@@ -489,11 +497,16 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
             }`}
             aria-pressed={showCorners}
             data-testid="toggle-turn-numbers"
+            title={
+              showCorners
+                ? 'Hide the T1–Tn turn badges drawn on the circuit'
+                : 'Overlay T1–Tn turn badges on the circuit — click a badge to read that corner'
+            }
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${showCorners ? 'bg-red-400 motion-safe:animate-pulse' : 'bg-neutral-500'}`}
             />
-            Turns {showCorners ? 'ON' : 'OFF'}
+            Turn Numbers {showCorners ? 'ON' : 'OFF'}
           </button>
         )}
       </div>
@@ -685,6 +698,47 @@ const TrackDominationMap: React.FC<TrackDominationMapProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* How to read this map — replaces the bare space under the legend */}
+      <div
+        data-testid="domination-explainer"
+        className="mt-6 pt-5 border-t border-neutral-800/80"
+      >
+        <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.18em] mb-3">
+          How to read this map
+        </h4>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex gap-2.5">
+            <Palette size={15} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              <span className="text-neutral-200 font-bold">Each colour is a driver.</span>{' '}
+              The track is split into micro-sectors and painted with the colour of
+              whoever set the highest speed through that exact stretch.
+            </p>
+          </div>
+          <div className="flex gap-2.5">
+            <Trophy size={15} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              <span className="text-neutral-200 font-bold">The % is share of track.</span>{' '}
+              {dominationLeader
+                ? `${dominationLeader.driver} leads with ${dominationLeader.percent}% of the lap. `
+                : ''}
+              A driver on 0% was never fastest anywhere — not slow overall, just
+              beaten in every sector by the others selected.
+            </p>
+          </div>
+          <div className="flex gap-2.5">
+            <MousePointerClick size={15} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              <span className="text-neutral-200 font-bold">Try it.</span>{' '}
+              Hover a line or a driver pill to isolate it.
+              {corners.length > 0
+                ? ' Toggle Turn Numbers, then click any T-badge to read that corner’s history.'
+                : ''}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Tooltip overlay — lives on the card so the map viewport cannot clip it */}

@@ -446,9 +446,10 @@ function RaceDetailPage() {
           {/* Keyboard hint */}
           {availableTabs.length > 1 && (
             <div className="flex items-center justify-end gap-2 text-[10px] text-neutral-500 font-mono mb-4">
-              <span>Navigate:</span>
+              <span className="uppercase tracking-wider">Keyboard shortcut:</span>
               <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded-sm text-neutral-400">←</kbd>
               <kbd className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-700 rounded-sm text-neutral-400">→</kbd>
+              <span className="normal-case">to switch between the tabs below</span>
             </div>
           )}
 

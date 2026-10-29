@@ -141,7 +141,7 @@ describe('TrackDominationMap positional data guards', () => {
     expect(screen.queryByText(/published after a session finishes/i)).not.toBeInTheDocument();
   });
 
-  it('renders turn number badges and toggles them with the Turns button', () => {
+  it('renders turn number badges and toggles them with the Turn Numbers button', () => {
     const telemetry = [
       point(0, 0, 0),
       point(1000, 0, 0),
@@ -161,7 +161,7 @@ describe('TrackDominationMap positional data guards', () => {
     // Toggle button is present and defaults to ON
     const toggle = screen.getByTestId('toggle-turn-numbers');
     expect(toggle).toBeInTheDocument();
-    expect(toggle).toHaveTextContent(/Turns ON/i);
+    expect(toggle).toHaveTextContent(/Turn Numbers ON/i);
 
     // Corner markers are rendered
     expect(screen.getByTestId('circuit-corner-markers')).toBeInTheDocument();
@@ -171,12 +171,12 @@ describe('TrackDominationMap positional data guards', () => {
 
     // Clicking toggle turns badges off
     fireEvent.click(toggle);
-    expect(toggle).toHaveTextContent(/Turns OFF/i);
+    expect(toggle).toHaveTextContent(/Turn Numbers OFF/i);
     expect(screen.queryByTestId('circuit-corner-markers')).not.toBeInTheDocument();
 
     // Clicking again turns them back on
     fireEvent.click(toggle);
-    expect(toggle).toHaveTextContent(/Turns ON/i);
+    expect(toggle).toHaveTextContent(/Turn Numbers ON/i);
     expect(screen.getByTestId('circuit-corner-markers')).toBeInTheDocument();
   });
 
@@ -212,6 +212,33 @@ describe('TrackDominationMap positional data guards', () => {
     fireEvent.mouseEnter(screen.getByTestId('driver-pill-STR'));
     expect(screen.getByText(/0% · No sectors dominated/i)).toBeInTheDocument();
     expect(screen.getByText(/Slower in all track sectors/i)).toBeInTheDocument();
+  });
+
+  it('explains how to read the map and names the domination leader', () => {
+    const multiDriverInfo = {
+      NOR: { team: 'McLaren', name: 'Lando Norris' },
+      HAM: { team: 'Ferrari', name: 'Lewis Hamilton' },
+    };
+    const telemetry: TelemetryDataPoint[] = [
+      { distance: 0, x: 0, y: 0, dominant_driver: 'NOR' },
+      { distance: 1000, x: 1000, y: 0, dominant_driver: 'NOR' },
+      { distance: 2000, x: 2000, y: 0, dominant_driver: 'HAM' },
+    ];
+
+    render(
+      <TrackDominationMap
+        telemetry={telemetry}
+        drivers={['NOR', 'HAM']}
+        driver_info={multiDriverInfo}
+        activeDistance={null}
+      />
+    );
+
+    const explainer = screen.getByTestId('domination-explainer');
+    expect(explainer).toHaveTextContent(/How to read this map/i);
+    expect(explainer).toHaveTextContent(/Each colour is a driver/i);
+    expect(explainer).toHaveTextContent(/NOR leads with 67% of the lap/i);
+    expect(explainer).toHaveTextContent(/never fastest anywhere/i);
   });
 
   it('allows clicking a corner badge to view corner technical details and lore', () => {

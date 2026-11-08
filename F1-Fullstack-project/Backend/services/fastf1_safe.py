@@ -30,6 +30,7 @@ import logging
 from typing import Any, Optional
 
 import fastf1
+import pandas as pd
 from fastf1.core import DataNotLoadedError
 
 logger = logging.getLogger(__name__)
@@ -262,3 +263,35 @@ def is_valid_year(year: Any) -> bool:
     if isinstance(year, bool) or not isinstance(year, int):
         return False
     return 1950 <= year <= 2100
+
+
+def build_empty_season(year: int, message: str, **defaults: Any) -> dict:
+    """
+    Construct a standard pre-season / empty-schedule response envelope.
+
+    Shared by championship and dashboard services so pre-season metadata keys
+    stay uniform across endpoints while caller-specific collection keys are
+    merged via ``defaults``.
+    """
+    return {
+        "year": year,
+        "status": "pre_season",
+        "message": message,
+        **defaults,
+    }
+
+
+def clean_nans(obj: Any) -> Any:
+    """Recursively convert pandas NaN/NaT to None so the payload is JSON-safe."""
+    if isinstance(obj, list):
+        return [clean_nans(i) for i in obj]
+    if isinstance(obj, dict):
+        return {k: clean_nans(v) for k, v in obj.items()}
+    try:
+        if pd.isna(obj):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return obj
+
+

@@ -107,8 +107,12 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(race_details.json()["race_info"]["name"], "Test Grand Prix")
 
     def test_upcoming_race_details_serves_preview_metadata(self):
-        # Round 19 is an upcoming race in the 2026 calendar
-        response = self.client.get("/api/race/2026/19")
+        # Deterministically test upcoming race preview fallback without depending on mutable disk cache
+        with (
+            patch("routers.race_details.get_advanced_cache_with_meta", return_value=None),
+            patch("services.race_details_service.load_event_schedule", return_value=None),
+        ):
+            response = self.client.get("/api/race/2026/19")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data.get("status"), "Upcoming")

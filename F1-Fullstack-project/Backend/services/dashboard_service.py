@@ -2,6 +2,8 @@ import logging
 import pandas as pd
 
 from services.fastf1_safe import (
+    build_empty_season,
+    clean_nans,
     has_rows,
     is_valid_year,
     load_event_schedule,
@@ -13,18 +15,17 @@ RACE_LOAD_KWARGS = dict(telemetry=False, weather=False, laps=False, messages=Fal
 ANALYTICS_LOAD_KWARGS = dict(laps=False, telemetry=False, weather=False, messages=False)
 
 
-def _empty_season(year: int, message: str) -> dict:
+def _empty_dashboard_season(year: int, message: str) -> dict:
     """The honest payload for a season with no data to report."""
-    return {
-        "year": year,
-        "status": "pre_season",
-        "message": message,
-        "team_standings": [],
-        "driver_standings": [],
-        "race_analytics": [],
-        "next_race_event": None,
-        "total_races": 0,
-    }
+    return build_empty_season(
+        year,
+        message,
+        team_standings=[],
+        driver_standings=[],
+        race_analytics=[],
+        next_race_event=None,
+        total_races=0,
+    )
 
 
 def _find_next_session(schedule: pd.DataFrame, now_utc: pd.Timestamp):
@@ -262,7 +263,7 @@ def compute_fastf1_dashboard(year: int):
     # empty standings instead of surfacing FastF1's own lookup failure.
     if not is_valid_year(year):
         logging.info(f"  -> Tahun {year} di luar rentang musim F1. Mengirim pre_season.")
-        return _empty_season(year, f"The {year} season has no data.")
+        return _empty_dashboard_season(year, f"The {year} season has no data.")
 
     logging.info("[Dashboard] Computing dashboard data...")
     # UTC calendar date: a race's EventDate is a calendar date, so "today" must
@@ -274,7 +275,7 @@ def compute_fastf1_dashboard(year: int):
     schedule = load_event_schedule(year, include_testing=False)
     if schedule is None or schedule.empty:
         logging.info(f"  -> Tidak ada jadwal untuk musim {year}. Mengirim status pre_season.")
-        return _empty_season(
+        return _empty_dashboard_season(
             year,
             f"The {year} season has not started yet. Data will be available "
             f"after the first race.",
@@ -289,12 +290,12 @@ def compute_fastf1_dashboard(year: int):
         ongoing_races = official_races[event_dates == today].copy()
     except Exception as e:  # noqa: BLE001
         logging.warning(f"Could not partition schedule for {year}: {e}")
-        return _empty_season(year, f"The {year} season schedule could not be read.")
+        return _empty_dashboard_season(year, f"The {year} season schedule could not be read.")
 
     # Penanganan Pra-Musim (sudah diupdate dengan logika countdown)
     if completed_races.empty and ongoing_races.empty:
         logging.info(f"  -> Musim {year} belum dimulai. Mengirim status pre_season.")
-        pre_season_data = _empty_season(
+        pre_season_data = _empty_dashboard_season(
             year,
             f"The {year} season has not started yet. Data will be available "
             f"after the first race.",
@@ -346,6 +347,5 @@ def compute_fastf1_dashboard(year: int):
 
     final_data["race_analytics"] = _build_race_analytics(schedule, year, today)
 
-    from services.championship_service import clean_nans
-
     return clean_nans(final_data)
+

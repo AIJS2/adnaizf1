@@ -5,6 +5,7 @@ from datetime import timedelta
 from config.cache import set_advanced_cache
 
 from services.fastf1_safe import (
+    clean_nans,
     has_rows,
     is_valid_year,
     load_event_schedule,
@@ -1649,16 +1650,6 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
         "gap_chart": gap_chart if gap_chart else None,
         "lap_times_chart": lap_times_chart if lap_times_chart else None,
     }
-
-    def clean_nans(obj):
-        if isinstance(obj, list):
-            return [clean_nans(i) for i in obj]
-        elif isinstance(obj, dict):
-            return {k: clean_nans(v) for k, v in obj.items()}
-        else:
-            if pd.isna(obj):
-                return None
-        return obj
 
     cleaned = clean_nans(final_data)
     if cache_file and "error" not in cleaned:

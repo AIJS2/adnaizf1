@@ -2,6 +2,8 @@ import logging
 import pandas as pd
 
 from services.fastf1_safe import (
+    build_empty_season,
+    clean_nans,
     is_valid_year,
     load_event_schedule,
     load_session_safe,
@@ -23,16 +25,15 @@ REQUIRED_COLUMNS = [
 ]
 
 
-def _empty_season(year: int, message: str) -> dict:
+def _empty_championship_season(year: int, message: str) -> dict:
     """The honest payload for a season with no standings to report."""
-    return {
-        "year": year,
-        "status": "pre_season",
-        "message": message,
-        "teams": [],
-        "drivers": [],
-        "session_results": [],
-    }
+    return build_empty_season(
+        year,
+        message,
+        teams=[],
+        drivers=[],
+        session_results=[],
+    )
 
 
 def is_dns_status(status) -> bool:
@@ -108,7 +109,7 @@ def compute_fastf1_championship(year: int):
     # misleading "internal error" from FastF1's own schedule lookup.
     if not is_valid_year(year):
         logging.info(f"  -> Tahun {year} di luar rentang musim F1. Mengirim pre_season.")
-        return _empty_season(
+        return _empty_championship_season(
             year, f"No championship data exists for the {year} season."
         )
 
@@ -116,7 +117,7 @@ def compute_fastf1_championship(year: int):
     schedule = load_event_schedule(year, include_testing=False)
     if schedule is None or schedule.empty:
         logging.info(f"  -> Tidak ada jadwal untuk musim {year}. Mengirim status pre_season.")
-        return _empty_season(
+        return _empty_championship_season(
             year,
             f"The {year} season schedule is not available. Championship "
             f"standings will be available once races have run.",
@@ -134,7 +135,7 @@ def compute_fastf1_championship(year: int):
         logging.info(
             f"  -> Musim {year} belum dimulai. Mengirim status pre_season untuk Championship."
         )
-        return _empty_season(
+        return _empty_championship_season(
             year,
             f"The {year} season has not started yet. Championship standings "
             f"will be available after the first race.",
@@ -151,7 +152,7 @@ def compute_fastf1_championship(year: int):
         logging.warning(
             f"No race data could be loaded for {year}; returning empty standings."
         )
-        return _empty_season(
+        return _empty_championship_season(
             year,
             f"No race results are currently available for the {year} season.",
         )
@@ -302,16 +303,3 @@ def compute_fastf1_championship(year: int):
 
     return clean_nans(final_data)
 
-
-def clean_nans(obj):
-    """Recursively convert pandas NaN/NaT to None so the payload is JSON-safe."""
-    if isinstance(obj, list):
-        return [clean_nans(i) for i in obj]
-    if isinstance(obj, dict):
-        return {k: clean_nans(v) for k, v in obj.items()}
-    try:
-        if pd.isna(obj):
-            return None
-    except (TypeError, ValueError):
-        pass
-    return obj

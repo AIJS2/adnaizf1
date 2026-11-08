@@ -1,10 +1,10 @@
 import logging
 import unicodedata
 from services.championship_service import (
-    clean_nans,
     is_dnf_classified,
     is_dns_status,
 )
+from services.fastf1_safe import clean_nans
 
 
 def _normalize_slug(value) -> str:

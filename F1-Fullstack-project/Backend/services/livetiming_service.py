@@ -6,66 +6,33 @@ format expected by the LiveTimingPage frontend component.
 from __future__ import annotations
 
 import logging
-import re
 import threading
 from datetime import datetime, timezone
 from typing import Any
 
 from services import circuit_map_service
+from services.signalr_parsers import (
+    AVERAGE_LAP_SECONDS,
+    FINISHED_SESSION_STATUSES,
+    TEAM_LOOKUP,
+    TYRE_COMPOUND_MAP,
+    build_radio_entries,
+    classify_rc_msg,
+    deep_merge,
+    extract_driver_gap_and_interval,
+    extract_driver_lap_time,
+    extract_driver_sectors,
+    extract_driver_stints,
+    format_sector_value,
+    format_weather,
+    parse_compound,
+    parse_gap_seconds,
+    resolve_track_status,
+    segment_color,
+    to_int,
+)
 
 logger = logging.getLogger(__name__)
-
-# 2026 grid – kept in sync with the frontend teamColors map
-TEAM_LOOKUP: dict[str, str] = {
-    "1": "Red Bull Racing",
-    "61": "Red Bull Racing",  # VER, HAD
-    "4": "McLaren",
-    "81": "McLaren",  # NOR, PIA
-    "16": "Ferrari",
-    "44": "Ferrari",  # LEC, HAM
-    "63": "Mercedes",
-    "12": "Mercedes",  # RUS, ANT
-    "14": "Aston Martin",
-    "18": "Aston Martin",  # ALO, STR
-    "31": "Haas F1 Team",
-    "87": "Haas F1 Team",  # OCO, BEA
-    "55": "Williams",
-    "23": "Williams",  # SAI, ALB
-    "10": "Alpine",
-    "27": "Alpine",  # GAS, COL (placeholder)
-    "20": "Audi",
-    "5": "Audi",  # HUL, BOR (placeholder)
-    "22": "Racing Bulls",
-    "30": "Racing Bulls",  # TSU, LAW
-    "77": "Cadillac",
-    "11": "Cadillac",  # BOT, PER
-}
-
-TYRE_COMPOUND_MAP: dict[int, str] = {
-    1: "S",
-    2: "M",
-    3: "H",
-    4: "I",
-    5: "W",
-    # Also accept string keys from some feeds
-}
-
-# The live feed reports the end of a session in several places depending on
-# how far the archive has progressed. Any of these means the classification on
-# screen is final, even when TrackStatus still says GREEN.
-FINISHED_SESSION_STATUSES = {
-    "finalised",
-    "finalized",
-    "ends",
-    "aborted",
-    "inactive",
-    "finished",
-}
-
-# Used only to spread the dots along the real circuit outline when the feed
-# exposes a gap in seconds. A representative dry lap keeps the spacing stable
-# without pretending it is a measured lap time.
-AVERAGE_LAP_SECONDS = 98.0
 
 # Last non-empty radio capture published by any LiveTimingState instance.
 # Team radio is intentionally kept across ``reset()`` so the REST fallback can
@@ -73,18 +40,6 @@ AVERAGE_LAP_SECONDS = 98.0
 _radio_cache_lock = threading.Lock()
 _radio_cache: dict[str, Any] = {}
 
-
-def parse_compound(comp: Any) -> str:
-    """Normalize numeric or string tyre compound to standard single-letter code."""
-    if comp is None:
-        return "M"
-    if isinstance(comp, int):
-        return TYRE_COMPOUND_MAP.get(comp, "M")
-    if isinstance(comp, str) and comp:
-        if comp.isdigit():
-            return TYRE_COMPOUND_MAP.get(int(comp), "M")
-        return comp[0].upper()
-    return "M"
 
 
 class LiveTimingState:
@@ -214,17 +169,8 @@ class LiveTimingState:
 
     def _deep_merge(self, base: dict, update: dict) -> dict:
         """Recursively merge *update* into *base*, mutating base in place."""
-        # SignalR payloads occasionally carry scalar metadata such as
-        # ``_kf: true`` alongside the actual topic data. Treat anything that
-        # is not a mapping as a leaf so a marker can never crash a handler.
-        if not isinstance(update, dict):
-            return base
-        for k, v in update.items():
-            if isinstance(v, dict) and isinstance(base.get(k), dict):
-                self._deep_merge(base[k], v)
-            else:
-                base[k] = v
-        return base
+        return deep_merge(base, update)
+
 
     # ---- topic handlers ----
 
@@ -274,17 +220,8 @@ class LiveTimingState:
 
     def _handle_track_status(self, payload: Any) -> None:
         if isinstance(payload, dict):
-            status_val = payload.get("Status", "1")
-            msg = payload.get("Message", "")
-            status_map = {
-                "1": "GREEN",
-                "2": "YELLOW",
-                "4": "SC",
-                "5": "RED",
-                "6": "VSC",
-                "7": "VSC ENDING",
-            }
-            self.track_status = status_map.get(str(status_val), msg or "GREEN")
+            self.track_status = resolve_track_status(payload)
+
 
     def _handle_session_info(self, payload: Any) -> None:
         if isinstance(payload, dict):
@@ -400,13 +337,7 @@ class LiveTimingState:
 
     @staticmethod
     def _classify_rc_msg(m: dict) -> str:
-        cat = str(m.get("Category", "")).lower()
-        msg_text = str(m.get("Message", "")).upper()
-        if "flag" in cat or "FLAG" in msg_text:
-            return "flag"
-        if "pit" in cat or "PIT" in msg_text:
-            return "pit"
-        return "system"
+        return classify_rc_msg(m)
 
     # ------------------------------------------------------------------
     # Session metadata / finish detection
@@ -414,10 +345,8 @@ class LiveTimingState:
 
     @staticmethod
     def _to_int(value: Any) -> int | None:
-        try:
-            return int(str(value))
-        except (TypeError, ValueError):
-            return None
+        return to_int(value)
+
 
     def _session_title_locked(self) -> str:
         meeting = self.session_info.get("Meeting") or {}
@@ -527,23 +456,8 @@ class LiveTimingState:
     @staticmethod
     def _parse_gap_seconds(value: Any) -> float | None:
         """Parse ``+12.345`` / ``1 LAP`` into seconds, or None for leader rows."""
-        if value is None:
-            return None
-        text = str(value).strip().upper()
-        if not text or text in {"LEADER", "-", "--"}:
-            return None
-        if text.startswith("LAP "):
-            return None
+        return parse_gap_seconds(value)
 
-        lap_match = re.search(r"(\d+)\s*LAPS?", text)
-        if lap_match:
-            return float(lap_match.group(1)) * AVERAGE_LAP_SECONDS
-
-        cleaned = text.replace("+", "").replace("S", "").strip()
-        try:
-            return float(cleaned)
-        except ValueError:
-            return None
 
     # ------------------------------------------------------------------
     # Snapshot builder – produces the dict the frontend expects
@@ -582,55 +496,10 @@ class LiveTimingState:
             abbr = dl.get("Tla", dl.get("RacingNumber", num))
             team = dl.get("TeamName", TEAM_LOOKUP.get(num, "Unknown"))
 
-            # Sectors. The live feed sends a 3-item list; older/replayed
-            # payloads use a keyed dict. Support both so sector times are
-            # not silently dropped.
-            sectors_raw = td.get("Sectors", [])
-            if isinstance(sectors_raw, list):
-                sector_items = sectors_raw
-            elif isinstance(sectors_raw, dict):
-                sector_items = [
-                    sectors_raw.get("0", {}),
-                    sectors_raw.get("1", {}),
-                    sectors_raw.get("2", {}),
-                ]
-            else:
-                sector_items = []
-            s0 = sector_items[0] if len(sector_items) > 0 else {}
-            s1 = sector_items[1] if len(sector_items) > 1 else {}
-            s2 = sector_items[2] if len(sector_items) > 2 else {}
-
-            # Current stint / tyre from TimingAppData. Stints are a list
-            # in the live feed (chronological), but a keyed dict in some
-            # archived payloads.
-            stints_raw = ta.get("Stints", [])
-            if isinstance(stints_raw, dict):
-                stints = [
-                    stints_raw[k]
-                    for k in sorted(
-                        stints_raw,
-                        key=lambda x: int(x) if str(x).isdigit() else 0,
-                    )
-                ]
-            elif isinstance(stints_raw, list):
-                stints = [s for s in stints_raw if isinstance(s, dict)]
-            else:
-                stints = []
-
-            current_compound = "M"
-            tyre_age = 0
-            stints_list: list[dict] = []
-            for stint in stints:
-                current_compound = parse_compound(stint.get("Compound"))
-                stint_laps = stint.get("TotalLaps", 0)
-                try:
-                    stint_laps = int(stint_laps)
-                except (TypeError, ValueError):
-                    stint_laps = 0
-                tyre_age = stint_laps
-                stints_list.append(
-                    {"tyre": current_compound, "laps": stint_laps}
-                )
+            s0, s1, s2 = extract_driver_sectors(td)
+            current_compound, tyre_age, stints_list, stints_count = (
+                extract_driver_stints(ta)
+            )
 
             # Position
             position = td.get("Position", td.get("Line", 0))
@@ -644,25 +513,19 @@ class LiveTimingState:
             if str(pits_raw).isdigit():
                 pits = int(pits_raw)
             else:
-                pits = max(0, len(stints) - 1)
+                pits = max(0, stints_count - 1)
+
 
             # Status
             in_pit = td.get("InPit", False)
             pit_out = td.get("PitOut", False)
             status = "PIT" if in_pit else ("OUT" if pit_out else "TRACK")
 
-            # Gap & Interval. The leader's GapToLeader is the current
-            # lap ("LAP 43"), not a gap, so present it as the leader.
-            gap_to_leader = td.get("GapToLeader", "")
-            interval = td.get("IntervalToPositionAhead", {})
-            interval_val = (
-                interval.get("Value", "")
-                if isinstance(interval, dict)
-                else str(interval)
+            # Gap & Interval for Race, Practice (TimeDiffToFastest), and
+            # Qualifying (Stats Q1/Q2/Q3). Leader is always "LEADER" / "-".
+            gap_to_leader, interval_val = extract_driver_gap_and_interval(
+                td, position_int
             )
-            if position_int == 1:
-                gap_to_leader = "LEADER"
-                interval_val = "-"
 
             # Gap in seconds is also what spreads the track-map dots
             # along the real circuit outline. The leader's feed value is
@@ -673,42 +536,29 @@ class LiveTimingState:
             if position_int == 1:
                 gap_seconds = 0.0
 
-            # Last lap time
-            last_lap = td.get("LastLapTime", {})
-            last_lap_value = (
-                last_lap.get("Value", "")
-                if isinstance(last_lap, dict)
-                else str(last_lap)
-            )
+            # Last lap time (falls back to BestLapTime when in pit / between runs)
+            last_lap_dict, last_lap_value = extract_driver_lap_time(td)
 
             lines.append(
                 {
                     "driver": abbr,
                     "team": team,
                     "position": position_int,
-                    "gap": gap_to_leader if gap_to_leader else "LEADER",
-                    "interval": interval_val if interval_val else "-",
-                    "lastLap": last_lap_value or "-",
+                    "gap": gap_to_leader,
+                    "interval": interval_val,
+                    "lastLap": last_lap_value,
                     "lap_time_num": 0,
                     "bestLapNum": 0,
-                    "sector1": (
-                        s0.get("Value", "-") if isinstance(s0, dict) else "-"
-                    ),
-                    "sector2": (
-                        s1.get("Value", "-") if isinstance(s1, dict) else "-"
-                    ),
-                    "sector3": (
-                        s2.get("Value", "-") if isinstance(s2, dict) else "-"
-                    ),
+                    "sector1": format_sector_value(s0),
+                    "sector2": format_sector_value(s1),
+                    "sector3": format_sector_value(s2),
                     "s1_num": 0,
                     "s2_num": 0,
                     "s3_num": 0,
                     "s1_color": self._segment_color(s0),
                     "s2_color": self._segment_color(s1),
                     "s3_color": self._segment_color(s2),
-                    "lap_color": self._segment_color(
-                        last_lap if isinstance(last_lap, dict) else {}
-                    ),
+                    "lap_color": self._segment_color(last_lap_dict),
                     "tyre": current_compound,
                     "tyre_age": tyre_age,
                     "pits": pits,
@@ -740,46 +590,13 @@ class LiveTimingState:
                 line["progress"] = min(0.04 + index * 0.012, 0.9)
 
         # Weather
-        wd = self.weather_data
-        weather = {
-            "air": f"{wd.get('AirTemp', '--')}°C",
-            "track": f"{wd.get('TrackTemp', '--')}°C",
-            "humidity": f"{wd.get('Humidity', '--')}%",
-            "rain": f"{wd.get('Rainfall', '0')}%",
-        }
+        weather = format_weather(self.weather_data)
 
         # Team radio: the free SignalR feed supplies relative capture
         # paths; the playable file lives under the session's static path.
-        session_path = str(self.session_info.get("Path") or "").strip("/")
-        meeting = self.session_info.get("Meeting") or {}
-        meeting_key = meeting.get("Key") if isinstance(meeting, dict) else None
-        session_key = self.session_info.get("Key")
-        radio: list[dict] = []
-        for capture in self.team_radio:
-            path = str(capture.get("Path") or "").lstrip("/")
-            if not path:
-                continue
-            if path.startswith("http"):
-                url = path
-            elif session_path:
-                url = (
-                    "https://livetiming.formula1.com/static/"
-                    f"{session_path}/{path}"
-                )
-            else:
-                continue
-            number = capture.get("RacingNumber")
-            radio.append(
-                {
-                    "session_key": session_key,
-                    "meeting_key": meeting_key,
-                    "date": capture.get("Utc") or "",
-                    "driver_number": (
-                        int(number) if str(number).isdigit() else 0
-                    ),
-                    "recording_url": url,
-                }
-            )
+        _, session_key, meeting_key, radio = build_radio_entries(
+            self.team_radio, self.session_info
+        )
 
         if radio:
             _publish_radio_cache(
@@ -811,13 +628,8 @@ class LiveTimingState:
     @staticmethod
     def _segment_color(segment: dict) -> str:
         """Map F1 OverallFastest / PersonalFastest flags to color names."""
-        if not isinstance(segment, dict):
-            return "yellow"
-        if segment.get("OverallFastest", False):
-            return "purple"
-        if segment.get("PersonalFastest", False):
-            return "green"
-        return "yellow"
+        return segment_color(segment)
+
 
 
 def _publish_radio_cache(payload: dict[str, Any]) -> None:

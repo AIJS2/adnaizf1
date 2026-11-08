@@ -598,6 +598,81 @@ class ScheduleGateTests(unittest.TestCase):
         get_schedule.assert_not_called()
         thread_cls.return_value.start.assert_called_once()
 
+    def test_qualifying_stats_and_previous_sectors_populate_gaps_and_laps(self):
+        """Qualifying/Practice payloads use Stats/BestLapTimes/PreviousValue and must not label P2+ as LEADER."""
+        state = LiveTimingState()
+        state.update(
+            "DriverList",
+            {
+                "4": {"Tla": "NOR", "TeamName": "McLaren"},
+                "12": {"Tla": "ANT", "TeamName": "Mercedes"},
+                "3": {"Tla": "VER", "TeamName": "Red Bull Racing"},
+            },
+        )
+        state.update(
+            "TimingData",
+            {
+                "Lines": {
+                    "4": {
+                        "Position": "1",
+                        "LastLapTime": {"Value": "1:42.810"},
+                        "Sectors": [
+                            {"Value": "23.139"},
+                            {"Value": "49.632"},
+                            {"Value": "30.039"},
+                        ],
+                    },
+                    "12": {
+                        "Position": "2",
+                        "Stats": [
+                            {"TimeDiffToFastest": "+1.290", "TimeDifftoPositionAhead": "+0.108"},
+                            {"TimeDiffToFastest": "+0.625", "TimeDifftoPositionAhead": "+0.421"},
+                        ],
+                        "LastLapTime": {"Value": "1:51.194"},
+                        "Sectors": [
+                            {"Value": "23.417"},
+                            {"Value": "51.571"},
+                            {"Value": "36.206"},
+                        ],
+                    },
+                    "3": {
+                        "Position": "16",
+                        "Stats": [
+                            {"TimeDiffToFastest": "+0.299", "TimeDifftoPositionAhead": "+0.032"},
+                            {"TimeDiffToFastest": "", "TimeDifftoPositionAhead": ""},
+                        ],
+                        "BestLapTimes": [
+                            {"Value": "1:31.238", "Lap": 6},
+                            {"Value": ""},
+                        ],
+                        "LastLapTime": {"Value": ""},
+                        "BestLapTime": {"Value": ""},
+                        "Sectors": [
+                            {"Value": "", "PreviousValue": "23.579"},
+                            {"Value": "", "PreviousValue": "49.943"},
+                            {"Value": "", "PreviousValue": "31.301"},
+                        ],
+                    },
+                }
+            },
+        )
+
+        snap = state.snapshot()
+        lines = {row["driver"]: row for row in snap["lines"]}
+
+        self.assertEqual(lines["NOR"]["gap"], "LEADER")
+        self.assertEqual(lines["NOR"]["interval"], "-")
+
+        self.assertEqual(lines["ANT"]["gap"], "+0.625")
+        self.assertEqual(lines["ANT"]["interval"], "+0.421")
+
+        self.assertEqual(lines["VER"]["gap"], "+0.299")
+        self.assertEqual(lines["VER"]["interval"], "+0.032")
+        self.assertEqual(lines["VER"]["lastLap"], "1:31.238")
+        self.assertEqual(lines["VER"]["sector1"], "23.579")
+        self.assertEqual(lines["VER"]["sector2"], "49.943")
+        self.assertEqual(lines["VER"]["sector3"], "31.301")
+
 
 if __name__ == "__main__":
     unittest.main()

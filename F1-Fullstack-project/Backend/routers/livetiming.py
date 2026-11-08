@@ -227,8 +227,9 @@ def _check_live_session() -> bool:
                 col = f"Session{i}DateUtc"
                 if col in event and pd.notna(event[col]):
                     start = pd.to_datetime(event[col], utc=True)
+                    pre_start = start - timedelta(minutes=15)
                     end = start + timedelta(hours=3)
-                    if start <= now_utc <= end:
+                    if pre_start <= now_utc <= end:
                         return True
     except Exception as e:
         logger.error(f"Error checking live session: {e}")
@@ -594,6 +595,11 @@ async def _broadcast_loop(initial_status: str) -> None:
             )
 
     while _connected_clients:
+        # Promote immediately if SignalR finished delivering data after an
+        # initial unavailable state, without waiting for the 15s recheck.
+        if status == STATUS_UNAVAILABLE and _state.timing_data:
+            _set_status(STATUS_LIVE)
+
         # Re-evaluate the mode periodically, not just on first connect.
         now = time.monotonic()
         if now - last_check >= _LIVE_RECHECK_SECONDS:
@@ -602,6 +608,11 @@ async def _broadcast_loop(initial_status: str) -> None:
             if detected:
                 if status != STATUS_LIVE:
                     await asyncio.to_thread(_ensure_signalr)
+                    wait_steps = max(1, int(_LIVE_DATA_WAIT_SECONDS / 0.25))
+                    for _ in range(wait_steps):
+                        if _state.timing_data or _signalr_auth_failed:
+                            break
+                        await asyncio.sleep(0.25)
                     if _state.timing_data:
                         _set_status(STATUS_LIVE)
                     else:

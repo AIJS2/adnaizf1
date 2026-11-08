@@ -341,8 +341,8 @@ const StatsPage = () => {
   return (
     <div className="bg-tarmac min-h-screen text-white font-sans relative selection:bg-red-500 selection:text-white">
       {/* Background Pit-Wall Grid & Holographic Glows */}
-      <div className="fixed inset-0 xl:left-72 bg-[radial-gradient(#1f2937_1px,transparent_1px)] bg-size-[24px_24px] opacity-15 pointer-events-none" />
-      <div className="fixed inset-0 xl:left-72 bg-linear-to-b from-red-950/20 via-neutral-950/90 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(#1f2937_1px,transparent_1px)] bg-size-[24px_24px] opacity-15 pointer-events-none" />
+      <div className="fixed inset-0 bg-linear-to-b from-red-950/20 via-neutral-950/90 to-neutral-950 pointer-events-none" />
       <div className="fixed top-0 left-1/4 xl:left-[35%] w-96 h-96 bg-red-600/10 blur-[130px] rounded-full pointer-events-none" />
       <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/5 blur-[140px] rounded-full pointer-events-none" />
 

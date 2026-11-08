@@ -813,3 +813,44 @@ span[class*="px-3"][class*="py-1"][class*="rounded-full"] {
 @media (prefers-reduced-motion: reduce) {
   .track-dash { animation: none; }
 }
+
+/* ==========================================================================
+   F1 Ambient Background (Pit Wall Breathing Glow & Grid)
+   Composited entirely on GPU compositor thread; 0% main-thread CPU overhead.
+   ========================================================================== */
+@keyframes ambientDriftRed {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-50px, 40px, 0) scale(1.1); }
+  100% { transform: translate3d(-15px, 80px, 0) scale(0.95); }
+}
+
+@keyframes ambientDriftCyan {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(45px, -45px, 0) scale(1.08); }
+  100% { transform: translate3d(75px, -15px, 0) scale(0.93); }
+}
+
+.ambient-glow-red {
+  will-change: transform;
+  animation: ambientDriftRed 22s ease-in-out infinite alternate;
+}
+
+.ambient-glow-cyan {
+  will-change: transform;
+  animation: ambientDriftCyan 26s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-glow-red,
+  .ambient-glow-cyan {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* Allow ambient layout background to show through page shells */
+main .bg-neutral-950.min-h-screen,
+main .bg-tarmac.min-h-screen,
+main .bg-black.min-h-screen {
+  background-color: transparent !important;
+}

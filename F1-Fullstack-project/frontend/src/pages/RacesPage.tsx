@@ -477,9 +477,9 @@ const RacesPage = () => {
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans relative">
       {/* Backgrounds */}
-      <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.08] pointer-events-none mix-blend-luminosity" />
-      <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 xl:left-72 bg-linear-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none" />
+      <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.08] pointer-events-none mix-blend-luminosity" />
+      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none mix-blend-overlay" />
+      <div className="fixed inset-0 bg-linear-to-b from-red-900/10 via-neutral-950/80 to-neutral-950 pointer-events-none" />
 
       
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-6 md:py-8 xl:py-10 relative z-10">

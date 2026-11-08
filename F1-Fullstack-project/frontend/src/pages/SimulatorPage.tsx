@@ -351,9 +351,9 @@ const SimulatorPage = () => {
       <style>{tokens}</style>
       <div className="min-h-screen text-white font-sans relative" style={{ backgroundColor: 'var(--surface-0)' }} onKeyDown={onKeyDown}>
         {/* Layered backgrounds */}
-        <div className="fixed inset-0 xl:left-72 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none mix-blend-luminosity"></div>
-        <div className="fixed inset-0 xl:left-72 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.08] pointer-events-none mix-blend-overlay"></div>
-        <div className="fixed inset-0 xl:left-72 pointer-events-none" style={{ background: 'radial-gradient(circle at 20% 10%, rgba(230,57,70,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 90%, rgba(56,189,248,0.08) 0%, transparent 50%)' }}></div>
+        <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat opacity-[0.06] pointer-events-none mix-blend-luminosity"></div>
+        <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.08] pointer-events-none mix-blend-overlay"></div>
+        <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 20% 10%, rgba(230,57,70,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 90%, rgba(56,189,248,0.08) 0%, transparent 50%)' }}></div>
 
         <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 py-8 md:py-12 xl:py-16 relative z-10">
 

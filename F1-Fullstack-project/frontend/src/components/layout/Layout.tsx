@@ -3,6 +3,7 @@ import { useOutlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion, type Variants } from 'framer-motion';
 import Sidebar, { MobileHeader } from './Sidebar';
 import SiteFooter from './SiteFooter';
+import F1AmbientBackground from './F1AmbientBackground';
 
 /**
  * Route level enter & exit transition variants.
@@ -119,7 +120,8 @@ const Layout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-tarmac text-chalk overflow-x-clip">
+    <div className="flex min-h-screen text-chalk overflow-x-clip relative">
+      <F1AmbientBackground />
       <TopRacingLine />
       <a
         href="#main-content"
@@ -146,7 +148,7 @@ const Layout: React.FC = () => {
         ref={mainRef}
         tabIndex={-1}
         className={`
-          flex-1 min-h-screen min-w-0 outline-hidden flex flex-col
+          flex-1 min-h-screen min-w-0 outline-hidden flex flex-col relative z-10
           pt-16 lg:pt-0
           transition-[margin] duration-200 ease-pit
           ${isLandingPage ? 'ml-0' : isCollapsed ? 'ml-0 lg:ml-20' : 'ml-0 lg:ml-72'}

@@ -477,7 +477,7 @@ export function CircuitVectorView({
         </svg>
 
         {/* Turns Mode helper hint pill */}
-        {mode === 'Turns' && interactiveCorners && !selectedCorner && corners.length > 0 && (
+        {mode === 'Turns' && interactiveCorners && showCornerFunFact && !selectedCorner && corners.length > 0 && (
           <div
             data-testid="corner-click-hint"
             className="absolute top-3 left-3 z-20 pointer-events-none hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-950/80 border border-neutral-800/80 text-[11px] text-neutral-400 font-medium backdrop-blur-xs shadow-md"

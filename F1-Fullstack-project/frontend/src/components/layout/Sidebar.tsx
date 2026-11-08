@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Flag, Activity, Trophy, Users, Search, Calculator, Home, ChevronLeft, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Flag, Activity, Trophy, Users, Search, Calculator, Home, ChevronLeft, Menu, X, Grid3X3, Zap } from 'lucide-react';
 import CommandPalette from '../ui/CommandPalette';
 
 interface NavLinkItem {
@@ -15,6 +15,8 @@ const navLinks: NavLinkItem[] = [
   { to: '/races', label: 'Races', icon: Flag },
   { to: '/stats', label: 'Stats', icon: Trophy },
   { to: '/compare', label: 'Compare', icon: Users },
+  { to: '/bingo', label: 'Bingo', icon: Grid3X3 },
+  { to: '/ghost', label: 'Ghost Race', icon: Zap },
   { to: '/simulator', label: 'Simulator', icon: Calculator },
   { to: '/live', label: 'Live Timing', icon: Activity },
 ];
@@ -37,8 +39,8 @@ const navItemClass = (isActive: boolean, isCollapsed: boolean) => `
   transition-colors duration-150 ease-pit
   ${isCollapsed ? 'justify-center' : ''}
   ${isActive
-    ? 'bg-neutral-850 text-chalk before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-red-600'
-    : 'text-neutral-400 hover:text-chalk hover:bg-neutral-900'}
+    ? 'bg-white/5 text-chalk border border-white/5 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-red-600'
+    : 'text-neutral-400 hover:text-chalk hover:bg-white/5 border border-transparent'}
 `;
 
 const NavList: React.FC<{ isCollapsed?: boolean; onNavigate?: () => void }> = ({ isCollapsed = false, onNavigate }) => (
@@ -65,7 +67,7 @@ const SearchButton: React.FC<{ isMac: boolean; onClick: () => void }> = ({ isMac
   <button
     type="button"
     onClick={onClick}
-    className="w-full flex items-center gap-3 h-11 px-3 rounded-md bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-chalk text-sm font-semibold transition-colors duration-150"
+    className="w-full flex items-center gap-3 h-11 px-3 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-neutral-400 hover:text-chalk text-sm font-semibold transition-colors duration-150"
   >
     <Search size={16} className="text-red-500" aria-hidden="true" />
     <span>Search drivers, teams, races…</span>
@@ -124,12 +126,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label="Primary"
         className={`
           fixed left-0 top-0 h-full z-50 hidden flex-col ${hideDesktop ? '' : 'lg:flex'}
-          bg-neutral-950 border-r border-neutral-900
+          bg-neutral-950/40 border-r border-white/10 backdrop-blur-2xl shadow-[4px_0_30px_rgba(0,0,0,0.4)]
           transition-[width] duration-200 ease-pit
           ${isCollapsed ? 'w-20' : 'w-72'}
         `}
       >
-        <div className={`flex items-center h-20 border-b border-neutral-900 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-5'}`}>
+        <div className={`flex items-center h-20 border-b border-white/5 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-5'}`}>
           {!isCollapsed && (
             <NavLink to="/" className="rounded-xs" aria-label="Analyziz home">
               <Wordmark />
@@ -154,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <NavList isCollapsed={isCollapsed} />
         </nav>
 
-        <div className={`border-t border-neutral-900 ${isCollapsed ? 'p-3 flex justify-center' : 'p-4'}`}>
+        <div className={`border-t border-white/5 ${isCollapsed ? 'p-3 flex justify-center' : 'p-4'}`}>
           {isCollapsed ? (
             <button
               type="button"
@@ -189,13 +191,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         inert={!isMobileDrawerOpen}
         className={`
           fixed left-0 top-0 h-full z-50 lg:hidden flex flex-col
-          w-72 max-w-[85vw] bg-neutral-950 border-r border-neutral-900 overscroll-contain
+          w-72 max-w-[85vw] bg-neutral-950/40 border-r border-white/10 backdrop-blur-2xl overscroll-contain
           pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
           transition-transform duration-300 ease-pit
           ${isMobileDrawerOpen ? 'translate-x-0 shadow-2xl shadow-black/60' : '-translate-x-full'}
         `}
       >
-        <div className="flex items-center justify-between h-16 px-5 border-b border-neutral-900">
+        <div className="flex items-center justify-between h-16 px-5 border-b border-white/5">
           <NavLink to="/" onClick={onCloseMobileDrawer} className="rounded-xs" aria-label="Analyziz home">
             <Wordmark />
           </NavLink>
@@ -213,7 +215,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <NavList onNavigate={onCloseMobileDrawer} />
         </nav>
 
-        <div className="p-4 border-t border-neutral-900">
+        <div className="p-4 border-t border-white/5">
           <SearchButton isMac={isMac} onClick={() => { setIsSearchOpen(true); onCloseMobileDrawer(); }} />
         </div>
       </aside>

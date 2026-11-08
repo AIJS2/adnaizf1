@@ -317,7 +317,7 @@ export function getCircuitSpec(query?: string | null): CircuitSpec {
   if (normalized.includes("baku")) return CIRCUIT_SPECS["azerbaijan"];
   if (normalized.includes("marina bay")) return CIRCUIT_SPECS["singapore"];
   if (normalized.includes("cota") || normalized.includes("austin") || normalized.includes("texas")) return CIRCUIT_SPECS["united states"];
-  if (normalized.includes("hermanos rodriguez") || normalized.includes("mexico city")) return CIRCUIT_SPECS["mexico"];
+  if (normalized.includes("hermanos") || normalized.includes("mexico")) return CIRCUIT_SPECS["mexico"];
   if (normalized.includes("interlagos") || normalized.includes("sao paulo") || normalized.includes("são paulo")) return CIRCUIT_SPECS["brazil"];
   if (normalized.includes("vegas") || normalized.includes("strip")) return CIRCUIT_SPECS["las vegas"];
   if (normalized.includes("lusail") || normalized.includes("doha")) return CIRCUIT_SPECS["qatar"];

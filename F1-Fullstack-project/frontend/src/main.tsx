@@ -26,6 +26,8 @@ const LiveTimingPage = lazy(() => import('./pages/LiveTimingPage'));
 const OverlayLivePage = lazy(() => import('./pages/OverlayLivePage'));
 const SimulatorPage = lazy(() => import('./pages/SimulatorPage'));
 const GuidePage = lazy(() => import('./pages/GuidePage'));
+const BingoPage = lazy(() => import('./pages/BingoPage'));
+const GhostRacePage = lazy(() => import('./pages/GhostRacePage'));
 
 const router = createBrowserRouter([
   {
@@ -91,8 +93,16 @@ const router = createBrowserRouter([
         path: "/guide",
         element: <GuidePage />,
       },
+      {
+        path: "/bingo",
+        element: <BingoPage />,
+      },
+      {
+        path: "/ghost",
+        element: <GhostRacePage />,
+      },
     ],
-  }
+  },
 ]);
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

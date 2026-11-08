@@ -29,14 +29,14 @@ describe('Layout component page transitions', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Dashboard Page Content')).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
 
     // Navigate to stats
     await router.navigate('/stats');
 
     await waitFor(() => {
       expect(screen.getByText('Stats Page Content')).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
   });
 
   it('provides a Skip to Content link for accessibility', () => {

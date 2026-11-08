@@ -95,7 +95,7 @@ const GuidePage = () => {
       
       {/* Header */}
       <div className="relative py-8 md:py-12 xl:py-14 overflow-hidden border-b border-neutral-900/50">
-        <div className="absolute inset-0 xl:left-72 bg-linear-to-b from-red-600/10 to-transparent blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-b from-red-600/10 to-transparent blur-[100px] rounded-full pointer-events-none" />
         <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-10 relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold uppercase tracking-wider mb-6 ">
             <BookOpen size={16} /> Official Documentation

@@ -386,4 +386,51 @@ describe('LiveTimingPage empty state & countdown integration', () => {
     expect(screen.getByText('No Live Session Data')).toBeInTheDocument();
     expect(screen.queryByText('ANT')).not.toBeInTheDocument();
   });
+
+  it('activates and controls Live Simulation Mode properly', () => {
+    renderLiveTiming();
+
+    // Verify simulation toggle button exists
+    const simButton = screen.getByTestId('toggle-simulation');
+    expect(simButton).toBeInTheDocument();
+
+    // Toggle simulation mode
+    act(() => {
+      fireEvent.click(simButton);
+    });
+
+    // Check header badge and simulation engine bar
+    expect(screen.getByText(/PIT WALL LIVE SIMULATOR/i)).toBeInTheDocument();
+    expect(screen.getByText(/LIVE SIMULATION ENGINE/i)).toBeInTheDocument();
+
+    // Verify drivers grid is populated in simulation mode
+    expect(screen.getAllByText('VER').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('NOR').length).toBeGreaterThan(0);
+
+    // Verify control buttons: Pause, SC, Rain, Speed
+    const pauseBtn = screen.getByRole('button', { name: /Pause/i });
+    expect(pauseBtn).toBeInTheDocument();
+
+    const scBtn = screen.getByRole('button', { name: /SC OFF/i });
+    expect(scBtn).toBeInTheDocument();
+
+    // Toggle SC
+    act(() => {
+      fireEvent.click(scBtn);
+    });
+    expect(screen.getByRole('button', { name: /SC ON/i })).toBeInTheDocument();
+
+    // Toggle Rain
+    const rainBtn = screen.getByRole('button', { name: /Rain OFF/i });
+    act(() => {
+      fireEvent.click(rainBtn);
+    });
+    expect(screen.getByRole('button', { name: /Rain ON/i })).toBeInTheDocument();
+  });
+
+  it('activates simulation mode immediately when URL query has ?sim=1', () => {
+    renderLiveTiming('/live-timing?sim=1');
+    expect(screen.getByText(/PIT WALL LIVE SIMULATOR/i)).toBeInTheDocument();
+    expect(screen.getByText(/LIVE SIMULATION ENGINE/i)).toBeInTheDocument();
+  });
 });

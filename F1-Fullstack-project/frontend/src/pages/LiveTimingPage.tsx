@@ -1,6 +1,6 @@
 import React, { useState, useMemo, memo } from 'react';
 import { Activity, CloudRain, Wind, Thermometer, Radio, Flag, Clock, MonitorPlay } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '../config';
 import { fetchDashboardData } from '../services/api';
@@ -20,6 +20,7 @@ import { getCircuitGeometry } from '../data/circuitPaths';
 import { Track3D } from '../components/ui/Track3D';
 import { LiveCircuitMap } from '../components/ui/LiveCircuitMap';
 import { useLiveTimingFeed } from '../hooks/useLiveTimingFeed';
+import { useLiveTimingSimulation } from '../hooks/useLiveTimingSimulation';
 import { buildPreviewCircuit } from '../utils/liveCircuit';
 
 const LiveTimingPage: React.FC = () => {
@@ -57,7 +58,32 @@ const LiveTimingPage: React.FC = () => {
     return 'bg-green-500 text-black';
   };
 
-  const [sessionView, setSessionView] = useState<'latest' | 'previous'>('latest');
+  const location = useLocation();
+  const initialMode = useMemo<'latest' | 'previous' | 'simulation'>(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('sim') === '1' || params.get('demo') === '1') {
+      return 'simulation';
+    }
+    return 'latest';
+  }, [location.search]);
+
+  const [sessionView, setSessionView] = useState<'latest' | 'previous' | 'simulation'>(initialMode);
+
+  // Circuit preview fallback
+  const previewCircuit = useMemo<LiveTimingCircuit | null>(() => {
+    if (data.circuit) return null;
+    const geom = (nextEvent ? getCircuitGeometry({
+      round: nextEvent.round,
+      name: nextEvent.name,
+      location: nextEvent.location,
+    }) : null) ?? getCircuitGeometry({ round: 21 });
+    return geom ? buildPreviewCircuit(geom) : null;
+  }, [data.circuit, nextEvent]);
+
+  const simControls = useLiveTimingSimulation({
+    enabled: sessionView === 'simulation',
+    circuit: previewCircuit,
+  });
 
   const hasEmbeddedPreviousLines = Boolean(
     data.last_session?.lines && data.last_session.lines.length > 0
@@ -85,8 +111,12 @@ const LiveTimingPage: React.FC = () => {
   }, [data.last_session, remotePrevious]);
 
   const isViewingPrevious = sessionView === 'previous' && Boolean(activePreviousSession);
+  const isViewingSimulation = sessionView === 'simulation';
 
   const activeData = useMemo<LiveTimingData>(() => {
+    if (isViewingSimulation) {
+      return simControls.simulationData;
+    }
     if (isViewingPrevious && activePreviousSession) {
       const prevLines = activePreviousSession.lines ?? [];
       return {
@@ -109,7 +139,7 @@ const LiveTimingPage: React.FC = () => {
       };
     }
     return data;
-  }, [isViewingPrevious, activePreviousSession, data]);
+  }, [isViewingSimulation, simControls.simulationData, isViewingPrevious, activePreviousSession, data]);
 
   const sortedLines = useMemo(() => {
     return [...activeData.lines].sort((a, b) => {
@@ -123,9 +153,9 @@ const LiveTimingPage: React.FC = () => {
   }, [activeData.lines]);
 
   const hasNoSessionData = sortedLines.length === 0;
-  const isUnavailable = !isViewingPrevious && activeData.status === 'unavailable_subscription';
+  const isUnavailable = !isViewingPrevious && !isViewingSimulation && activeData.status === 'unavailable_subscription';
   const isFinished = activeData.session_state === 'finished';
-  const isNoSession = activeData.session_state === 'no_session';
+  const isNoSession = activeData.session_state === 'no_session' && !isViewingSimulation;
   const sessionSubBadge = activeData.session_title
     ? activeData.session_title.replace(' — ', ' • ')
     : '';
@@ -134,20 +164,6 @@ const LiveTimingPage: React.FC = () => {
     : isNoSession
       ? 'bg-neutral-900 text-neutral-400 border-neutral-700 text-sm sm:text-base'
       : `border-black/50 text-xl ${getStatusColor(activeData.trackStatus)}`;
-
-  // When there is no live session the backend sends no circuit payload, which
-  // used to leave the map card as an empty placeholder. The next round's
-  // canonical geometry is bundled locally, so preview it instead: the card
-  // stays informative and the page keeps its track-map anchor.
-  const previewCircuit = useMemo<LiveTimingCircuit | null>(() => {
-    if (activeData.circuit || !nextEvent) return null;
-    const geom = getCircuitGeometry({
-      round: nextEvent.round,
-      name: nextEvent.name,
-      location: nextEvent.location,
-    });
-    return geom ? buildPreviewCircuit(geom) : null;
-  }, [activeData.circuit, nextEvent]);
 
   const trackCircuit = activeData.circuit ?? previewCircuit;
 
@@ -160,32 +176,36 @@ const LiveTimingPage: React.FC = () => {
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <div className={`inline-flex items-center gap-2 border text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-xs ${
-                connectionStatus === 'connected'
-                  ? isViewingPrevious
-                    ? 'bg-amber-400/10 border-amber-400/40 text-amber-300'
-                    : isFinished
+                isViewingSimulation
+                  ? 'bg-purple-600/15 border-purple-500/40 text-purple-300 shadow-xs'
+                  : connectionStatus === 'connected'
+                    ? isViewingPrevious
                       ? 'bg-amber-400/10 border-amber-400/40 text-amber-300'
-                      : isUnavailable
-                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                        : activeData.isLiveSession
-                          ? 'bg-red-600/10 border-red-500/30 text-red-500'
-                          : 'bg-blue-600/10 border-blue-500/30 text-blue-400'
-                  : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
+                      : isFinished
+                        ? 'bg-amber-400/10 border-amber-400/40 text-amber-300'
+                        : isUnavailable
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                          : activeData.isLiveSession
+                            ? 'bg-red-600/10 border-red-500/30 text-red-500'
+                            : 'bg-blue-600/10 border-blue-500/30 text-blue-400'
+                    : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
               }`}>
                 <Activity size={12} />
-                {connectionStatus === 'connecting'
-                  ? 'AWAITING CONNECTION…'
-                  : connectionStatus === 'lost'
-                    ? (gaveUp ? 'LIVE TIMING UNAVAILABLE' : 'CONNECTION LOST - RECONNECTING…')
-                    : isViewingPrevious
-                      ? '🏁 PREVIOUS SESSION — FINAL CLASSIFICATION'
-                      : isFinished
-                        ? '🏁 SESSION FINISHED — FINAL CLASSIFICATION'
-                        : isUnavailable
-                          ? 'LIVE TIMING UNAVAILABLE'
-                          : activeData.isLiveSession
-                            ? 'LIVE SIGNAL DETECTED'
-                            : 'NO LIVE SESSION'}
+                {isViewingSimulation
+                  ? '⚡ PIT WALL LIVE SIMULATOR'
+                  : connectionStatus === 'connecting'
+                    ? 'AWAITING CONNECTION…'
+                    : connectionStatus === 'lost'
+                      ? (gaveUp ? 'LIVE TIMING UNAVAILABLE' : 'CONNECTION LOST - RECONNECTING…')
+                      : isViewingPrevious
+                        ? '🏁 PREVIOUS SESSION — FINAL CLASSIFICATION'
+                        : isFinished
+                          ? '🏁 SESSION FINISHED — FINAL CLASSIFICATION'
+                          : isUnavailable
+                            ? 'LIVE TIMING UNAVAILABLE'
+                            : activeData.isLiveSession
+                              ? 'LIVE SIGNAL DETECTED'
+                              : 'NO LIVE SESSION'}
               </div>
               {(isFinished || isViewingPrevious) && sessionSubBadge && (
                 <div className="inline-flex items-center gap-2 border border-amber-500/20 bg-amber-500/5 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/80 px-3 py-1 rounded-xs">
@@ -199,7 +219,7 @@ const LiveTimingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Live / Previous Session Toggle Button */}
+            {/* Live / Previous / Simulation Session Toggle Button */}
             <div className="flex bg-neutral-900 border border-neutral-800 rounded-md p-1 shadow-inner">
               <button
                 type="button"
@@ -224,6 +244,19 @@ const LiveTimingPage: React.FC = () => {
               >
                 <span>🏁</span>
                 Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setSessionView('simulation')}
+                data-testid="toggle-simulation"
+                className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-ui flex items-center gap-1.5 cursor-pointer ${
+                  sessionView === 'simulation'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <span>⚡</span>
+                Live Sim
               </button>
             </div>
 
@@ -263,6 +296,80 @@ const LiveTimingPage: React.FC = () => {
                 >
                   Return to Live feed →
                 </button>
+              </div>
+            )}
+
+            {isViewingSimulation && (
+              <div className="bg-purple-950/40 border-b border-purple-500/30 px-4 py-2.5 text-xs font-bold text-purple-200 flex flex-wrap items-center justify-between gap-3 z-20">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 text-purple-400">
+                    <span className="w-2 h-2 rounded-full bg-purple-400 motion-safe:animate-pulse" />
+                    LIVE SIMULATION ENGINE
+                  </span>
+                  <span className="text-neutral-500 hidden sm:inline">|</span>
+                  <span className="text-neutral-300 text-[11px] hidden md:inline">
+                    Lap {activeData.lap}/{activeData.total_laps} • Interlagos
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Play/Pause */}
+                  <button
+                    type="button"
+                    onClick={simControls.togglePlayPause}
+                    className="px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[11px] border border-neutral-700 transition-colors"
+                  >
+                    {simControls.isRunning ? '⏸ Pause' : '▶ Resume'}
+                  </button>
+
+                  {/* Safety Car */}
+                  <button
+                    type="button"
+                    onClick={simControls.toggleSafetyCar}
+                    className={`px-2.5 py-1 rounded text-[11px] border transition-colors ${
+                      simControls.isSafetyCar
+                        ? 'bg-orange-500/30 border-orange-500 text-orange-300'
+                        : 'bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-neutral-300'
+                    }`}
+                  >
+                    ⚠️ SC {simControls.isSafetyCar ? 'ON' : 'OFF'}
+                  </button>
+
+                  {/* Rain */}
+                  <button
+                    type="button"
+                    onClick={simControls.toggleRain}
+                    className={`px-2.5 py-1 rounded text-[11px] border transition-colors ${
+                      simControls.isRain
+                        ? 'bg-blue-500/30 border-blue-500 text-blue-300'
+                        : 'bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-neutral-300'
+                    }`}
+                  >
+                    🌧️ Rain {simControls.isRain ? 'ON' : 'OFF'}
+                  </button>
+
+                  {/* Speed toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextSpeed = simControls.speed === 1 ? 2 : simControls.speed === 2 ? 4 : 1;
+                      simControls.setSpeed(nextSpeed);
+                    }}
+                    className="px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[11px] border border-neutral-700 text-neutral-300 transition-colors"
+                  >
+                    ⚡ {simControls.speed}x
+                  </button>
+
+                  {/* Reset */}
+                  <button
+                    type="button"
+                    onClick={simControls.reset}
+                    className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[11px] border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                    title="Reset simulation"
+                  >
+                    ↺ Reset
+                  </button>
+                </div>
               </div>
             )}
 
@@ -370,6 +477,13 @@ const LiveTimingPage: React.FC = () => {
                   )}
 
                   <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSessionView('simulation')}
+                      className="inline-flex items-center gap-2 rounded-md border border-purple-500/50 bg-purple-600/20 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-purple-200 hover:bg-purple-600/30 hover:border-purple-400 transition-ui cursor-pointer shadow-md"
+                    >
+                      <Activity size={13} className="text-purple-400" /> Start Live Sim Demo
+                    </button>
                     <button
                       type="button"
                       onClick={() => setSessionView('previous')}
@@ -598,7 +712,7 @@ const LiveTimingPage: React.FC = () => {
             liveRadio={activeData.radio}
             liveStatus={activeData.status}
             connectionStatus={connectionStatus}
-            sessionMode={sessionView}
+            sessionMode={sessionView === 'simulation' ? 'latest' : sessionView}
             onSessionModeChange={setSessionView}
           />
         </div>

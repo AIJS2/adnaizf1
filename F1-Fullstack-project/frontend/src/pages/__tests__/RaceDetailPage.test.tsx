@@ -141,7 +141,7 @@ describe('RaceDetailPage', () => {
             },
             status: 'Upcoming',
             available_tabs: [],
-            message: 'Sesi balapan belum dimulai.',
+            message: 'This race weekend has not started yet.',
           }),
         };
       }),
@@ -153,6 +153,6 @@ describe('RaceDetailPage', () => {
       expect(screen.getByText('Las Vegas Grand Prix')).toBeInTheDocument();
     });
     expect(screen.getByText('Upcoming Race Weekend')).toBeInTheDocument();
-    expect(screen.getByText('Sesi balapan belum dimulai.')).toBeInTheDocument();
+    expect(screen.getByText('This race weekend has not started yet.')).toBeInTheDocument();
   });
 });

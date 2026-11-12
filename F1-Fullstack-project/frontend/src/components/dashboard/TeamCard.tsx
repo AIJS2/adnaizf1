@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Trophy } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { teamLogos, getTeamColor } from '../../data/teamData';
 
@@ -16,9 +16,11 @@ interface TeamCardProps {
   team: TeamStanding;
   index: number;
   maxPoints: number;
+  isChampion?: boolean;
+  isEliminated?: boolean;
 }
 
-const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
+const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints, isChampion, isEliminated }) => {
   const shouldReduceMotion = useReducedMotion();
   const logo = teamLogos[team.name];
   const color = getTeamColor(team.name);
@@ -39,19 +41,49 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index, maxPoints }) => {
     >
       <Link
         to={`/team/${teamId}`}
-        className="block group bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg p-5 transition-ui duration-300 shadow-lg relative overflow-hidden cursor-pointer h-full"
+        className={`block group bg-neutral-900/60 hover:bg-neutral-900 border rounded-lg p-5 transition-ui duration-300 shadow-lg relative overflow-hidden cursor-pointer h-full ${
+          isChampion
+            ? 'border-yellow-400/60 bg-gradient-to-br from-yellow-950/25 via-neutral-900/80 to-neutral-950 hover:border-yellow-400 shadow-[0_10px_30px_-10px_rgba(250,204,21,0.22)]'
+            : 'border-neutral-800 hover:border-neutral-700'
+        }`}
       >
         {/* Accent left color border */}
-        <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: color }} />
+        <div
+          className="absolute top-0 left-0 bottom-0 w-1.5"
+          style={{
+            background: isChampion
+              ? `linear-gradient(180deg, #FACC15 0%, ${color} 100%)`
+              : color,
+          }}
+        />
+        {isChampion && (
+          <div
+            className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-yellow-400/15 blur-2xl"
+            aria-hidden="true"
+          />
+        )}
 
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="font-mono text-xs font-black text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded-sm border border-neutral-800 shrink-0">
+            <span className={`font-mono text-xs font-black px-2 py-0.5 rounded-sm border shrink-0 ${
+              isChampion
+                ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'
+                : 'text-neutral-500 bg-neutral-950 border-neutral-800'
+            }`}>
               P{index + 1}
             </span>
             <span className="font-extrabold text-neutral-300 group-hover:text-red-400 transition-colors uppercase tracking-wider text-sm truncate">
               {team.name}
             </span>
+            {isChampion ? (
+              <span className="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 border border-yellow-400/50 text-[10px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider shrink-0">
+                <Trophy size={10} /> WCC
+              </span>
+            ) : isEliminated ? (
+              <span className="bg-neutral-950 text-neutral-500 border border-neutral-800 text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase shrink-0">
+                OUT
+              </span>
+            ) : null}
           </div>
           {logo && (
             <img

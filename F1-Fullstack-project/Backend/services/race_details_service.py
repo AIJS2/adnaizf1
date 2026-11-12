@@ -154,6 +154,28 @@ def _extract_race_metadata(event: Any, round_number: Optional[int] = None) -> di
     }
 
 
+def _race_status(meta: dict, results: Any, available_tabs: list[str]) -> str:
+    """Derive race status from the calendar before considering data availability."""
+    raw_date = meta.get("date")
+    if raw_date:
+        try:
+            race_day = pd.to_datetime(raw_date, utc=True).normalize()
+            today = pd.Timestamp.now(tz="UTC").normalize()
+            if race_day < today:
+                return "Completed"
+            if race_day > today:
+                return "Upcoming"
+            if results:
+                return "Completed"
+            if available_tabs:
+                return "Ongoing"
+            return "Upcoming"
+        except (TypeError, ValueError, OSError):
+            logging.warning("Could not parse race date %r for status", raw_date)
+
+    return "Completed" if results else ("Ongoing" if available_tabs else "Upcoming")
+
+
 def _empty_race_payload(event: Any, status: str, message: str, round_number: Optional[int] = None) -> dict:
     """Shape every response shares, so the UI can rely on all keys existing."""
     meta = _extract_race_metadata(event, round_number)
@@ -230,7 +252,7 @@ def _get_fallback_upcoming_race(year: int, round_number: int):
                         return _empty_race_payload(
                             r,
                             status="Upcoming",
-                            message="Sesi balapan ini belum dimulai. Data sesi akan tersedia setelah sesi selesai.",
+                            message="This race weekend has not started yet. Session data will be available once sessions conclude.",
                             round_number=round_number,
                         )
         except Exception as e:
@@ -426,7 +448,7 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
         final_data = _empty_race_payload(
             event,
             "Upcoming",
-            "Sesi balapan ini belum dimulai. Data sesi akan tersedia setelah sesi selesai.",
+            "This race weekend has not started yet. Session data will be available once sessions conclude.",
             round_number=round_number,
         )
         if cache_file:
@@ -1587,11 +1609,8 @@ def _compute_race_details(year: int, round_number: int, cache_file: str = None):
                 e,
             )
 
-    race_status = (
-        "Completed" if results else ("Ongoing" if available_tabs else "Upcoming")
-    )
-
     meta = _extract_race_metadata(event, round_number)
+    race_status = _race_status(meta, results, available_tabs)
 
     final_data = {
         "round": meta["round"],

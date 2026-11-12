@@ -192,6 +192,7 @@ from routers.profiles import router as profiles_router
 from routers.system import router as system_router
 from routers.livetiming import router as livetiming_router
 from routers.team_radio import router as team_radio_router
+from services.openf1_service import close_client as close_openf1_client
 
 app.include_router(dashboard_router)
 app.include_router(races_router)
@@ -203,3 +204,8 @@ app.include_router(profiles_router)
 app.include_router(system_router)
 app.include_router(livetiming_router)
 app.include_router(team_radio_router)
+
+
+@app.on_event("shutdown")
+async def close_shared_clients() -> None:
+    close_openf1_client()

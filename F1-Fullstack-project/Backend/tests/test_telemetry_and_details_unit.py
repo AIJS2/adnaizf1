@@ -15,7 +15,9 @@ Unit tests for Wave 2 Backend God Nodes and core services:
 import logging
 import os
 import sys
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -49,6 +51,7 @@ from services.race_details_service import (
     _compute_race_details,
     _empty_race_payload,
     _get_fallback_upcoming_race,
+    _race_status,
     compute_fastf1_race_details,
 )
 from services.races_service import (
@@ -94,6 +97,22 @@ class TestWave2BackendServicesUnit(unittest.TestCase):
         if fb is not None:
             self.assertEqual(fb["status"], "Upcoming")
 
+    def test_race_status_uses_calendar_when_upstream_has_no_results(self):
+        with patch(
+            "services.race_details_service.pd.Timestamp",
+            wraps=pd.Timestamp,
+        ) as timestamp:
+            timestamp.now.return_value = pd.Timestamp("2026-11-11", tz="UTC")
+            self.assertEqual(
+                _race_status({"date": "2026-11-09"}, None, []),
+                "Completed",
+            )
+
+        self.assertEqual(
+            _race_status({"date": "2099-11-09"}, None, []),
+            "Upcoming",
+        )
+
     def test_compute_race_details_invalid_year_and_get_race_details(self):
         data = compute_fastf1_race_details(1940, 1)
         self.assertIn("error", data)
@@ -130,6 +149,33 @@ class TestWave2BackendServicesUnit(unittest.TestCase):
         no_drv = process_telemetry_compare(2026, 99, ["VER", "NOR"])
         self.assertEqual(no_drv["drivers"], [])
         self.assertEqual(no_drv["telemetry"], [])
+
+    def test_telemetry_single_flight_shares_concurrent_computation(self):
+        calls = 0
+
+        def compute(*_args):
+            nonlocal calls
+            calls += 1
+            time.sleep(0.05)
+            return {"drivers": ["VER"], "telemetry": [{"distance": 0}]}
+
+        with patch(
+            "services.telemetry_service._process_telemetry_compare",
+            side_effect=compute,
+        ):
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                results = list(
+                    executor.map(
+                        lambda _index: process_telemetry_compare(
+                            2026, 1, ["VER"], None
+                        ),
+                        range(4),
+                    )
+                )
+
+        self.assertEqual(calls, 1)
+        self.assertEqual(results, [results[0]] * 4)
+        self.assertIsNot(results[0], results[1])
 
     # --- openf1_telemetry ---
 
@@ -243,6 +289,12 @@ class TestWave2BackendServicesUnit(unittest.TestCase):
             interp = interpolate_canonical_coords(1, [0.0, 0.5, 1.0])
             self.assertIsNotNone(interp)
             self.assertEqual(len(interp[0]), 3)
+
+    def test_canonical_context_overrides_conflicting_round_number(self):
+        circuit = get_canonical_circuit(1, location="Sakhir", country="Bahrain")
+        self.assertIsNotNone(circuit)
+        self.assertEqual(circuit["location"], "Sakhir")
+        self.assertEqual(circuit["country"], "Bahrain")
 
         t = np.linspace(0, 2 * np.pi, 20, endpoint=False)
         x = pd.Series(np.cos(t) * 100.0)

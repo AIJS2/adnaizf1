@@ -36,7 +36,8 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - ENVIRONMENT=production
-      - CORS_ORIGINS=http://localhost:5173,http://localhost
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost,https://analyziz.my.id}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost,https://analyziz.my.id}
       - API_KEY=${API_KEY:-}
     volumes:
       - backend_logs:/app/logs
@@ -55,12 +56,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    args:
-      # Empty = relative. The browser then calls the same origin and nginx
-      # proxies /api/ + /ws/ to the backend. Baking an absolute localhost URL
-      # here (the old `http://localhost:5173`) made every remote/deployed client
-      # call its OWN 127.0.0.1 and fail.
-      - VITE_API_URL=
+      args:
+        # Empty = relative. The browser then calls the same origin and nginx
+        # proxies /api/ + /ws/ to the backend. Baking an absolute localhost URL
+        # here (the old `http://localhost:5173`) made every remote/deployed client
+        # call its OWN 127.0.0.1 and fail.
+        VITE_API_URL: ${VITE_API_URL:-}
     container_name: f1-frontend
     ports:
       - "5173:80"

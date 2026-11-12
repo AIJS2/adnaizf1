@@ -91,13 +91,13 @@ const formatAudioTime = (seconds: number) => {
 const InlineErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="flex flex-col items-center justify-center p-8 bg-neutral-900/50 border border-red-900/30 rounded-md">
     <AlertCircle className="text-red-500 mb-3" size={32} />
-    <h3 className="text-lg font-bold text-white mb-2">Gagal Memuat Radio Tim</h3>
+    <h3 className="text-lg font-bold text-white mb-2">Failed to Load Team Radio</h3>
     <p className="text-neutral-400 text-sm mb-4 text-center">{error}</p>
     <button
       onClick={onRetry}
       className="flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 rounded-lg transition-ui"
     >
-      <RefreshCw size={16} /> Coba Lagi
+      <RefreshCw size={16} /> Try Again
     </button>
   </div>
 );
@@ -439,8 +439,8 @@ export default function TeamRadioSection({
 
   const friendlyError =
     error?.message === 'Failed to fetch'
-      ? 'Relay radio tidak dapat dijangkau. Periksa koneksi lalu coba lagi.'
-      : error?.message || 'Gagal menghubungi OpenF1 Audio Relay';
+      ? 'Radio relay is unreachable. Please check your connection and try again.'
+      : error?.message || 'Failed to connect to OpenF1 Audio Relay';
 
   let content: React.ReactNode;
   if (isPaywalled) {
@@ -448,8 +448,8 @@ export default function TeamRadioSection({
   } else if (isLiveFeed) {
     content = filteredData.length === 0 ? (
       <EmptyState
-        title="Menunggu Radio Tim"
-        description="Sesi sedang live. Siaran radio akan muncul di sini saat tim berbicara di radio."
+        title="Waiting for Team Radio"
+        description="Session is live. Radio transmissions will appear here as teams broadcast on the pit wall."
       />
     ) : (
       <RadioList items={filteredData} />
@@ -466,8 +466,8 @@ export default function TeamRadioSection({
   } else if (filteredData.length === 0) {
     content = (
       <EmptyState
-        title="Tidak Ada Siaran Radio Ditemukan"
-        description="API OpenF1 tidak mengembalikan data untuk sesi ini. Coba ubah filter atau beralih ke sesi sebelumnya."
+        title="No Radio Transmissions Found"
+        description="The OpenF1 API returned no data for this session. Try changing the filter or switching to a previous session."
       />
     );
   } else {
@@ -543,8 +543,8 @@ export default function TeamRadioSection({
         {(isCachedFallback || (error && hasLiveRadio)) && (
           <div className="mb-3 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-200/80">
             {isCachedFallback
-              ? 'SignalR cache — OpenF1 sedang tidak tersedia.'
-              : 'Relay radio tidak dapat dijangkau — menampilkan tangkapan SignalR terakhir.'}
+              ? 'SignalR cache — OpenF1 is currently unavailable.'
+              : 'Radio relay unreachable — showing latest SignalR captures.'}
           </div>
         )}
         {content}

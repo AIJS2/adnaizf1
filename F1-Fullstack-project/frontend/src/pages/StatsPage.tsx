@@ -9,10 +9,12 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import { teamLogos, getTeamColor, getDriverColor } from '../data/teamData';
-import { fetchChampionship, fetchStandings } from '../services/api';
+import { fetchChampionship, fetchStandings, fetchAllRaces } from '../services/api';
 import type { ChampionshipPayload } from '../services/api';
 import { SessionResultEntry } from '../types/f1';
 import ChampionshipWorm from '../components/ChampionshipWorm';
+import ChampionshipClinchBanner from '../components/championship/ChampionshipClinchBanner';
+import { evaluateChampionship, ChampionshipEntry, ChampionshipRace } from '../utils/championshipMath';
 import { safeMax, toNumber } from '../utils/data';
 
 type ChampionshipView = {
@@ -28,7 +30,7 @@ const EMPTY_CHAMPIONSHIP: ChampionshipView = {
   session_results: [],
 };
 
-interface LeaderboardEntry {
+interface LeaderboardEntry extends ChampionshipEntry {
   id: string;
   name: string;
   team?: string;
@@ -57,9 +59,11 @@ interface PodiumCardProps {
   type: 'driver' | 'constructor';
   maxPoints: number;
   leaderPoints: number;
+  isClinched?: boolean;
+  isEliminated?: boolean;
 }
 
-const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardProps) => {
+const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints, isClinched, isEliminated }: PodiumCardProps) => {
   const teamColor = type === 'driver' && entry.team
     ? getDriverColor(entry.name, entry.team)
     : getTeamColor(entry.name);
@@ -68,9 +72,33 @@ const PodiumCard = ({ entry, rank, type, maxPoints, leaderPoints }: PodiumCardPr
   const logoNeedsBrightening = darkLogos.includes(teamName);
 
   const rankConfig: Record<number, { border: string; bg: string; shadow: string; icon: LucideIcon; iconColor: string; label: string; labelBg: string }> = {
-    0: { border: 'border-yellow-500/60', bg: 'from-yellow-500/15 via-yellow-900/10', shadow: 'shadow-yellow-500/20', icon: Crown, iconColor: 'text-yellow-400', label: 'P1 // CHAMPIONSHIP LEADER', labelBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
-    1: { border: 'border-slate-400/40', bg: 'from-slate-400/15 via-slate-800/10', shadow: 'shadow-slate-400/15', icon: Medal, iconColor: 'text-slate-300', label: 'P2 // CONTENDER', labelBg: 'bg-slate-400/20 text-slate-300 border-slate-400/40' },
-    2: { border: 'border-amber-600/40', bg: 'from-amber-600/15 via-amber-900/10', shadow: 'shadow-amber-600/15', icon: Medal, iconColor: 'text-amber-500', label: 'P3 // PODIUM SPOT', labelBg: 'bg-amber-600/20 text-amber-500 border-amber-600/40' },
+    0: {
+      border: isClinched ? 'border-yellow-400/80' : 'border-yellow-500/60',
+      bg: isClinched ? 'from-yellow-500/25 via-amber-900/15' : 'from-yellow-500/15 via-yellow-900/10',
+      shadow: isClinched ? 'shadow-[0_12px_40px_-10px_rgba(250,204,21,0.28)]' : 'shadow-yellow-500/20',
+      icon: Crown,
+      iconColor: 'text-yellow-400',
+      label: isClinched ? 'WORLD CHAMPION // CLINCHED' : 'P1 // CHAMPIONSHIP LEADER',
+      labelBg: isClinched ? 'bg-yellow-500/25 text-yellow-200 border-yellow-400/80 shadow-xs' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
+    },
+    1: {
+      border: 'border-slate-400/40',
+      bg: 'from-slate-400/15 via-slate-800/10',
+      shadow: 'shadow-slate-400/15',
+      icon: Medal,
+      iconColor: 'text-slate-300',
+      label: isEliminated ? 'P2 // TITLE ELIMINATED' : 'P2 // CONTENDER',
+      labelBg: isEliminated ? 'bg-neutral-800/80 text-neutral-400 border-neutral-700' : 'bg-slate-400/20 text-slate-300 border-slate-400/40',
+    },
+    2: {
+      border: 'border-amber-600/40',
+      bg: 'from-amber-600/15 via-amber-900/10',
+      shadow: 'shadow-amber-600/15',
+      icon: Medal,
+      iconColor: 'text-amber-500',
+      label: isEliminated ? 'P3 // TITLE ELIMINATED' : 'P3 // PODIUM SPOT',
+      labelBg: isEliminated ? 'bg-neutral-800/80 text-neutral-400 border-neutral-700' : 'bg-amber-600/20 text-amber-500 border-amber-600/40',
+    },
   };
   const cfg = rankConfig[rank] || rankConfig[2];
   const RankIcon = cfg.icon;
@@ -231,6 +259,11 @@ const StatsPage = () => {
     queryFn: () => fetchChampionship(currentYear),
   });
 
+  const { data: racesData } = useQuery({
+    queryKey: ['races', currentYear],
+    queryFn: () => fetchAllRaces(currentYear),
+  });
+
   // Prefer the championship session_results; the standings fallback covers
   // the case where the standings route itself returned FastF1-shaped data.
   const wormSessionResults =
@@ -291,6 +324,39 @@ const StatsPage = () => {
   const activeEntries = activeTab === 'drivers' ? normalizedDrivers : normalizedTeams;
   const maxPoints = activeTab === 'drivers' ? maxDriverPoints : maxTeamPoints;
   const leaderPoints = activeTab === 'drivers' ? leaderDriverPoints : leaderTeamPoints;
+
+  const normalizedRaces = useMemo<ChampionshipRace[]>(() => {
+    const raw = racesData as unknown;
+    return Array.isArray(raw)
+      ? (raw as ChampionshipRace[])
+      : ((raw as { races?: ChampionshipRace[] } | undefined)?.races ?? []);
+  }, [racesData]);
+
+  // Mathematical championship clinching & elimination evaluation
+  const championshipCalc = useMemo(() => {
+    return evaluateChampionship(
+      activeTab === 'drivers' ? normalizedDrivers : normalizedTeams,
+      {
+        races: normalizedRaces,
+        isConstructor: activeTab === 'constructors',
+      }
+    );
+  }, [activeTab, normalizedDrivers, normalizedTeams, normalizedRaces]);
+
+  const statusMap = useMemo(() => {
+    const map = new Map<string, { status: string; isChampion: boolean; isEliminated: boolean; canWinTitle: boolean; gapToLeader: number }>();
+    championshipCalc.entries.forEach((e) => {
+      const entryId = e.entry.id || e.entry.name;
+      map.set(entryId, {
+        status: e.status,
+        isChampion: e.isChampion,
+        isEliminated: e.isEliminated,
+        canWinTitle: e.canWinTitle,
+        gapToLeader: e.gapToLeader,
+      });
+    });
+    return map;
+  }, [championshipCalc]);
 
   const filteredEntries = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -500,6 +566,14 @@ const StatsPage = () => {
             {/* ================================================================= */}
             {activeTab !== 'progression' && (
               <div className="space-y-6">
+                {/* Mathematical Championship Clinch & Elimination Engine Announcement */}
+                <ChampionshipClinchBanner
+                  drivers={normalizedDrivers}
+                  teams={normalizedTeams}
+                  races={normalizedRaces}
+                  currentYear={currentYear}
+                />
+
                 {/* Top 3 Podium Showcase Cards (shown when not actively searching) */}
                 {podiumEntries.length > 0 && (
                   <section>
@@ -518,6 +592,8 @@ const StatsPage = () => {
                           type={activeTab === 'drivers' ? 'driver' : 'constructor'}
                           maxPoints={maxPoints}
                           leaderPoints={leaderPoints}
+                          isClinched={championshipCalc.isClinched}
+                          isEliminated={statusMap.get(entry.id || entry.name)?.isEliminated}
                         />
                       ))}
                     </div>
@@ -754,16 +830,34 @@ const StatsPage = () => {
                                   </div>
                                 </td>
 
-                                {/* Gap to Leader */}
+                                {/* Gap to Leader & Mathematical Status */}
                                 <td className="py-3 px-4 text-right hidden sm:table-cell font-mono text-xs">
                                   {isP1 ? (
-                                    <span className="text-yellow-400 font-bold bg-yellow-500/10 px-1.5 py-0.5 rounded-sm border border-yellow-500/20">
-                                      LEADER
-                                    </span>
+                                    championshipCalc.isClinched ? (
+                                      <span className="inline-flex items-center gap-1 text-yellow-300 font-black bg-yellow-500/20 px-2 py-0.5 rounded-sm border border-yellow-400/50 shadow-xs">
+                                        <Crown size={11} /> CHAMPION
+                                      </span>
+                                    ) : (
+                                      <span className="text-yellow-400 font-bold bg-yellow-500/10 px-1.5 py-0.5 rounded-sm border border-yellow-500/20">
+                                        LEADER
+                                      </span>
+                                    )
                                   ) : (
-                                    <span className="text-neutral-400">
-                                      -{gap}
-                                    </span>
+                                    <div className="inline-flex items-center justify-end gap-1.5">
+                                      <span className="text-neutral-400">-{gap}</span>
+                                      {statusMap.get(entry.id || entry.name)?.isEliminated ? (
+                                        <span
+                                          title={`Mathematically eliminated from ${activeTab === 'drivers' ? 'WDC' : 'WCC'} title contention (max remaining: ${championshipCalc.maxRemainingPoints} pts)`}
+                                          className="text-[9px] font-bold uppercase tracking-wider text-neutral-500 bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 rounded-sm"
+                                        >
+                                          ELIMINATED
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-sm">
+                                          IN HUNT
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                 </td>
 

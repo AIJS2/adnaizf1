@@ -84,7 +84,7 @@ describe('TeamRadioSection component', () => {
     renderWithClient(<TeamRadioSection />);
 
     await waitFor(() => {
-      expect(screen.getByText('Tidak Ada Siaran Radio Ditemukan')).toBeInTheDocument();
+      expect(screen.getByText('No Radio Transmissions Found')).toBeInTheDocument();
     });
   });
 
@@ -148,7 +148,7 @@ describe('TeamRadioSection component', () => {
       />
     );
 
-    expect(screen.getByText('Menunggu Radio Tim')).toBeInTheDocument();
+    expect(screen.getByText('Waiting for Team Radio')).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -178,10 +178,10 @@ describe('TeamRadioSection component', () => {
     await waitFor(() => {
       expect(screen.getByText('Kimi Antonelli')).toBeInTheDocument();
     });
-    expect(screen.queryByText(/Gagal Memuat Radio Tim/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Failed to Load Team Radio/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Failed to fetch/i)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/menampilkan tangkapan SignalR terakhir/i),
+      screen.getByText(/showing latest SignalR captures/i),
     ).toBeInTheDocument();
 
     expect(fetchMock).toHaveBeenCalled();
@@ -225,7 +225,7 @@ describe('TeamRadioSection component', () => {
       expect(screen.getByText('Kimi Antonelli')).toBeInTheDocument();
     });
     expect(screen.getByText(/SignalR cache/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Gagal Memuat Radio Tim/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Failed to Load Team Radio/i)).not.toBeInTheDocument();
   });
 
   it('lists only drivers that have a radio clip in the current session', () => {

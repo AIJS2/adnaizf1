@@ -13,9 +13,15 @@ export interface DriverStanding {
 
 interface DriverStandingsListProps {
   drivers: DriverStanding[];
+  championName?: string;
+  eliminatedNames?: Set<string>;
 }
 
-const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) => {
+const DriverStandingsList: React.FC<DriverStandingsListProps> = ({
+  drivers,
+  championName,
+  eliminatedNames,
+}) => {
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -39,10 +45,14 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
           const driverId = driver.id || driver.name.toLowerCase().replace(/\s+/g, '_');
           const isLeader = index === 0;
 
-          // Custom background for top 3
-          const bgClass = index === 0 
-            ? 'bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10 hover:border-yellow-500/40' 
-            : index === 1 
+          const isChampion = Boolean(championName && championName === driver.name);
+
+          // Custom background for top 3 & World Champion
+          const bgClass = isChampion
+            ? 'bg-gradient-to-r from-yellow-500/15 via-amber-500/5 to-transparent border-yellow-400/50 hover:from-yellow-500/20 hover:border-yellow-400 shadow-[0_0_24px_-8px_rgba(250,204,21,0.35)]'
+            : index === 0
+            ? 'bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10 hover:border-yellow-500/40'
+            : index === 1
             ? 'bg-slate-400/5 border-slate-400/20 hover:bg-slate-400/10 hover:border-slate-400/40'
             : index === 2
             ? 'bg-amber-600/5 border-amber-600/20 hover:bg-amber-600/10 hover:border-amber-600/40'
@@ -59,7 +69,7 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
                 ease: [0.2, 0.8, 0.2, 1],
               }}
             >
-              <Link 
+              <Link
                 to={`/driver/${driverId}`}
                 className={`flex items-center justify-between text-sm py-2.5 px-3 rounded-md border transition-ui group cursor-pointer ${bgClass}`}
               >
@@ -80,11 +90,19 @@ const DriverStandingsList: React.FC<DriverStandingsListProps> = ({ drivers }) =>
                   <span className="font-bold text-white group-hover:text-red-400 uppercase tracking-tight transition-colors truncate">
                     {driver.name}
                   </span>
-                  {isLeader && (
+                  {championName && championName === driver.name ? (
+                    <span className="hidden sm:inline-flex items-center gap-1 bg-yellow-500/25 text-yellow-300 text-[10px] font-black px-1.5 py-0.5 rounded-sm border border-yellow-400/50 uppercase tracking-wider shadow-xs">
+                      <Crown size={10} /> WDC CHAMPION
+                    </span>
+                  ) : isLeader ? (
                     <span className="hidden sm:inline-block bg-yellow-500/20 text-yellow-400 text-[11px] font-black px-1.5 py-0.5 rounded-sm border border-yellow-500/40 uppercase ">
                       <Crown size={10} className="inline-block mr-1 -mt-0.5" />P1
                     </span>
-                  )}
+                  ) : eliminatedNames?.has(driver.name) ? (
+                    <span className="hidden sm:inline-block bg-neutral-900 text-neutral-500 text-[9px] font-bold px-1 py-0.5 rounded-sm border border-neutral-800 uppercase">
+                      OUT
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 font-mono">

@@ -23,6 +23,8 @@ import { CircuitVectorView, CircuitVectorMode } from '../components/ui/CircuitVe
 import { getCircuitGeometry } from '../data/circuitPaths';
 import { safeMax, toNumber } from '../utils/data';
 import { resolveNextRaceFromSources, countdownTarget } from '../utils/nextRace';
+import { evaluateChampionship, ChampionshipEntry, ChampionshipRace } from '../utils/championshipMath';
+import ChampionshipClinchBanner from '../components/championship/ChampionshipClinchBanner';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 
 // =======================================================================
@@ -155,6 +157,44 @@ function DashboardPage() {
     : 50;
   const teamGap = (p1Team && p2Team) ? Math.round(Number(p1Team.points) - Number(p2Team.points)) : null;
 
+  // Mathematical championship clinching & elimination calculations
+  const raceEntries: ChampionshipRace[] = raceAnalytics.map((r) => ({
+    round: typeof r.round === 'number' ? r.round : Number(r.round),
+    name: r.name,
+    date: r.date,
+    status: r.status,
+  }));
+
+  const wdcEntries: ChampionshipEntry[] = driverStandings.map((d) => ({
+    name: d.name,
+    team: d.team,
+    points: toNumber(d.points),
+  }));
+
+  const wccEntries: ChampionshipEntry[] = teamStandings.map((t) => ({
+    name: t.name,
+    points: toNumber(t.points),
+  }));
+
+  const wdcCalc = evaluateChampionship(wdcEntries, {
+    races: raceEntries,
+    totalRaces: dashboardData?.total_races || raceEntries.length || 24,
+    isConstructor: false,
+  });
+
+  const wccCalc = evaluateChampionship(wccEntries, {
+    races: raceEntries,
+    totalRaces: dashboardData?.total_races || raceEntries.length || 24,
+    isConstructor: true,
+  });
+
+  const eliminatedDriverNames = new Set(
+    wdcCalc.entries.filter((e) => e.isEliminated).map((e) => e.entry.name)
+  );
+  const eliminatedTeamNames = new Set(
+    wccCalc.entries.filter((e) => e.isEliminated).map((e) => e.entry.name)
+  );
+
   return (
     <div className="bg-neutral-950 min-h-screen text-white font-sans selection:bg-red-600">
       <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-5 sm:py-6 md:py-8 space-y-6 sm:space-y-8">
@@ -192,11 +232,19 @@ function DashboardPage() {
               <Crown size={19} aria-hidden="true" />
             </div>
             <div className="min-w-0 relative z-10 flex-1">
-              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-400 block group-hover:text-yellow-400 transition-colors">Drivers Leader</span>
+              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-400 block group-hover:text-yellow-400 transition-colors">
+                {wdcCalc.isClinched ? '🏆 2026 WDC Champion' : 'Drivers Leader'}
+              </span>
               <p className="text-base font-black text-white truncate drop-shadow-sm">
                 {p1Driver ? `${p1Name || 'Unknown Driver'} (${parseInt(String(p1Driver.points), 10)} PTS)` : '-'}
               </p>
-              {p2Driver && p2Name && <p className="text-xs text-neutral-400 mt-0.5 truncate group-hover:text-neutral-300 transition-colors">+{Math.round(p1Points - p2Points)} PTS ahead of {p2Name.split(' ').pop()}</p>}
+              {p2Driver && p2Name && (
+                <p className="text-xs text-neutral-400 mt-0.5 truncate group-hover:text-neutral-300 transition-colors">
+                  {wdcCalc.isClinched
+                    ? `Clinched (+${wdcCalc.gap} PTS • ${wdcCalc.maxRemainingPoints} pts left)`
+                    : `+${Math.round(p1Points - p2Points)} PTS ahead of ${p2Name.split(' ').pop()}`}
+                </p>
+              )}
             </div>
           </Link>
 
@@ -208,11 +256,19 @@ function DashboardPage() {
               <Shield size={19} aria-hidden="true" />
             </div>
             <div className="min-w-0 relative z-10 flex-1">
-              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-400 block group-hover:text-cyan-400 transition-colors">Constructors Leader</span>
+              <span className="text-[11px] uppercase font-black tracking-widest text-neutral-400 block group-hover:text-cyan-400 transition-colors">
+                {wccCalc.isClinched ? '🏆 2026 WCC Champion' : 'Constructors Leader'}
+              </span>
               <p className="text-base font-black text-white truncate drop-shadow-sm">
                 {p1Team ? `${p1Team.name} (${parseInt(String(p1Team.points), 10)} PTS)` : '-'}
               </p>
-              {p2Team && <p className="text-xs text-neutral-400 mt-0.5 truncate group-hover:text-neutral-300 transition-colors">+{teamGap} PTS ahead of {p2Team.name}</p>}
+              {p2Team && (
+                <p className="text-xs text-neutral-400 mt-0.5 truncate group-hover:text-neutral-300 transition-colors">
+                  {wccCalc.isClinched
+                    ? `Clinched (+${wccCalc.gap} PTS • ${wccCalc.maxRemainingPoints} pts left)`
+                    : `+${teamGap} PTS ahead of ${p2Team.name}`}
+                </p>
+              )}
             </div>
           </Link>
 
@@ -232,6 +288,25 @@ function DashboardPage() {
             </div>
           </Link>
         </motion.section>
+
+        {/* 1b. MATHEMATICAL CHAMPIONSHIP CLINCH & ELIMINATION ANNOUNCEMENT */}
+        {(wdcCalc.isClinched || wccCalc.isClinched) && (
+          <motion.section
+            aria-label="Championship Title Clinched"
+            initial="hidden"
+            animate="visible"
+            custom={0.5}
+            variants={sectionVariants}
+          >
+            <ChampionshipClinchBanner
+              drivers={wdcEntries}
+              teams={wccEntries}
+              races={raceEntries}
+              totalRaces={dashboardData?.total_races || raceEntries.length || 24}
+              currentYear={dashboardData?.year ?? currentYear}
+            />
+          </motion.section>
+        )}
 
         {/* 2. NEXT GRAND PRIX COMMAND CENTER HERO */}
         <motion.section
@@ -436,9 +511,17 @@ function DashboardPage() {
                   </div>
                   <div>
                     <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
-                      Title Fight <span className="text-red-500">Battle</span>
+                      {wdcCalc.isClinched ? (
+                        <>Championship <span className="text-yellow-400">Clinched</span></>
+                      ) : (
+                        <>Title Fight <span className="text-red-500">Battle</span></>
+                      )}
                     </h2>
-                    <p className="text-xs text-neutral-400 font-medium">Head-to-head championship showdown</p>
+                    <p className="text-xs text-neutral-400 font-medium">
+                      {wdcCalc.isClinched
+                        ? `${p1Name} is mathematically the ${dashboardData?.year ?? currentYear} World Champion`
+                        : 'Head-to-head championship showdown'}
+                    </p>
                   </div>
                 </div>
                 <Link to="/simulator" className="text-xs uppercase font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 group bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 transition-colors">
@@ -464,9 +547,15 @@ function DashboardPage() {
                         <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
                           {p1Name || 'Unknown Driver'}
                         </h3>
-                        <span className="text-[11px] font-bold bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 flex items-center gap-1">
-                          <Crown size={10} /> LEADER
-                        </span>
+                        {wdcCalc.isClinched ? (
+                          <span className="text-[11px] font-black bg-yellow-500/25 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-400/50 flex items-center gap-1 animate-pulse">
+                            <Crown size={10} /> WORLD CHAMPION
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-bold bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 flex items-center gap-1">
+                            <Crown size={10} /> LEADER
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
                         {teamLogos[p1Driver.team ?? ''] && <img src={teamLogos[p1Driver.team ?? '']} alt={p1Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
@@ -496,9 +585,15 @@ function DashboardPage() {
                         <h3 className="font-extrabold text-white text-xl group-hover:text-red-400 transition-colors uppercase tracking-tight">
                           {p2Name || 'Unknown Driver'}
                         </h3>
-                        <span className="text-[11px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 flex items-center gap-1">
-                          <Target size={10} /> HUNTING
-                        </span>
+                        {eliminatedDriverNames.has(p2Name) ? (
+                          <span className="text-[11px] font-bold bg-neutral-800/80 text-neutral-400 px-2 py-0.5 rounded-full border border-neutral-700 flex items-center gap-1">
+                            ELIMINATED
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 flex items-center gap-1">
+                            <Target size={10} /> HUNTING
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
                         {teamLogos[p2Driver.team ?? ''] && <img src={teamLogos[p2Driver.team ?? '']} alt={p2Driver.team ?? ''} className="h-4 w-auto drop-shadow-md" />}
@@ -517,8 +612,12 @@ function DashboardPage() {
               <div className="bg-neutral-950/90 border border-neutral-800 rounded-xl p-4 md:p-5 relative z-10 shadow-inner">
                 <div className="flex justify-between items-center text-xs font-mono text-neutral-300 mb-3">
                   <span className="font-black text-white text-sm tracking-tight">{p1Name || 'Unknown Driver'} <span className="text-neutral-500 ml-1">({p1DuelPct}%)</span></span>
-                  <span className="bg-neutral-900 text-red-500 border border-red-500/30 px-3 py-1 rounded-full font-black text-[11px] tracking-widest ">
-                    GAP: <AnimatedNumber value={titleGap} /> PTS
+                  <span className={`px-3 py-1 rounded-full font-black text-[11px] tracking-widest border ${
+                    wdcCalc.isClinched
+                      ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'
+                      : 'bg-neutral-900 text-red-500 border-red-500/30'
+                  }`}>
+                    GAP: <AnimatedNumber value={titleGap} /> PTS {wdcCalc.isClinched ? `• MAX LEFT: ${wdcCalc.maxRemainingPoints}` : ''}
                   </span>
                   <span className="font-black text-white text-sm tracking-tight"><span className="text-neutral-500 mr-1">({100 - p1DuelPct}%)</span> {p2Name || 'Unknown Driver'}</span>
                 </div>
@@ -568,7 +667,14 @@ function DashboardPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {(dashboardData?.team_standings?.slice(0, 4) || []).map((team: TeamStanding, index: number) => (
-              <TeamCard key={team.name} team={team} index={index} maxPoints={maxTeamPoints} />
+              <TeamCard
+                key={team.name}
+                team={team}
+                index={index}
+                maxPoints={maxTeamPoints}
+                isChampion={wccCalc.isClinched && wccCalc.champion?.name === team.name}
+                isEliminated={eliminatedTeamNames.has(team.name)}
+              />
             ))}
           </div>
         </motion.section>
@@ -583,6 +689,8 @@ function DashboardPage() {
         >
           <DriverStandingsList
             drivers={driverStandings.slice(0, 7)}
+            championName={wdcCalc.isClinched ? wdcCalc.champion?.name : undefined}
+            eliminatedNames={eliminatedDriverNames}
           />
 
           <RaceAnalyticsCard

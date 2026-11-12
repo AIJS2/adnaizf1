@@ -57,6 +57,23 @@ class SignalrParsersTests(unittest.TestCase):
         self.assertEqual(base, {"a": {"x": 1, "y": 99, "z": 3}, "b": 10, "c": 4})
         self.assertEqual(deep_merge(base, True), base)  # type: ignore[arg-type]
 
+        # SignalR initial snapshot sends Stints as a list, then deltas as a dict
+        stint_state: dict = {
+            "Stints": [
+                {"Compound": "INTERMEDIATE", "TotalLaps": 28},
+                {"Compound": "INTERMEDIATE", "TotalLaps": 37},
+            ]
+        }
+        deep_merge(stint_state, {"Stints": {"1": {"TotalLaps": 38}}})
+        compound, age, stints_list, count = extract_driver_stints(stint_state)
+        self.assertEqual(compound, "I")
+        self.assertEqual(age, 38)
+        self.assertEqual(count, 2)
+        self.assertEqual(
+            stints_list,
+            [{"tyre": "I", "laps": 28}, {"tyre": "I", "laps": 38}],
+        )
+
     def test_classify_rc_msg_detects_flag_pit_and_system(self):
         self.assertEqual(classify_rc_msg({"Category": "Flag", "Message": "YELLOW"}), "flag")
         self.assertEqual(classify_rc_msg({"Category": "Other", "Message": "RED FLAG"}), "flag")
@@ -69,6 +86,8 @@ class SignalrParsersTests(unittest.TestCase):
         self.assertIsNone(parse_gap_seconds("LAP 42"))
         self.assertAlmostEqual(parse_gap_seconds("+3.456") or 0.0, 3.456)
         self.assertAlmostEqual(parse_gap_seconds("2 LAPS") or 0.0, 2 * AVERAGE_LAP_SECONDS)
+        self.assertAlmostEqual(parse_gap_seconds("1L") or 0.0, 1 * AVERAGE_LAP_SECONDS)
+        self.assertAlmostEqual(parse_gap_seconds("2L") or 0.0, 2 * AVERAGE_LAP_SECONDS)
 
     def test_segment_color_and_track_status_mapping(self):
         self.assertEqual(segment_color({"OverallFastest": True}), "purple")

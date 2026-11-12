@@ -28,7 +28,9 @@ Use `openf1_status()` for the connection detail that `/health` can surface.
 from __future__ import annotations
 
 import json
+import atexit
 import logging
+import threading
 import time
 from typing import Any, Optional
 
@@ -132,6 +134,7 @@ DEFAULT_HEADERS = {
 }
 
 _client: Optional[httpx.Client] = None
+_client_lock = threading.Lock()
 
 
 def _get_client() -> httpx.Client:
@@ -142,15 +145,28 @@ def _get_client() -> httpx.Client:
     makes every request pay a fresh TLS handshake.
     """
     global _client
-    if _client is not None:
+    with _client_lock:
+        if _client is None:
+            _client = httpx.Client(
+                base_url=BASE_URL,
+                timeout=DEFAULT_TIMEOUT,
+                headers=DEFAULT_HEADERS,
+                follow_redirects=True,
+            )
         return _client
-    _client = httpx.Client(
-        base_url=BASE_URL,
-        timeout=DEFAULT_TIMEOUT,
-        headers=DEFAULT_HEADERS,
-        follow_redirects=True,
-    )
-    return _client
+
+
+def close_client() -> None:
+    """Close the shared HTTP client during application/test shutdown."""
+    global _client
+    with _client_lock:
+        client = _client
+        _client = None
+    if client is not None:
+        client.close()
+
+
+atexit.register(close_client)
 
 
 def _get(path: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:

@@ -61,6 +61,8 @@ export interface LiveTimingLine {
   pits: number;
   tyre: string;
   tyre_age: number;
+  retired?: boolean;
+  racing_number?: string;
   /** Gap to the leader in seconds, when the feed provides a numeric gap. */
   gap_seconds?: number | null;
   /** 0–1 position along the real circuit outline (leader = 0). */

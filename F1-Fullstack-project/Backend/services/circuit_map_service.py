@@ -95,6 +95,55 @@ def _candidates(session_info: dict[str, Any]) -> list[str]:
     ]
 
 
+def _apply_canonical_svg_geometry(circuit: dict[str, Any]) -> dict[str, Any]:
+    """Replace path/viewBox with canonical MultiViewer geometry when available.
+
+    In canonical circuits (``Backend/data/circuits/*.json``), index ``0``
+    (``norm_distance == 0.0``) is guaranteed to sit on the true Start/Finish
+    line and aligns 100% with corner distance fractions and live car progress.
+    """
+    try:
+        from services.canonical_circuits import get_canonical_circuit
+
+        canonical = get_canonical_circuit(
+            circuit.get("key"),
+            country=circuit.get("country"),
+            location=circuit.get("location") or circuit.get("name"),
+        )
+        if not canonical:
+            return circuit
+        xs = canonical.get("x") or []
+        ys = canonical.get("y") or []
+        if len(xs) < 3 or len(xs) != len(ys):
+            return circuit
+
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        width = max(max_x - min_x, 1.0)
+        height = max(max_y - min_y, 1.0)
+        span = max(width, height)
+        scale = 450.0 / span
+        offset_x = 25.0 + ((span - width) * scale) / 2.0
+        offset_y = 25.0 + ((span - height) * scale) / 2.0
+
+        parts = [
+            f"{'M' if idx == 0 else 'L'} {offset_x + (x - min_x) * scale:.1f} {offset_y + (y - min_y) * scale:.1f}"
+            for idx, (x, y) in enumerate(zip(xs, ys))
+        ]
+        parts.append("Z")
+        circuit["viewBox"] = "0 0 500 500"
+        circuit["path"] = " ".join(parts)
+        if canonical.get("round") is not None:
+            circuit["round"] = canonical["round"]
+        if canonical.get("circuit_key") is not None:
+            circuit["circuitKey"] = canonical["circuit_key"]
+        if canonical.get("rotation") is not None:
+            circuit["rotation"] = canonical["rotation"]
+    except Exception:
+        logger.debug("Canonical SVG geometry fallback skipped", exc_info=True)
+    return circuit
+
+
 def resolve_circuit(session_info: dict[str, Any]) -> Optional[dict[str, Any]]:
     """Return the bundled outline for the circuit in *session_info*.
 
@@ -116,7 +165,7 @@ def resolve_circuit(session_info: dict[str, Any]) -> Optional[dict[str, Any]]:
         if exact:
             circuit = dict(circuits[exact])
             circuit["key"] = exact
-            return circuit
+            return _apply_canonical_svg_geometry(circuit)
 
         # Match whole aliases inside a longer string ("United States Grand
         # Prix" -> "united states"), preferring the most specific alias.
@@ -130,6 +179,6 @@ def resolve_circuit(session_info: dict[str, Any]) -> Optional[dict[str, Any]]:
             best = max(matches, key=len)
             circuit = dict(circuits[aliases[best]])
             circuit["key"] = aliases[best]
-            return circuit
+            return _apply_canonical_svg_geometry(circuit)
 
     return None

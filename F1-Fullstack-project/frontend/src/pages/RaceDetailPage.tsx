@@ -73,8 +73,8 @@ function RaceDetailPage() {
         fetch(`${API_URL}/api/race/${year}/${round}`),
         fetch(`${API_URL}/api/races/${year}`),
       ]);
-      if (!detailsResponse.ok) throw new Error('Gagal mengambil detail balapan.');
-      if (!scheduleResponse.ok) throw new Error('Gagal mengambil jadwal balapan.');
+      if (!detailsResponse.ok) throw new Error('Failed to fetch race details.');
+      if (!scheduleResponse.ok) throw new Error('Failed to fetch race schedule.');
 
       const detailsData = await detailsResponse.json();
       const scheduleData = await scheduleResponse.json();
@@ -284,7 +284,7 @@ function RaceDetailPage() {
           <Calendar size={48} className="text-red-500 mb-4 opacity-80" />
           <h3 className="text-2xl font-black text-white mb-2">Upcoming Race Weekend</h3>
           <p className="text-neutral-400 max-w-md text-sm">
-            {raceData?.message || "Data sesi dan telemetry untuk balapan ini akan tersedia begitu akhir pekan balapan dimulai dan sesi selesai."}
+            {raceData?.message || "Session results and telemetry data for this Grand Prix will become available once the race weekend begins and sessions conclude."}
           </p>
         </div>
       );

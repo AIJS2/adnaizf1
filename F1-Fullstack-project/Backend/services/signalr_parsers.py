@@ -79,12 +79,25 @@ def parse_compound(comp: Any) -> str:
 
 
 def deep_merge(base: dict, update: dict) -> dict:
-    """Recursively merge *update* into *base*, mutating base in place."""
+    """Recursively merge *update* into *base*, mutating base in place.
+
+    Handles F1 SignalR's convention where initial snapshots send collections
+    (``Stints``, ``Sectors``, ``Stats``, ``BestLapTimes``) as a ``list`` and
+    subsequent delta frames send index-keyed ``dict``s (``{"0": {...}}``).
+    """
     if not isinstance(update, dict):
         return base
     for k, v in update.items():
-        if isinstance(v, dict) and isinstance(base.get(k), dict):
-            deep_merge(base[k], v)
+        existing = base.get(k)
+        if isinstance(v, dict) and isinstance(existing, dict):
+            deep_merge(existing, v)
+        elif isinstance(v, dict) and isinstance(existing, list):
+            as_dict = {str(idx): item for idx, item in enumerate(existing)}
+            deep_merge(as_dict, v)
+            base[k] = as_dict
+        elif isinstance(v, list) and isinstance(existing, dict):
+            as_dict = {str(idx): item for idx, item in enumerate(v)}
+            deep_merge(existing, as_dict)
         else:
             base[k] = v
     return base
@@ -110,7 +123,7 @@ def to_int(value: Any) -> int | None:
 
 
 def parse_gap_seconds(value: Any) -> float | None:
-    """Parse ``+12.345`` / ``1 LAP`` into seconds, or None for leader rows."""
+    """Parse ``+12.345`` / ``1 LAP`` / ``1L`` into seconds, or None for leader rows."""
     if value is None:
         return None
     text = str(value).strip().upper()
@@ -119,7 +132,7 @@ def parse_gap_seconds(value: Any) -> float | None:
     if text.startswith("LAP "):
         return None
 
-    lap_match = re.search(r"(\d+)\s*LAPS?", text)
+    lap_match = re.search(r"^\+?(\d+)\s*(?:LAPS?|L)\b", text)
     if lap_match:
         return float(lap_match.group(1)) * AVERAGE_LAP_SECONDS
 
@@ -294,8 +307,10 @@ def extract_driver_stints(ta: dict) -> tuple[str, int, list[dict], int]:
     tyre_age = 0
     stints_list: list[dict] = []
     for stint in stints:
-        current_compound = parse_compound(stint.get("Compound"))
-        stint_laps = stint.get("TotalLaps", 0)
+        raw_comp = stint.get("Compound")
+        if raw_comp is not None and str(raw_comp).strip() and str(raw_comp).strip().upper() != "UNKNOWN":
+            current_compound = parse_compound(raw_comp)
+        stint_laps = stint.get("TotalLaps", stint.get("LapNumber", 0))
         try:
             stint_laps = int(stint_laps)
         except (TypeError, ValueError):

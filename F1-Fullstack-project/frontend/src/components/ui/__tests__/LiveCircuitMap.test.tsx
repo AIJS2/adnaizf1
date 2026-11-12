@@ -153,4 +153,33 @@ describe('LiveCircuitMap', () => {
     expect(screen.getByTestId('circuit-track-map')).toBeInTheDocument();
     expect(screen.queryByTestId('circuit-corner-markers')).not.toBeInTheDocument();
   });
+
+  it('filters out retired OUT drivers so they do not pile up on the start/finish line', () => {
+    render(
+      <LiveCircuitMap
+        circuit={circuit}
+        lines={[
+          line('VER', 1, 0, 'TRACK'),
+          { ...line('ALB', 19, 0, 'OUT'), gap: 'OUT', lastLap: 'RET', retired: true },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('driver-marker-VER')).toBeInTheDocument();
+    expect(screen.queryByTestId('driver-marker-ALB')).not.toBeInTheDocument();
+  });
+
+  it('renders aerial satellite tiles when satellite mode is enabled', () => {
+    const { container } = render(
+      <LiveCircuitMap
+        circuit={circuit}
+        lines={[line('VER', 1, 0, 'TRACK')]}
+        satellite
+      />,
+    );
+
+    const images = container.querySelectorAll('image');
+    expect(images.length).toBeGreaterThan(0);
+    expect(images[0].getAttribute('href')).toContain('World_Imagery/MapServer/tile');
+  });
 });

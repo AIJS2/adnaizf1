@@ -3,6 +3,8 @@ import json
 import os
 import threading
 import time
+from copy import deepcopy
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -12,6 +14,7 @@ from services import openf1_telemetry
 from services.fastf1_safe import (
     has_rows,
     is_valid_year,
+    load_event_schedule,
     load_session_safe,
     safe_getattr,
 )
@@ -27,6 +30,36 @@ TELEMETRY_LOAD_KWARGS = dict(telemetry=True, laps=True, weather=False, messages=
 # the same timeouts.
 _FASTF1_GAP_TTL_SECONDS = 24 * 60 * 60
 _FASTF1_GAP_DIR = "cache"
+
+
+@dataclass
+class _TelemetryFlight:
+    event: threading.Event
+    result: Optional[dict] = None
+    error: Optional[BaseException] = None
+
+
+_telemetry_flights: dict[tuple[int, int, tuple[str, ...], Optional[int]], _TelemetryFlight] = {}
+_telemetry_flights_guard = threading.Lock()
+
+
+def _telemetry_flight_key(
+    year: int, round_number: int, driver_list: list, lap: Optional[int]
+) -> tuple[int, int, tuple[str, ...], Optional[int]]:
+    return year, round_number, tuple(str(driver) for driver in driver_list), lap
+
+
+def _circuit_for_round(year: int, round_number: int) -> Optional[str]:
+    schedule = load_event_schedule(year)
+    if schedule is None or getattr(schedule, "empty", True):
+        return None
+    if "RoundNumber" not in schedule.columns:
+        return None
+    rows = schedule[schedule["RoundNumber"] == round_number]
+    if rows.empty:
+        return None
+    location = rows.iloc[0].get("Location")
+    return str(location) if pd.notna(location) else None
 
 
 def _fastf1_gap_path(year: int, round_number: int) -> str:
@@ -186,7 +219,9 @@ def _attach_position_data(target_lap, tel: pd.DataFrame, drv: str) -> pd.DataFra
 
 
 def _interpolate_position_by_distance(
-    tel: pd.DataFrame, round_number: Optional[int] = None
+    tel: pd.DataFrame,
+    round_number: Optional[int] = None,
+    location: Optional[str] = None,
 ) -> pd.DataFrame:
     """Return *tel* with smooth X/Y positions for a circuit outline.
 
@@ -223,7 +258,9 @@ def _interpolate_position_by_distance(
         d_max = np.nanmax(dist)
         if d_max > d_min:
             norm_d = (dist - d_min) / (d_max - d_min)
-            canonical_coords = interpolate_canonical_coords(round_number, norm_d)
+            canonical_coords = interpolate_canonical_coords(
+                round_number, norm_d, location=location
+            )
             if canonical_coords is not None:
                 tel["X"] = canonical_coords[0]
                 tel["Y"] = canonical_coords[1]
@@ -245,7 +282,9 @@ def _interpolate_position_by_distance(
     return tel
 
 
-def _extract_lap_telemetry(target_lap, drv: str) -> tuple:
+def _extract_lap_telemetry(
+    target_lap, drv: str, location: Optional[str] = None
+) -> tuple:
     """Return (frame with Speed+Distance[+X/Y], error_or_None) for one lap."""
     candidates = []
 
@@ -275,7 +314,9 @@ def _extract_lap_telemetry(target_lap, drv: str) -> tuple:
         if validated is not None:
             # Interpolate X/Y against Distance so the 10 m bins trace a
             # smooth circuit outline instead of a collapsed polygon.
-            return _interpolate_position_by_distance(validated), None
+            return _interpolate_position_by_distance(
+                validated, location=location
+            ), None
     return None, "No lap data for this driver in this session."
 
 
@@ -285,6 +326,7 @@ def _assemble_payload(
     unavailable: dict,
     driver_list: list,
     round_number: Optional[int] = None,
+    location: Optional[str] = None,
 ) -> dict:
     """Merge per-driver binned frames into the API payload.
 
@@ -330,7 +372,9 @@ def _assemble_payload(
         total_dist = merged["BinnedDist"].max()
         if total_dist > 0:
             norm_dists = merged["BinnedDist"].values / total_dist
-            canonical_coords = interpolate_canonical_coords(round_number, norm_dists)
+            canonical_coords = interpolate_canonical_coords(
+                round_number, norm_dists, location=location
+            )
 
     data_points = []
     for idx, (_, row) in enumerate(merged.iterrows()):
@@ -408,6 +452,7 @@ def _ingest_openf1_frames(
     driver_data: dict,
     binned_dfs: list,
     round_number: Optional[int] = None,
+    location: Optional[str] = None,
 ) -> dict:
     """Add OpenF1 frames to the running driver/binned collections.
 
@@ -430,7 +475,7 @@ def _ingest_openf1_frames(
             # linear for dense FastF1 data).
             if {"X", "Y"}.issubset(frame.columns):
                 frame = _interpolate_position_by_distance(
-                    frame, round_number=round_number
+                    frame, round_number=round_number, location=location
                 )
             binned = (
                 frame.groupby(frame["Distance"] // 10 * 10)
@@ -452,7 +497,12 @@ def _ingest_openf1_frames(
 
 
 def _telemetry_from_openf1(
-    year: int, round_number: int, driver_list: list, lap, reason_for
+    year: int,
+    round_number: int,
+    driver_list: list,
+    lap,
+    reason_for,
+    location: Optional[str] = None,
 ) -> Optional[dict]:
     """Build the payload from OpenF1 when FastF1 has no lap timing.
 
@@ -480,7 +530,11 @@ def _telemetry_from_openf1(
     binned_dfs = []
     unavailable = dict(
         _ingest_openf1_frames(
-            collected, driver_data, binned_dfs, round_number=round_number
+            collected,
+            driver_data,
+            binned_dfs,
+            round_number=round_number,
+            location=location,
         )
     )
 
@@ -493,11 +547,16 @@ def _telemetry_from_openf1(
         unavailable[drv] = reason or "No lap data for this driver in this session."
 
     return _assemble_payload(
-        driver_data, binned_dfs, unavailable, driver_list, round_number=round_number
+        driver_data,
+        binned_dfs,
+        unavailable,
+        driver_list,
+        round_number=round_number,
+        location=location,
     )
 
 
-def process_telemetry_compare(
+def _process_telemetry_compare(
     year: int, round_number: int, driver_list: list, lap: Optional[int] = None
 ):
     # Validate before spending a network round-trip on an impossible request.
@@ -506,6 +565,7 @@ def process_telemetry_compare(
             f"Round {round_number} is not a valid race round for {year}.",
             driver_list,
         )
+    location = _circuit_for_round(year, round_number)
 
     # Concurrency lock for FastF1 session.load() per (year, round_number).
     # When a previous attempt already found no lap timing, skip it: FastF1
@@ -578,6 +638,7 @@ def process_telemetry_compare(
             driver_list,
             lap,
             no_lap_reason_for,
+            location,
         )
         if payload is not None:
             return payload
@@ -640,7 +701,7 @@ def process_telemetry_compare(
             )
 
             # Car channels + distance + X/Y. See _extract_lap_telemetry().
-            tel, tel_err = _extract_lap_telemetry(target_lap, drv)
+            tel, tel_err = _extract_lap_telemetry(target_lap, drv, location=location)
             if tel is None or tel_err:
                 # The lap exists, so this is not a DNS/DNF story: the archive
                 # simply has no car channels for it. OpenF1 sometimes does,
@@ -681,7 +742,9 @@ def process_telemetry_compare(
             # dense enough for linear interpolation; when the archive is
             # sparse the spline fallback kicks in automatically.
             if {"X", "Y"}.issubset(tel.columns):
-                tel = _interpolate_position_by_distance(tel, round_number=round_number)
+                tel = _interpolate_position_by_distance(
+                    tel, round_number=round_number, location=location
+                )
 
             binned = (
                 tel.groupby(tel["Distance"] // 10 * 10)
@@ -720,7 +783,11 @@ def process_telemetry_compare(
             )
         if collected is not None:
             failures = _ingest_openf1_frames(
-                collected, driver_data, binned_dfs, round_number=round_number
+                collected,
+                driver_data,
+                binned_dfs,
+                round_number=round_number,
+                location=location,
             )
             for drv in openf1_fallback:
                 if drv in driver_data:
@@ -734,8 +801,47 @@ def process_telemetry_compare(
                 )
 
     return _assemble_payload(
-        driver_data, binned_dfs, unavailable, driver_list, round_number=round_number
+        driver_data,
+        binned_dfs,
+        unavailable,
+        driver_list,
+        round_number=round_number,
+        location=location,
     )
+
+
+def process_telemetry_compare(
+    year: int, round_number: int, driver_list: list, lap: Optional[int] = None
+):
+    """Share one in-flight telemetry computation between concurrent callers."""
+    key = _telemetry_flight_key(year, round_number, driver_list, lap)
+    with _telemetry_flights_guard:
+        flight = _telemetry_flights.get(key)
+        if flight is None:
+            flight = _TelemetryFlight(event=threading.Event())
+            _telemetry_flights[key] = flight
+            owner = True
+        else:
+            owner = False
+
+    if not owner:
+        flight.event.wait()
+        if flight.error is not None:
+            raise flight.error
+        return deepcopy(flight.result)
+
+    try:
+        flight.result = _process_telemetry_compare(
+            year, round_number, driver_list, lap
+        )
+        return deepcopy(flight.result)
+    except BaseException as exc:
+        flight.error = exc
+        raise
+    finally:
+        with _telemetry_flights_guard:
+            _telemetry_flights.pop(key, None)
+        flight.event.set()
 
 
 def get_telemetry_drivers_list(year: int, round_number: int):

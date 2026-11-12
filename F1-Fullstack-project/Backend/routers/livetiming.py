@@ -261,6 +261,8 @@ _TOPICS = [
     "TimingData",
     "TopThree",
     "LapCount",
+    "Position.z",
+    "CarData.z",
 ]
 
 

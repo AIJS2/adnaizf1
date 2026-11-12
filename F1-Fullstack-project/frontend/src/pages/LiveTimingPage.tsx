@@ -68,6 +68,9 @@ const LiveTimingPage: React.FC = () => {
   }, [location.search]);
 
   const [sessionView, setSessionView] = useState<'latest' | 'previous' | 'simulation'>(initialMode);
+  const [topDownView, setTopDownView] = useState<boolean>(true);
+  const [satelliteView, setSatelliteView] = useState<boolean>(false);
+  const [showMapCorners, setShowMapCorners] = useState<boolean>(true);
 
   // Circuit preview fallback
   const previewCircuit = useMemo<LiveTimingCircuit | null>(() => {
@@ -582,21 +585,68 @@ const LiveTimingPage: React.FC = () => {
             {/* Track Map */}
             <div className="bg-tarmac border border-[#1a1a1a] rounded-md p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
               <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-500/20 to-transparent"></div>
-              <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2 mb-4 w-full">
-                <Activity size={14} /> {!previewCircuit && trackCircuit ? `${trackCircuit.name.toUpperCase()} — TRACK MAP` : 'TRACK MAP'}
-                {previewCircuit && (
-                  <span className="ml-auto shrink-0 rounded-xs border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] tracking-widest text-cyan-300">
-                    NEXT ROUND
-                  </span>
-                )}
-              </h3>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4 w-full">
+                <h3 className="text-[11px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2">
+                  <Activity size={14} /> {!previewCircuit && trackCircuit ? `${trackCircuit.name.toUpperCase()} — TRACK MAP` : 'TRACK MAP'}
+                </h3>
+                <div className="flex items-center gap-1 ml-auto">
+                  {previewCircuit && (
+                    <span className="shrink-0 rounded-xs border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] tracking-widest text-cyan-300">
+                      NEXT ROUND
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setTopDownView((prev) => !prev)}
+                    className={`rounded-xs border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest transition ${
+                      topDownView
+                        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                        : 'border-white/10 bg-white/5 text-neutral-400 hover:text-white'
+                    }`}
+                    title="Toggle flat top-down view vs 3D perspective"
+                  >
+                    {topDownView ? 'Top-Down' : '3D Tilt'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSatelliteView((prev) => !prev)}
+                    className={`rounded-xs border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest transition ${
+                      satelliteView
+                        ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300'
+                        : 'border-white/10 bg-white/5 text-neutral-400 hover:text-white'
+                    }`}
+                    title="Toggle aerial satellite imagery backdrop"
+                  >
+                    Sat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapCorners((prev) => !prev)}
+                    className={`rounded-xs border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest transition ${
+                      showMapCorners
+                        ? 'border-red-500/40 bg-red-500/15 text-red-300'
+                        : 'border-white/10 bg-white/5 text-neutral-400 hover:text-white'
+                    }`}
+                    title="Toggle corner numbers"
+                  >
+                    Turns
+                  </button>
+                </div>
+              </div>
               <div className="relative w-full aspect-square bg-tarmac rounded-lg border border-[#151515] flex items-center justify-center overflow-hidden shadow-inner">
                 {trackCircuit ? (
-                  <Track3D className="w-full h-full p-1" tone={previewCircuit ? 'cyan' : 'red'} tilt={12}>
+                  <Track3D
+                    className="w-full h-full p-1"
+                    tone={previewCircuit ? 'cyan' : 'red'}
+                    flat={topDownView}
+                    tilt={topDownView ? 0 : 12}
+                  >
                     <LiveCircuitMap
                       circuit={trackCircuit}
                       lines={activeData.circuit ? sortedLines : []}
                       preview={Boolean(previewCircuit)}
+                      showCorners={showMapCorners}
+                      satellite={satelliteView}
                     />
                   </Track3D>
                 ) : (
@@ -746,7 +796,8 @@ const areTimingRowsEqual = (prevProps: TimingRowProps, nextProps: TimingRowProps
     p.s3_color === n.s3_color &&
     p.pits === n.pits &&
     p.tyre === n.tyre &&
-    p.tyre_age === n.tyre_age
+    p.tyre_age === n.tyre_age &&
+    p.retired === n.retired
   );
 };
 
@@ -755,20 +806,30 @@ const TimingRow = memo<TimingRowProps>(({ row }) => {
   const isIntervalClose = Boolean(
     row.interval && !isNaN(parseFloat(row.interval)) && parseFloat(row.interval) < 1.0
   );
+  const isOut =
+    row.retired === true ||
+    row.status === 'OUT' ||
+    ['OUT', 'RET', 'STOP', 'DNF'].includes((row.gap || '').toUpperCase()) ||
+    ['OUT', 'RET', 'STOP', 'DNF'].includes((row.lastLap || '').toUpperCase());
 
   return (
-    <tr className="hover:bg-neutral-950 transition-colors group relative">
+    <tr className={`hover:bg-neutral-950 transition-colors group relative ${isOut ? 'opacity-60' : ''}`}>
       <td className="p-2.5 text-center font-black text-neutral-500 border-r border-[#151515] sticky left-0 bg-tarmac group-hover:bg-neutral-950 z-10 tabular-nums">{row.position}</td>
 
       <td className="p-2.5 font-black text-white text-[14px] border-r border-[#151515] flex items-center gap-2 sticky left-10 bg-tarmac group-hover:bg-neutral-950 z-10">
         <div className="w-1 h-5 rounded-xs shadow-xs" style={{ backgroundColor: teamColor }}></div>
         {row.driver}
-        {row.status === 'PIT' && (
-          <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 text-[11px] rounded-xs motion-safe:animate-pulse uppercase tracking-wider">
+        {row.status === 'PIT' && !isOut && (
+          <span className="ml-2 px-1 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] rounded-xs motion-safe:animate-pulse uppercase tracking-wider">
             IN PIT
           </span>
         )}
-        {row.status !== 'PIT' && isIntervalClose && (
+        {isOut && (
+          <span className="ml-2 px-1 py-0.5 bg-red-600/20 text-red-400 border border-red-500/30 text-[11px] rounded-xs uppercase tracking-wider">
+            OUT
+          </span>
+        )}
+        {row.status !== 'PIT' && !isOut && isIntervalClose && (
           <span
             className="ml-1 px-1 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[11px] rounded-xs uppercase tracking-wider "
             title="Manual Override Available"

@@ -5,12 +5,16 @@ format expected by the LiveTimingPage frontend component.
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
+import math
 import threading
+import zlib
 from datetime import datetime, timezone
 from typing import Any
 
-from services import circuit_map_service
+from services import canonical_circuits, circuit_map_service
 from services.signalr_parsers import (
     AVERAGE_LAP_SECONDS,
     FINISHED_SESSION_STATUSES,
@@ -68,6 +72,8 @@ class LiveTimingState:
         self.lap_count: dict[str, Any] = {}
         self.team_radio: list[dict] = []
         self._team_radio_keys: set[str] = set()
+        self.position_data: dict[str, dict] = {}
+        self.car_data: dict[str, dict] = {}
         self.is_live: bool = True
 
     # ------------------------------------------------------------------
@@ -104,6 +110,8 @@ class LiveTimingState:
             self.lap_count.clear()
             self.team_radio.clear()
             self._team_radio_keys.clear()
+            self.position_data.clear()
+            self.car_data.clear()
             self.is_live = False
 
     def update(self, topic: str, payload: Any) -> None:
@@ -165,6 +173,10 @@ class LiveTimingState:
             "RaceControlMessages": self._handle_race_control,
             "LapCount": self._handle_lap_count,
             "TeamRadio": self._handle_team_radio,
+            "Position": self._handle_position,
+            "Position.z": self._handle_position,
+            "CarData": self._handle_car_data,
+            "CarData.z": self._handle_car_data,
         }.get(topic)
 
     def _deep_merge(self, base: dict, update: dict) -> dict:
@@ -293,6 +305,47 @@ class LiveTimingState:
     def _handle_lap_count(self, payload: Any) -> None:
         if isinstance(payload, dict):
             self._deep_merge(self.lap_count, payload)
+
+    @staticmethod
+    def _decode_compressed_payload(payload: Any) -> Any:
+        if isinstance(payload, str):
+            try:
+                raw = zlib.decompress(base64.b64decode(payload), -zlib.MAX_WBITS)
+                return json.loads(raw.decode("utf-8"))
+            except Exception:
+                return None
+        return payload
+
+    def _handle_position(self, payload: Any) -> None:
+        decoded = self._decode_compressed_payload(payload)
+        if not isinstance(decoded, dict):
+            return
+        frames = decoded.get("Position")
+        if isinstance(frames, list) and frames:
+            latest = frames[-1]
+            entries = latest.get("Entries") if isinstance(latest, dict) else None
+            if isinstance(entries, dict):
+                for num, pos in entries.items():
+                    if isinstance(pos, dict):
+                        self.position_data[str(num)] = pos
+        elif isinstance(decoded.get("Entries"), dict):
+            for num, pos in decoded["Entries"].items():
+                if isinstance(pos, dict):
+                    self.position_data[str(num)] = pos
+
+    def _handle_car_data(self, payload: Any) -> None:
+        decoded = self._decode_compressed_payload(payload)
+        if not isinstance(decoded, dict):
+            return
+        entries = decoded.get("Entries")
+        if isinstance(entries, list) and entries:
+            latest = entries[-1]
+            cars = latest.get("Cars") if isinstance(latest, dict) else None
+            if isinstance(cars, dict):
+                for num, car in cars.items():
+                    channels = car.get("Channels") if isinstance(car, dict) else None
+                    if isinstance(channels, dict):
+                        self.car_data[str(num)] = channels
 
     def _handle_team_radio(self, payload: Any) -> None:
         """Accumulate real team-radio captures from the F1 SignalR feed.
@@ -507,19 +560,29 @@ class LiveTimingState:
                 int(position) if str(position).isdigit() else 99
             )
 
-            # Pit stops: prefer the feed's own count, fall back to the
-            # number of completed stints.
+            # Pit stops: take the max of NumberOfPitStops and completed stints
+            # because red-flag tyre changes or partial feed deltas can leave
+            # NumberOfPitStops behind the actual stint list.
+            stint_based_pits = max(0, stints_count - 1)
             pits_raw = td.get("NumberOfPitStops")
-            if str(pits_raw).isdigit():
-                pits = int(pits_raw)
+            if pits_raw is not None and str(pits_raw).isdigit():
+                pits = max(int(str(pits_raw)), stint_based_pits)
             else:
-                pits = max(0, stints_count - 1)
-
+                pits = stint_based_pits
 
             # Status
-            in_pit = td.get("InPit", False)
-            pit_out = td.get("PitOut", False)
-            status = "PIT" if in_pit else ("OUT" if pit_out else "TRACK")
+            retired = bool(
+                td.get("Retired", False)
+                or td.get("Stopped", False)
+                or td.get("KnockedOut", False)
+            )
+            in_pit = bool(td.get("InPit", False))
+            pit_out = bool(td.get("PitOut", False))
+            status = (
+                "OUT"
+                if retired
+                else ("PIT" if in_pit else ("OUT" if pit_out else "TRACK"))
+            )
 
             # Gap & Interval for Race, Practice (TimeDiffToFastest), and
             # Qualifying (Stats Q1/Q2/Q3). Leader is always "LEADER" / "-".
@@ -542,6 +605,7 @@ class LiveTimingState:
             lines.append(
                 {
                     "driver": abbr,
+                    "racing_number": str(num),
                     "team": team,
                     "position": position_int,
                     "gap": gap_to_leader,
@@ -563,6 +627,7 @@ class LiveTimingState:
                     "tyre_age": tyre_age,
                     "pits": pits,
                     "status": status,
+                    "retired": retired,
                     "gap_seconds": gap_seconds,
                     "progress": 0.0,
                     "stints": stints_list,
@@ -572,22 +637,72 @@ class LiveTimingState:
         # Sort by position, then derive progress after sorting so lapped
         # cars without a numeric gap still get distinct positions.
         lines.sort(key=lambda x: x["position"])
+        canonical = canonical_circuits.get_canonical_circuit(
+            circuit.get("key") if isinstance(circuit, dict) else None,
+            country=circuit.get("country") if isinstance(circuit, dict) else None,
+            location=circuit.get("location") if isinstance(circuit, dict) else None,
+        )
+        can_xs = canonical.get("x") if isinstance(canonical, dict) else None
+        can_ys = canonical.get("y") if isinstance(canonical, dict) else None
+        can_ds = canonical.get("norm_distance") if isinstance(canonical, dict) else None
+        can_rot = float(canonical.get("rotation", 0.0)) if isinstance(canonical, dict) else 0.0
+
+        running_gap = 0.0
         for index, line in enumerate(lines):
             position_int = line["position"]
             gap_seconds = line.get("gap_seconds")
+            interval_sec = self._parse_gap_seconds(line.get("interval"))
             if position_int == 1:
                 line["gap_seconds"] = 0.0
                 line["progress"] = 0.0
+                running_gap = 0.0
             elif gap_seconds is not None:
                 if gap_seconds >= AVERAGE_LAP_SECONDS:
-                    line["progress"] = min(0.85 + index * 0.005, 0.98)
+                    if interval_sec is not None and 0 < interval_sec < AVERAGE_LAP_SECONDS:
+                        running_gap += float(interval_sec)
+                    else:
+                        running_gap += 3.2
+                    sub_lap = (running_gap % (AVERAGE_LAP_SECONDS * 0.92)) / AVERAGE_LAP_SECONDS
+                    line["progress"] = round(min(max(sub_lap, 0.05), 0.96), 4)
                 else:
+                    running_gap = float(gap_seconds)
                     line["progress"] = min(
                         max(float(gap_seconds), 0.5) / AVERAGE_LAP_SECONDS,
                         0.9,
                     )
             else:
-                line["progress"] = min(0.04 + index * 0.012, 0.9)
+                if interval_sec is not None and 0 < interval_sec < AVERAGE_LAP_SECONDS:
+                    running_gap += float(interval_sec)
+                    line["progress"] = min(
+                        max(running_gap % AVERAGE_LAP_SECONDS, 0.5) / AVERAGE_LAP_SECONDS,
+                        0.94,
+                    )
+                else:
+                    line["progress"] = min(0.04 + index * 0.012, 0.9)
+
+            # Project live Position.z telemetry coordinates onto canonical track when available
+            rnum = line.get("racing_number")
+            pos_entry = self.position_data.get(str(rnum)) if rnum else None
+            if (
+                isinstance(pos_entry, dict)
+                and isinstance(can_xs, list)
+                and isinstance(can_ys, list)
+                and isinstance(can_ds, list)
+                and len(can_xs) == len(can_ys) == len(can_ds)
+                and len(can_xs) > 3
+            ):
+                px = pos_entry.get("X")
+                py = pos_entry.get("Y")
+                if isinstance(px, (int, float)) and isinstance(py, (int, float)) and (px != 0 or py != 0):
+                    rad = math.radians(can_rot)
+                    cos_a, sin_a = math.cos(rad), math.sin(rad)
+                    rx = float(px) * cos_a - float(py) * sin_a
+                    ry = -(float(px) * sin_a + float(py) * cos_a)
+                    best_i = min(
+                        range(len(can_xs)),
+                        key=lambda i: (can_xs[i] - rx) ** 2 + (can_ys[i] - ry) ** 2,
+                    )
+                    line["progress"] = float(can_ds[best_i])
 
         # Weather
         weather = format_weather(self.weather_data)

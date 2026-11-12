@@ -95,7 +95,11 @@ function WeatherStat({
 function DriverRow({ row, leader }: { row: LiveTimingLine; leader: boolean }) {
   const teamColor = getDriverColor(row.driver, row.team);
   const tyre = tyreStyle(row.tyre);
-  const isOut = row.status === 'OUT';
+  const isOut =
+    row.retired === true ||
+    row.status === 'OUT' ||
+    ['OUT', 'RET', 'STOP', 'DNF'].includes((row.gap || '').toUpperCase()) ||
+    ['OUT', 'RET', 'STOP', 'DNF'].includes((row.lastLap || '').toUpperCase());
   const position = parseInt(String(row.position), 10);
 
   return (
@@ -158,6 +162,8 @@ const OverlayLivePage: React.FC = () => {
   const { data, connectionStatus, gaveUp } = useLiveTimingFeed();
   const [controlsVisible, setControlsVisible] = useState(previewBackground);
   const [copied, setCopied] = useState(false);
+  const [showCorners, setShowCorners] = useState(true);
+  const [satelliteView, setSatelliteView] = useState(false);
 
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const { data: dashboardData } = useQuery({
@@ -374,9 +380,28 @@ const OverlayLivePage: React.FC = () => {
                 <span className="truncate">Circuit Map</span>
               </div>
               <div className="flex shrink-0 items-center gap-[0.7vh] text-[0.9vh] font-black uppercase tracking-[0.16em] text-white/35">
-                <span className="rounded-sm border border-cyan-400/25 bg-cyan-400/10 px-[0.55vh] py-[0.15vh] text-cyan-200/80">
+                <button
+                  type="button"
+                  onClick={() => setSatelliteView((prev) => !prev)}
+                  className={`rounded-sm border px-[0.55vh] py-[0.15vh] transition ${
+                    satelliteView
+                      ? 'border-emerald-400/40 bg-emerald-400/15 text-emerald-200'
+                      : 'border-white/15 bg-white/5 text-white/45 hover:text-white/80'
+                  }`}
+                >
+                  Sat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCorners((prev) => !prev)}
+                  className={`rounded-sm border px-[0.55vh] py-[0.15vh] transition ${
+                    showCorners
+                      ? 'border-cyan-400/35 bg-cyan-400/15 text-cyan-200/90'
+                      : 'border-white/15 bg-white/5 text-white/45 hover:text-white/80'
+                  }`}
+                >
                   Turns
-                </span>
+                </button>
                 <span className="tabular-nums">{lapLabel}</span>
               </div>
             </div>
@@ -388,6 +413,8 @@ const OverlayLivePage: React.FC = () => {
                     circuit={trackCircuit}
                     lines={data.circuit ? sortedLines : []}
                     preview={Boolean(previewCircuit)}
+                    showCorners={showCorners}
+                    satellite={satelliteView}
                     cornerTone="overlay"
                   />
                 </Track3D>

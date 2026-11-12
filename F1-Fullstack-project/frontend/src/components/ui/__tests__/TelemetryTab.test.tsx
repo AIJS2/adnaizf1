@@ -159,7 +159,7 @@ describe('TelemetryTab with partial backend payloads', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Tanpa data: HUL/)).toBeInTheDocument();
+      expect(screen.getByText(/No data: HUL/)).toBeInTheDocument();
     });
   });
 

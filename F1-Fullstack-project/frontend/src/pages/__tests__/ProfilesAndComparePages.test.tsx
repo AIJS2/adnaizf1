@@ -16,7 +16,7 @@ vi.mock('../../services/api', async () => {
   };
 });
 
-const mockDriverVer = {
+const mockDriverVer: api.DriverProfilePayload = {
   id: 'max_verstappen',
   name: 'Max Verstappen',
   abbreviation: 'VER',
@@ -45,7 +45,6 @@ const mockDriverVer = {
       points: 25,
       cumulative_points: 25,
       position: 1,
-      quali_position: 1,
     },
   ],
   teammate: {
@@ -60,7 +59,7 @@ const mockDriverVer = {
   },
 };
 
-const mockDriverNor = {
+const mockDriverNor: api.DriverProfilePayload = {
   ...mockDriverVer,
   id: 'lando_norris',
   name: 'Lando Norris',
@@ -74,7 +73,7 @@ const mockDriverNor = {
   poles: 0,
 };
 
-const mockTeamRedBull = {
+const mockTeamRedBull: api.TeamProfilePayload = {
   id: 'red_bull',
   name: 'Red Bull Racing',
   position: 1,
@@ -91,6 +90,13 @@ const mockTeamRedBull = {
   dns_details: [],
   drivers: [
     {
+      driverId: 'max_verstappen',
+      number: 1,
+      code: 'VER',
+      firstName: 'Max',
+      lastName: 'Verstappen',
+      team: 'Red Bull Racing',
+      teamColor: '#3671C6',
       id: 'max_verstappen',
       name: 'Max Verstappen',
       abbreviation: 'VER',
@@ -100,6 +106,13 @@ const mockTeamRedBull = {
       points_share: 80.6,
     },
     {
+      driverId: 'liam_lawson',
+      number: 30,
+      code: 'LAW',
+      firstName: 'Liam',
+      lastName: 'Lawson',
+      team: 'Red Bull Racing',
+      teamColor: '#3671C6',
       id: 'liam_lawson',
       name: 'Liam Lawson',
       abbreviation: 'LAW',
@@ -124,10 +137,10 @@ describe('DriverProfilePage, TeamProfilePage, and DriverComparePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.fetchDriverProfile).mockImplementation(async (_year, id) => {
-      if (String(id).includes('norris')) return mockDriverNor as any;
-      return mockDriverVer as any;
+      if (String(id).includes('norris')) return mockDriverNor;
+      return mockDriverVer;
     });
-    vi.mocked(api.fetchTeamProfile).mockResolvedValue(mockTeamRedBull as any);
+    vi.mocked(api.fetchTeamProfile).mockResolvedValue(mockTeamRedBull);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({

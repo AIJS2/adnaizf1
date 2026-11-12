@@ -431,10 +431,10 @@ const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
             <div className="mt-3 p-2 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-start gap-2 text-xs font-bold text-amber-400">
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <span className="block">{selectedDrivers.length} driver dipilih — klik <b>Run Analysis</b> untuk memuat telemetry.</span>
+                <span className="block">{selectedDrivers.length} driver(s) selected — click <b>Run Analysis</b> to load telemetry.</span>
                 {selectedWithoutData.length > 0 && (
                   <span className="block text-amber-300/90">
-                    Tanpa data: {selectedWithoutData.join(', ')} — did not start (tidak ada lap telemetry).
+                    No data: {selectedWithoutData.join(', ')} — did not start (no lap telemetry).
                   </span>
                 )}
               </div>
@@ -469,7 +469,7 @@ const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
         <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-lg p-4 mb-6 flex items-start gap-3">
           <AlertTriangle size={20} className="shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="font-bold">Tanpa data telemetry:</p>
+            <p className="font-bold">No telemetry data:</p>
             <ul className="mt-1 space-y-0.5 font-medium">
               {warning.map(w => (
                 <li key={w.driver}>{w.driver}: {w.reason}</li>
@@ -497,8 +497,8 @@ const TelemetryTab = ({ year, round, raceInfo }: TelemetryTabProps) => {
             {emptyStateMessage ??
               sharedUnavailableReason ??
               (telemetryData.unavailable_drivers?.length
-                ? 'Tidak ada data telemetry untuk driver berikut:'
-                : 'Tidak ada data telemetry tersedia untuk ronde yang dipilih.')}
+                ? 'No telemetry data available for the following drivers:'
+                : 'No telemetry data available for the selected round.')}
           </p>
           {sharedUnavailableReason && unavailableDrivers.length > 0 && (
             <p className="mt-2 text-xs font-medium text-neutral-500">

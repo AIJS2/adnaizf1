@@ -7,6 +7,10 @@ afterEach(() => {
   cleanup();
 });
 
+// jsdom does not implement browser scrolling APIs used by navigation effects.
+window.scrollTo = vi.fn();
+Element.prototype.scrollIntoView = vi.fn();
+
 // Recharts ResponsiveContainer needs dimension mock in jsdom
 vi.mock('recharts', async () => {
   const actual = await vi.importActual('recharts');
@@ -20,5 +24,4 @@ vi.mock('recharts', async () => {
       ),
   };
 });
-
 

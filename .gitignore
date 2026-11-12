@@ -54,3 +54,14 @@ agentic-awesome-skills*
 
 # Local dev-tool config (contains a localhost API key)
 opencode.json
+
+# Graphify local state and generated artifacts.
+# Keep GRAPH_REPORT.md reviewable; the rest is reproducible per machine/run.
+F1-Fullstack-project/graphify-out/cache/
+F1-Fullstack-project/graphify-out/memory/
+F1-Fullstack-project/graphify-out/.graphify_python
+F1-Fullstack-project/graphify-out/.graphify_root
+F1-Fullstack-project/graphify-out/cost.json
+F1-Fullstack-project/graphify-out/graph.html
+F1-Fullstack-project/graphify-out/graph.json
+F1-Fullstack-project/graphify-out/manifest.json

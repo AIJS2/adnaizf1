@@ -152,6 +152,7 @@ def _frame_from_rows(
     car_rows: list[dict[str, Any]],
     location_rows: list[dict[str, Any]],
     round_number: Optional[int] = None,
+    circuit: Optional[str] = None,
 ) -> Optional[pd.DataFrame]:
     """Turn OpenF1 samples into the FastF1-shaped car-channel frame."""
     car = pd.DataFrame(car_rows or [])
@@ -217,7 +218,9 @@ def _frame_from_rows(
             d_max = np.nanmax(dist)
             if d_max > d_min:
                 norm_d = (dist - d_min) / (d_max - d_min)
-                coords = interpolate_canonical_coords(round_number, norm_d)
+                coords = interpolate_canonical_coords(
+                    round_number, norm_d, location=circuit
+                )
                 if coords is not None:
                     frame["X"] = coords[0]
                     frame["Y"] = coords[1]
@@ -242,12 +245,13 @@ def collect(
       - `no_laps`: set of abbreviations with no timed lap at all
       - `session_key`: the resolved OpenF1 session key
     """
+    circuit = _circuit_for_round(year, round_number)
     _throttle()
     session_key = openf1_service.session_key_for(
         year,
         round_number,
         "R",
-        circuit=_circuit_for_round(year, round_number),
+        circuit=circuit,
     )
     if session_key is None:
         logger.info("OpenF1 has no race session for %s round %s", year, round_number)
@@ -329,7 +333,12 @@ def collect(
                 or []
             )
 
-        frame = _frame_from_rows(car_rows, location_rows, round_number=round_number)
+        frame = _frame_from_rows(
+            car_rows,
+            location_rows,
+            round_number=round_number,
+            circuit=circuit,
+        )
         if frame is None or frame.empty or len(frame) < 5:
             missing[drv] = "OpenF1 has no car telemetry for this driver's lap."
             continue
